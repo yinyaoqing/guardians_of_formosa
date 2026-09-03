@@ -10,6 +10,7 @@ const TICK_DELTA := 1.0 / float(TICK_RATE)
 
 ## 單幀最多執行的 tick 數。卡頓後若無上限地補跑積欠的 tick，
 ## 會讓下一幀更慢、積欠更多，形成死亡螺旋。超過上限就丟棄積欠。
+## 但只在真有積欠時才丟棄：若積欠 < TICK_DELTA，表示合法的餘數，應保留到下幀。
 const MAX_TICKS_PER_FRAME := 8
 
 var tick_count: int = 0
@@ -29,7 +30,7 @@ func advance(frame_delta: float) -> int:
 		_accumulator -= TICK_DELTA
 		_tick()
 		ticks += 1
-	if ticks == MAX_TICKS_PER_FRAME:
+	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks
 

@@ -41,3 +41,22 @@ func test_huge_frame_delta_is_capped_and_backlog_discarded() -> void:
 	# 積欠已被丟棄，下一個正常幀不該爆量
 	var next_ticks := sim.advance(FRAME_60FPS)
 	assert_int(next_ticks).is_equal(0)
+
+func test_hitting_cap_with_tiny_remainder_keeps_backlog() -> void:
+	var sim := BattleSim.new()
+
+	# Advance by exactly MAX_TICKS_PER_FRAME worth + 0.001 remainder
+	var cap_delta := float(BattleSim.MAX_TICKS_PER_FRAME) * BattleSim.TICK_DELTA + 0.001
+	var ticks_cap := sim.advance(cap_delta)
+	assert_int(ticks_cap).is_equal(BattleSim.MAX_TICKS_PER_FRAME)
+
+	# With the fix, the 0.001 remainder is kept.
+	# Without the fix (bug), it's discarded.
+	# Verify by advancing with just under one TICK_DELTA:
+	# - With remainder: 0.001 + (TICK_DELTA - 0.0005) > TICK_DELTA → should tick
+	# - Without remainder: 0 + (TICK_DELTA - 0.0005) < TICK_DELTA → shouldn't tick
+	var almost_one_tick := BattleSim.TICK_DELTA - 0.0005
+	var ticks_after := sim.advance(almost_one_tick)
+
+	# This assertion will fail without the fix
+	assert_int(ticks_after).is_equal(1)
