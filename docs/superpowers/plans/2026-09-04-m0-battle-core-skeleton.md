@@ -57,6 +57,14 @@
 
 建立可執行的 Godot 專案與可運作的測試框架。此任務的驗收就是「一個最小測試能跑起來並通過」——若 GdUnit4 的 CLI 路徑或斷言 API 與本計畫所寫不同，此任務會立刻暴露，而不會變成後續任務的潛在錯誤。
 
+> **實際執行結果（已完成）**
+>
+> - Godot **4.7.2**，安裝於 `C:\Users\yinya\tools\godot\`（刻意避開 OneDrive 與含中文的路徑）。`~/.local/bin/` 下放了 `godot`（bash）與 `godot.cmd`（cmd/PowerShell）兩個捷徑，都指向 `Godot_v4.7.2-stable_win64_console.exe`——console 版才會把 stdout 接回終端機，headless 測試需要。
+> - `project.godot` 以命令列直接撰寫後跑 `godot --headless --path . --import`，未經編輯器 GUI。
+> - GdUnit4 **6.2.1** 以 `git clone https://github.com/MikeSchulze/gdUnit4.git` 取得後複製 `addons/gdUnit4`，未經 AssetLib GUI。`bin/GdUnitCmdTool.gd` 路徑與本計畫原本假設一致。
+> - **冒煙測試抓到一項差異**：GdUnit4 6.2.1 預設拒絕 headless 執行（exit 103），必須加 `--ignoreHeadlessMode`。本計畫所有測試指令均已補上此旗標。我們的測試是純邏輯、不涉及 `InputEvent`，該檢查對本專案不適用。
+> - 冒煙測試 7/7 通過，exit 0。七種斷言 API（`is_equal`、`is_equal_approx`、`is_true`/`is_false`、`contains`、`has_size`、`is_greater`、`is_between`、`override_failure_message`）全部確認可用。
+
 **Files:**
 - Create: `project.godot`（由 Godot 編輯器產生後修改）
 - Create: `.gitignore`, `.gitattributes`, `.godot-version`, `CLAUDE.md`
@@ -65,7 +73,7 @@
 
 **Interfaces:**
 - Consumes: 無
-- Produces: 可執行的測試命令 `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests`
+- Produces: 可執行的測試命令 `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests`
 
 - [ ] **Step 1: 安裝 Godot 4.x 並鎖定版本**
 
@@ -215,7 +223,7 @@ func test_custom_failure_message_api() -> void:
 - [ ] **Step 10: 執行測試**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 Expected: 5 個測試全部通過，行程結束碼為 0。
@@ -247,7 +255,7 @@ Expected: 5 個測試全部通過，行程結束碼為 0。
 ## 測試
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 UI 與畫面不做自動化測試，人工驗收。
@@ -320,7 +328,7 @@ func test_position_exactly_at_end_returns_last_point() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_path_data.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_path_data.gd
 ```
 
 Expected: FAIL，錯誤訊息指出識別字 `PathData` 未定義。
@@ -367,7 +375,7 @@ func position_at(distance: float) -> Vector2:
 - [ ] **Step 4: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_path_data.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_path_data.gd
 ```
 
 Expected: 6 個測試全部 PASS。
@@ -450,7 +458,7 @@ func test_huge_frame_delta_is_capped_and_backlog_discarded() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_sim.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_sim.gd
 ```
 
 Expected: FAIL，識別字 `BattleSim` 未定義。
@@ -502,7 +510,7 @@ func _tick() -> void:
 - [ ] **Step 4: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_sim.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_sim.gd
 ```
 
 Expected: 5 個測試全部 PASS。
@@ -599,7 +607,7 @@ func test_blocked_enemy_does_not_advance() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_movement_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_movement_system.gd
 ```
 
 Expected: FAIL，識別字 `Enemy` 未定義。
@@ -663,7 +671,7 @@ static func tick(enemies: Array, paths: Dictionary, delta: float) -> void:
 - [ ] **Step 5: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_movement_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_movement_system.gd
 ```
 
 Expected: 6 個測試全部 PASS。
@@ -747,7 +755,7 @@ func test_negative_coordinates_are_handled() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_uniform_grid.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_uniform_grid.gd
 ```
 
 Expected: FAIL，識別字 `UniformGrid` 未定義。
@@ -805,7 +813,7 @@ func _cell_of(position: Vector2) -> Vector2i:
 - [ ] **Step 4: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_uniform_grid.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_uniform_grid.gd
 ```
 
 Expected: 7 個測試全部 PASS。
@@ -887,7 +895,7 @@ func test_full_armor_reduction_deals_no_damage_but_does_not_heal() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_damage_system.gd
 ```
 
 Expected: FAIL，識別字 `DamageSystem` 未定義。
@@ -941,7 +949,7 @@ static func apply(enemy: Enemy, amount: float, damage_type: StringName) -> float
 - [ ] **Step 4: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_damage_system.gd
 ```
 
 Expected: 6 個測試全部 PASS。
@@ -1047,7 +1055,7 @@ func test_leaked_enemy_is_skipped() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_targeting_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_targeting_system.gd
 ```
 
 Expected: FAIL，識別字 `Tower` 未定義。
@@ -1110,7 +1118,7 @@ static func find_first(tower: Tower, grid: UniformGrid, enemies_by_id: Dictionar
 - [ ] **Step 5: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_targeting_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_targeting_system.gd
 ```
 
 Expected: 6 個測試全部 PASS。
@@ -1284,7 +1292,7 @@ func test_fire_interval_limits_shots() -> void:
 - [ ] **Step 3: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_integration.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_integration.gd
 ```
 
 Expected: FAIL，`BattleSim.new()` 不接受參數。
@@ -1382,7 +1390,7 @@ func _remove_dead() -> void:
 `tests/core/test_battle_sim.gd` 中的 `BattleSim.new()` 現在會建立空的 `WorldState`，測試仍應通過。執行確認：
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_sim.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_sim.gd
 ```
 
 Expected: 5 個測試全部 PASS。若失敗，檢查 `_init` 的預設參數是否正確。
@@ -1390,7 +1398,7 @@ Expected: 5 個測試全部 PASS。若失敗，檢查 `_init` 的預設參數是
 - [ ] **Step 6: 執行整合測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 Expected: 全部測試 PASS。
@@ -1544,7 +1552,7 @@ func test_every_referenced_sprite_path_exists() -> void:
 - [ ] **Step 4: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/test_data_integrity.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/test_data_integrity.gd
 ```
 
 Expected: FAIL，識別字 `DataRegistry` 未定義。
@@ -1645,7 +1653,7 @@ Create `README.md`:
 ## 執行測試
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 ## 換機或重建匯出設定時的必要步驟
@@ -1659,7 +1667,7 @@ godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://
 - [ ] **Step 8: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 Expected: 全部測試 PASS，包含 8 個資料完整性測試。
@@ -1740,7 +1748,7 @@ func _collect_gd_files(root: String) -> Array[String]:
 - [ ] **Step 2: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/test_core_purity.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/test_core_purity.gd
 ```
 
 Expected: PASS。目前 `core/` 下的所有類別都是 `extends RefCounted`。
@@ -1750,7 +1758,7 @@ Expected: PASS。目前 `core/` 下的所有類別都是 `extends RefCounted`。
 暫時在 `core/entities/enemy.gd` 開頭加一行註解 `# .tscn`，重跑測試：
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/test_core_purity.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/test_core_purity.gd
 ```
 
 Expected: FAIL，錯誤訊息指出 `res://core/entities/enemy.gd 含有被禁止的 Node 依賴 '.tscn'`。
@@ -2088,7 +2096,7 @@ Expected: workflow 成功，所有測試通過。
         run: $GODOT_BIN --headless --path . --import
 
       - name: 執行測試
-        run: $GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+        run: $GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 - [ ] **Step 5: M0 完成驗收**
@@ -2096,7 +2104,7 @@ Expected: workflow 成功，所有測試通過。
 確認以下全部成立：
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 git status --short
 ```
 

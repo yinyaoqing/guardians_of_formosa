@@ -20,7 +20,7 @@
 ## 測試
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 UI 與畫面不做自動化測試，人工驗收。

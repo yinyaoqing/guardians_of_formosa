@@ -13,3 +13,6 @@ art_src/
 
 # subagent-driven-development 的進度暫存
 .superpowers/
+
+# GdUnit4 產生的測試報告
+reports/
