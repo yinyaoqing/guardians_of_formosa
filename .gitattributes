@@ -1,0 +1,16 @@
+# 文字檔一律以 LF 儲存，避免 Windows 與 CI 之間的行尾差異
+* text=auto eol=lf
+*.gd text eol=lf
+*.tscn text eol=lf
+*.tres text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.cfg text eol=lf
+*.godot text eol=lf
+
+# 圖片與音效走 Git LFS
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
