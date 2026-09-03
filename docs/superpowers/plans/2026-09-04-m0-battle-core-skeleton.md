@@ -819,7 +819,143 @@ git commit -m "feat(core): 新增 UniformGrid 空間索引"
 
 ---
 
-### Task 6: Tower 實體與 TargetingSystem
+### Task 6: DamageSystem
+
+**Files:**
+- Create: `core/systems/damage_system.gd`
+- Test: `tests/core/test_damage_system.gd`
+
+**Interfaces:**
+- Consumes: `Enemy`（Task 4）
+- Produces:
+  - `DamageSystem.PHYSICAL: StringName`、`DamageSystem.MAGIC: StringName`、`DamageSystem.TRUE_DAMAGE: StringName`
+  - `DamageSystem.apply(enemy: Enemy, amount: float, damage_type: StringName) -> float`（回傳實際造成的傷害）
+
+這是**唯一的傷害結算入口**。塔防的技術債幾乎都長在傷害計算散落各處，所以這條規則寫進 CLAUDE.md 並由 code review 把關。
+
+- [ ] **Step 1: 寫失敗的測試**
+
+Create `tests/core/test_damage_system.gd`:
+
+```gdscript
+extends GdUnitTestSuite
+
+func _make_enemy(armor: float, magic_resist: float) -> Enemy:
+	var enemy := Enemy.new()
+	enemy.id = 1
+	enemy.hp = 100.0
+	enemy.max_hp = 100.0
+	enemy.armor = armor
+	enemy.magic_resist = magic_resist
+	return enemy
+
+func test_physical_damage_is_reduced_by_armor() -> void:
+	var enemy := _make_enemy(0.5, 0.0)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(50.0, 0.001)
+	assert_float(enemy.hp).is_equal_approx(50.0, 0.001)
+
+func test_magic_damage_ignores_armor_and_uses_magic_resist() -> void:
+	var enemy := _make_enemy(0.9, 0.25)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.MAGIC)
+	assert_float(dealt).is_equal_approx(75.0, 0.001)
+
+func test_true_damage_ignores_all_reduction() -> void:
+	var enemy := _make_enemy(0.9, 0.9)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.TRUE_DAMAGE)
+	assert_float(dealt).is_equal_approx(100.0, 0.001)
+
+func test_lethal_damage_marks_enemy_dead_and_clamps_hp_to_zero() -> void:
+	var enemy := _make_enemy(0.0, 0.0)
+	DamageSystem.apply(enemy, 250.0, DamageSystem.PHYSICAL)
+	assert_bool(enemy.alive).is_false()
+	assert_float(enemy.hp).is_equal_approx(0.0, 0.001)
+
+func test_damage_to_dead_enemy_deals_nothing() -> void:
+	var enemy := _make_enemy(0.0, 0.0)
+	enemy.alive = false
+	var dealt := DamageSystem.apply(enemy, 50.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(0.0, 0.001)
+
+func test_full_armor_reduction_deals_no_damage_but_does_not_heal() -> void:
+	var enemy := _make_enemy(1.0, 0.0)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(0.0, 0.001)
+	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+```bash
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
+```
+
+Expected: FAIL，識別字 `DamageSystem` 未定義。
+
+- [ ] **Step 3: 寫最小實作**
+
+Create `core/systems/damage_system.gd`:
+
+```gdscript
+class_name DamageSystem
+extends RefCounted
+
+## 唯一的傷害結算入口。任何塔、法術、英雄都不得自行計算傷害減免——
+## 傷害計算一旦散落各處，數值平衡就無法推理，這是塔防最常見的技術債來源。
+##
+## 結算順序固定：
+##   1. 依傷害類型取得減免比例
+##   2. 套用減免
+##   3. 扣血
+##   4. 判定死亡
+
+const PHYSICAL := &"physical"
+const MAGIC := &"magic"
+const TRUE_DAMAGE := &"true"
+
+## 對敵人造成傷害，回傳實際造成的傷害值。
+static func apply(enemy: Enemy, amount: float, damage_type: StringName) -> float:
+	if not enemy.alive:
+		return 0.0
+
+	var reduction := 0.0
+	match damage_type:
+		PHYSICAL:
+			reduction = enemy.armor
+		MAGIC:
+			reduction = enemy.magic_resist
+		TRUE_DAMAGE:
+			reduction = 0.0
+		_:
+			push_error("未知的傷害類型: %s" % damage_type)
+			return 0.0
+
+	var dealt := maxf(0.0, amount * (1.0 - reduction))
+	enemy.hp -= dealt
+	if enemy.hp <= 0.0:
+		enemy.hp = 0.0
+		enemy.alive = false
+	return dealt
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+```bash
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
+```
+
+Expected: 6 個測試全部 PASS。
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add core/systems/damage_system.gd tests/core/test_damage_system.gd
+git commit -m "feat(core): 新增 DamageSystem 統一傷害結算"
+```
+
+---
+
+### Task 7: Tower 實體與 TargetingSystem
 
 **Files:**
 - Create: `core/entities/tower.gd`
@@ -827,7 +963,7 @@ git commit -m "feat(core): 新增 UniformGrid 空間索引"
 - Test: `tests/core/test_targeting_system.gd`
 
 **Interfaces:**
-- Consumes: `Enemy`（Task 4）、`UniformGrid`（Task 5）
+- Consumes: `Enemy`（Task 4）、`UniformGrid`（Task 5）、`DamageSystem`（Task 6）
 - Produces:
   - `Tower.new() -> Tower`，欄位：`id: int`、`tower_id: StringName`、`position: Vector2`、`level: int`、`damage: float`、`damage_type: StringName`、`attack_range: float`、`fire_interval: float`、`cooldown: float`、`target_id: int`
   - `TargetingSystem.find_first(tower: Tower, grid: UniformGrid, enemies_by_id: Dictionary) -> int`（回傳敵人 id，找不到回傳 0）
@@ -973,178 +1109,17 @@ static func find_first(tower: Tower, grid: UniformGrid, enemies_by_id: Dictionar
 
 - [ ] **Step 5: 執行測試確認通過**
 
-測試引用了 `DamageSystem.PHYSICAL`，該常數在 Task 7 才建立。先把測試中的 `DamageSystem.PHYSICAL` 暫時改為 `&"physical"`，執行測試：
-
 ```bash
 godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_targeting_system.gd
 ```
 
-Expected: 6 個測試全部 PASS。Task 7 完成後再改回 `DamageSystem.PHYSICAL`。
+Expected: 6 個測試全部 PASS。
 
 - [ ] **Step 6: 提交**
 
 ```bash
 git add core/entities/tower.gd core/systems/targeting_system.gd tests/core/test_targeting_system.gd
 git commit -m "feat(core): 新增 Tower 實體與 TargetingSystem First 策略"
-```
-
----
-
-### Task 7: DamageSystem
-
-**Files:**
-- Create: `core/systems/damage_system.gd`
-- Modify: `tests/core/test_targeting_system.gd`（把暫用的 `&"physical"` 改回 `DamageSystem.PHYSICAL`）
-- Test: `tests/core/test_damage_system.gd`
-
-**Interfaces:**
-- Consumes: `Enemy`（Task 4）
-- Produces:
-  - `DamageSystem.PHYSICAL: StringName`、`DamageSystem.MAGIC: StringName`、`DamageSystem.TRUE_DAMAGE: StringName`
-  - `DamageSystem.apply(enemy: Enemy, amount: float, damage_type: StringName) -> float`（回傳實際造成的傷害）
-
-這是**唯一的傷害結算入口**。塔防的技術債幾乎都長在傷害計算散落各處，所以這條規則寫進 CLAUDE.md 並由 code review 把關。
-
-- [ ] **Step 1: 寫失敗的測試**
-
-Create `tests/core/test_damage_system.gd`:
-
-```gdscript
-extends GdUnitTestSuite
-
-func _make_enemy(armor: float, magic_resist: float) -> Enemy:
-	var enemy := Enemy.new()
-	enemy.id = 1
-	enemy.hp = 100.0
-	enemy.max_hp = 100.0
-	enemy.armor = armor
-	enemy.magic_resist = magic_resist
-	return enemy
-
-func test_physical_damage_is_reduced_by_armor() -> void:
-	var enemy := _make_enemy(0.5, 0.0)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
-	assert_float(dealt).is_equal_approx(50.0, 0.001)
-	assert_float(enemy.hp).is_equal_approx(50.0, 0.001)
-
-func test_magic_damage_ignores_armor_and_uses_magic_resist() -> void:
-	var enemy := _make_enemy(0.9, 0.25)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.MAGIC)
-	assert_float(dealt).is_equal_approx(75.0, 0.001)
-
-func test_true_damage_ignores_all_reduction() -> void:
-	var enemy := _make_enemy(0.9, 0.9)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.TRUE_DAMAGE)
-	assert_float(dealt).is_equal_approx(100.0, 0.001)
-
-func test_lethal_damage_marks_enemy_dead_and_clamps_hp_to_zero() -> void:
-	var enemy := _make_enemy(0.0, 0.0)
-	DamageSystem.apply(enemy, 250.0, DamageSystem.PHYSICAL)
-	assert_bool(enemy.alive).is_false()
-	assert_float(enemy.hp).is_equal_approx(0.0, 0.001)
-
-func test_damage_to_dead_enemy_deals_nothing() -> void:
-	var enemy := _make_enemy(0.0, 0.0)
-	enemy.alive = false
-	var dealt := DamageSystem.apply(enemy, 50.0, DamageSystem.PHYSICAL)
-	assert_float(dealt).is_equal_approx(0.0, 0.001)
-
-func test_full_armor_reduction_deals_no_damage_but_does_not_heal() -> void:
-	var enemy := _make_enemy(1.0, 0.0)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
-	assert_float(dealt).is_equal_approx(0.0, 0.001)
-	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
-```
-
-- [ ] **Step 2: 執行測試確認失敗**
-
-```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
-```
-
-Expected: FAIL，識別字 `DamageSystem` 未定義。
-
-- [ ] **Step 3: 寫最小實作**
-
-Create `core/systems/damage_system.gd`:
-
-```gdscript
-class_name DamageSystem
-extends RefCounted
-
-## 唯一的傷害結算入口。任何塔、法術、英雄都不得自行計算傷害減免——
-## 傷害計算一旦散落各處，數值平衡就無法推理，這是塔防最常見的技術債來源。
-##
-## 結算順序固定：
-##   1. 依傷害類型取得減免比例
-##   2. 套用減免
-##   3. 扣血
-##   4. 判定死亡
-
-const PHYSICAL := &"physical"
-const MAGIC := &"magic"
-const TRUE_DAMAGE := &"true"
-
-## 對敵人造成傷害，回傳實際造成的傷害值。
-static func apply(enemy: Enemy, amount: float, damage_type: StringName) -> float:
-	if not enemy.alive:
-		return 0.0
-
-	var reduction := 0.0
-	match damage_type:
-		PHYSICAL:
-			reduction = enemy.armor
-		MAGIC:
-			reduction = enemy.magic_resist
-		TRUE_DAMAGE:
-			reduction = 0.0
-		_:
-			push_error("未知的傷害類型: %s" % damage_type)
-			return 0.0
-
-	var dealt := maxf(0.0, amount * (1.0 - reduction))
-	enemy.hp -= dealt
-	if enemy.hp <= 0.0:
-		enemy.hp = 0.0
-		enemy.alive = false
-	return dealt
-```
-
-- [ ] **Step 4: 執行測試確認通過**
-
-```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
-```
-
-Expected: 6 個測試全部 PASS。
-
-- [ ] **Step 5: 把 TargetingSystem 測試改回具名常數**
-
-在 `tests/core/test_targeting_system.gd` 的 `_make_tower()` 中，把：
-
-```gdscript
-	tower.damage_type = &"physical"
-```
-
-改回：
-
-```gdscript
-	tower.damage_type = DamageSystem.PHYSICAL
-```
-
-- [ ] **Step 6: 執行全部測試**
-
-```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
-```
-
-Expected: 全部通過。
-
-- [ ] **Step 7: 提交**
-
-```bash
-git add core/systems/damage_system.gd tests/core/test_damage_system.gd tests/core/test_targeting_system.gd
-git commit -m "feat(core): 新增 DamageSystem 統一傷害結算"
 ```
 
 ---
