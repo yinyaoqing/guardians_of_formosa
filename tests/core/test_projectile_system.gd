@@ -179,3 +179,37 @@ func test_single_target_projectile_does_not_splash() -> void:
 	assert_float(nearby.hp).override_failure_message(
 		"splash_radius 為 0 時只能打到主目標"
 	).is_equal_approx(100.0, 0.001)
+
+func test_on_hit_effect_is_applied_to_the_target() -> void:
+	var world := _make_world()
+	world.effect_defs[&"chill"] = {"id": "chill", "kind": "slow", "magnitude": 0.5, "duration": 3.0}
+	var enemy := _add_enemy(world, Vector2(60, 0), 100.0)
+	enemy.base_speed = 100.0
+	enemy.reset_derived_stats()
+	var tower := _make_tower(world, Vector2(0, 0))
+
+	var system := ProjectileSystem.new(world)
+	system.spawn(tower, enemy.id, 600.0, 0.0, [&"chill"] as Array[StringName])
+	system.tick(0.5)
+
+	assert_array(enemy.active_effects).has_size(1)
+	world.status_system.recompute(enemy)
+	assert_float(enemy.speed).override_failure_message(
+		"命中後施加的減速必須反映在衍生速度上"
+	).is_equal_approx(50.0, 0.001)
+
+func test_splash_applies_effects_to_everyone_hit() -> void:
+	var world := _make_world()
+	world.effect_defs[&"chill"] = {"id": "chill", "kind": "slow", "magnitude": 0.5, "duration": 3.0}
+	var primary := _add_enemy(world, Vector2(60, 0), 100.0)
+	var nearby := _add_enemy(world, Vector2(90, 0), 100.0)
+	var tower := _make_tower(world, Vector2(0, 0))
+	world.grid.clear()
+	world.grid.insert(primary.id, primary.position)
+	world.grid.insert(nearby.id, nearby.position)
+
+	var system := ProjectileSystem.new(world)
+	system.spawn(tower, primary.id, 600.0, 50.0, [&"chill"] as Array[StringName])
+	system.tick(0.5)
+
+	assert_array(nearby.active_effects).has_size(1)

@@ -257,3 +257,46 @@ func test_projectile_is_wasted_when_its_target_dies_first() -> void:
 	assert_array(world.projectiles).override_failure_message(
 		"遠塔的投射物在確認目標已死後應該被釋放，不會一直卡在 world.projectiles 裡"
 	).has_size(0)
+
+func test_shipped_data_drives_a_full_projectile_and_status_chain() -> void:
+	# 端到端：用真實 JSON 資料，塔發射投射物、命中、造成傷害並施加減速。
+	# 不寫死任何平衡數字，全部從 registry 讀，數值調整時不需修改本測試。
+	var registry := DataRegistry.new()
+	registry.load_from_disk()
+
+	var world := _make_world()
+	world.effect_defs = registry.status_effects
+
+	var enemy := registry.make_enemy(&"orc_grunt", PATH_ID)
+	enemy.position = Vector2(50, 0)
+	world.add_enemy(enemy)
+
+	var tower_def: Dictionary = registry.towers[&"archer_tower"]
+	var level_def: Dictionary = tower_def["levels"][0]
+	var tower := Tower.new()
+	tower.tower_id = &"archer_tower"
+	tower.position = Vector2(50, 0)
+	tower.damage = level_def["damage"]
+	tower.damage_type = StringName(tower_def["damage_type"])
+	tower.attack_range = level_def["attack_range"]
+	tower.fire_interval = level_def["fire_interval"]
+	tower.projectile_speed = level_def["projectile_speed"]
+	tower.splash_radius = level_def["splash_radius"]
+	tower.on_hit_effects.assign([&"chill"])
+	world.add_tower(tower)
+
+	var sim := BattleSim.new(world)
+	_run(sim, 2.0)
+
+	assert_bool(enemy.hp < enemy.max_hp).override_failure_message(
+		"塔應已透過投射物對敵人造成傷害"
+	).is_true()
+	assert_array(enemy.active_effects).override_failure_message(
+		"命中應施加 on_hit_effects 中的減速"
+	).has_size(1)
+	assert_bool(enemy.speed < enemy.base_speed).override_failure_message(
+		"減速必須反映在衍生速度上，且基礎值不得被改動"
+	).is_true()
+	assert_float(enemy.base_speed).override_failure_message(
+		"基礎速度必須維持 JSON 中的原值"
+	).is_equal_approx(registry.enemies[&"orc_grunt"]["speed"], 0.001)

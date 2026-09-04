@@ -7,6 +7,10 @@ var enemies: Array[Enemy] = []
 var towers: Array[Tower] = []
 var paths: Dictionary = {}          ## StringName -> PathData
 
+## 狀態效果的 JSON 定義，由表現層在載入關卡時自 DataRegistry 灌入。
+## core/ 不自行讀檔，維持可在無檔案系統的情況下被測試。
+var effect_defs: Dictionary = {}   ## StringName -> Dictionary
+
 var gold: int = 0
 var lives: int = 20
 

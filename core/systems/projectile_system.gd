@@ -59,7 +59,7 @@ func tick(delta: float) -> void:
 ## 範圍內全額傷害，不做距離衰減——衰減會讓數值難以推理。
 func _on_impact(projectile: Projectile, target: Enemy) -> void:
 	if projectile.splash_radius <= 0.0:
-		DamageSystem.apply(target, projectile.damage, projectile.damage_type)
+		_hit_one(projectile, target)
 		return
 
 	# grid 是 broad phase，回傳的候選需自行做精確距離判定
@@ -70,7 +70,18 @@ func _on_impact(projectile: Projectile, target: Enemy) -> void:
 			continue
 		if projectile.position.distance_squared_to(enemy.position) > radius_squared:
 			continue
-		DamageSystem.apply(enemy, projectile.damage, projectile.damage_type)
+		_hit_one(projectile, enemy)
+
+## 對單一敵人結算傷害並施加命中效果。
+## 傷害一律經過 DamageSystem；效果的「來源」是發射塔的種類，決定堆疊時是刷新還是並存。
+func _hit_one(projectile: Projectile, enemy: Enemy) -> void:
+	DamageSystem.apply(enemy, projectile.damage, projectile.damage_type)
+	for effect_id in projectile.on_hit_effects:
+		var def: Dictionary = _world.effect_defs.get(effect_id, {})
+		if def.is_empty():
+			push_error("投射物引用了不存在的狀態效果: %s" % effect_id)
+			continue
+		_world.status_system.apply(enemy, def, projectile.source_tower_id)
 
 func _despawn(index: int) -> void:
 	var projectile: Projectile = _world.projectiles[index]
