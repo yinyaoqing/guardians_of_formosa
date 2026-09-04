@@ -30,13 +30,24 @@ func test_exhausted_pool_grows_instead_of_returning_null() -> void:
 	).is_true()
 	assert_int(pool.capacity()).is_greater(2)
 
+func test_capacity_and_free_count_stay_consistent_across_use() -> void:
+	var pool := _make_pool(2)
+	var obj1: Variant = pool.acquire()
+	var obj2: Variant = pool.acquire()
+	pool.release(obj1)
+	pool.release(obj2)
+	assert_int(pool.free_count()).is_equal(pool.capacity())
+
 func test_reset_clears_effect_fields() -> void:
 	var effect := StatusEffect.new()
 	effect.kind = StatusEffect.KIND_SLOW
 	effect.source = &"archer_tower"
 	effect.magnitude = 0.5
+	effect.damage_type = &"fire"
 	effect.remaining = 3.0
 	effect.reset()
 	assert_str(effect.kind).is_equal("")
+	assert_str(effect.source).is_equal("")
 	assert_float(effect.magnitude).is_equal_approx(0.0, 0.001)
+	assert_str(effect.damage_type).is_equal("")
 	assert_float(effect.remaining).is_equal_approx(0.0, 0.001)
