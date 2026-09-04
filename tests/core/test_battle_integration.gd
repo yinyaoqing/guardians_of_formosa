@@ -28,7 +28,7 @@ func _add_enemy(world: WorldState, hp: float, speed: float, bounty: int) -> Enem
 	world.add_enemy(enemy)
 	return enemy
 
-func _add_tower(world: WorldState, pos: Vector2, damage: float, fire_interval: float) -> Tower:
+func _add_tower(world: WorldState, pos: Vector2, damage: float, fire_interval: float, projectile_speed: float = 600.0) -> Tower:
 	var tower := Tower.new()
 	tower.tower_id = &"archer_tower"
 	tower.position = pos
@@ -36,7 +36,7 @@ func _add_tower(world: WorldState, pos: Vector2, damage: float, fire_interval: f
 	tower.damage = damage
 	tower.damage_type = DamageSystem.PHYSICAL
 	tower.fire_interval = fire_interval
-	tower.projectile_speed = 600.0
+	tower.projectile_speed = projectile_speed
 	tower.splash_radius = 0.0
 	world.add_tower(tower)
 	return tower
@@ -93,9 +93,12 @@ func test_fire_interval_limits_shots() -> void:
 	# （ProjectileSystem 排在 _tick_towers 之前，故 tick N 生成的投射物要到
 	# tick N+1 才被處理；那一 tick 的移動距離必然 >= 0，於是命中）。
 	# 因此每一發的傷害相對「開火即結算」延後恰好一個 tick：
-	# 第一發於 tick 1 開火、tick 2 命中；第二發於 tick 16 開火（射速 0.5 秒
-	# = 15 tick 冷卻）、tick 17 命中。兩發都仍落在 1 秒（30 tick）之內，
-	# 傷害總量不變：兩發共 20 傷害，留下 980.0 HP。
+	# 第一發於 tick 1 開火、tick 2 命中。第二發理論上該在 15 tick 冷卻
+	# （射速 0.5 秒）後、也就是 tick 16 開火，但 cooldown 是逐 tick 以浮點數
+	# 減去 TICK_DELTA（1.0/30.0）：連續 15 次從 0.5 減去 1/30，殘留的浮點
+	# 誤差約 9.7e-17（並非精確的 0），使 tick 16 當下 cooldown 仍 > 0，
+	# 於是實際上第二發於 tick 17 開火、tick 18 命中。兩發都仍落在 1 秒
+	# （30 tick）之內，傷害總量不變：兩發共 20 傷害，留下 980.0 HP。
 	var world := _make_world()
 	var enemy := _add_enemy(world, 1000.0, 0.0, 5)
 	enemy.position = Vector2(50, 0)
@@ -157,6 +160,12 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	tower.damage_type = StringName(tower_def["damage_type"])
 	tower.attack_range = level_def["attack_range"]
 	tower.fire_interval = level_def["fire_interval"]
+	tower.projectile_speed = level_def["projectile_speed"]
+	tower.splash_radius = level_def["splash_radius"]
+	var on_hit_effects: Array[StringName] = []
+	for effect_id in level_def["on_hit_effects"]:
+		on_hit_effects.append(StringName(effect_id))
+	tower.on_hit_effects = on_hit_effects
 	world.add_tower(tower)
 
 	var starting_gold := world.gold
@@ -179,23 +188,76 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	assert_bool(enemy.alive).is_false()
 	assert_int(world.gold).is_equal(starting_gold + bounty)
 	assert_int(world.lives).is_equal(starting_lives)
+	assert_float(tower.projectile_speed).override_failure_message(
+		"Tower.projectile_speed 沒有從關卡資料複製過去——改 data/towers/archer_tower.json 的 projectile_speed 不會有任何效果"
+	).is_equal_approx(float(level_def["projectile_speed"]), 0.001)
 
 func test_overkill_wastes_shots_because_damage_lands_on_impact() -> void:
-	# 兩座塔同時對一隻將死的敵人開火，第二發必須落空。
-	# 這個測試直接釘住「傷害在命中時結算」的設計決定——
-	# 若有人改回發射即結算，第二發會照樣扣血，測試立刻失敗。
+	# 兩座塔同時對同一隻敵人開火，且塔與敵人同座標（距離 0）。
+	# 敵人的實際座標由 MovementSystem 每 tick 依 distance_along 從路徑重新換算
+	# （position_at），直接指定 .position 會在第一個 tick 就被蓋掉,所以這裡改用
+	# distance_along 來控制座標——_make_world 的路徑點都落在 x 軸上、取樣間距
+	# 100,所以 distance_along = 50.0 換算回來正好是 (50, 0)。
+	# 只推進恰好一個 tick——也就是兩座塔開火的那個 tick——立刻檢查：
+	# 若傷害在「發射當下」結算，敵人此刻就該已經掉血；本專案的設計是
+	# 傷害要到「命中那一 tick」才結算（命中最快也要等到下一個 tick，
+	# 見 ProjectileSystem 排在 _tick_towers 之前的順序），所以此刻敵人
+	# 應該還是滿血，兩發投射物都還在飛行中、尚未被消耗。
+	# 這個時間點才是真正能分辨「發射即結算」與「命中才結算」兩種實作的地方——
+	# 距離為 0 讓兩發後續會在同一個 tick 命中,不能拿來證明「浪費」,
+	# 只有「開火當下有沒有立刻扣血」能分辨。
 	var world := _make_world()
-	var enemy := _add_enemy(world, 15.0, 0.0, 5)
-	enemy.position = Vector2(50, 0)
+	var enemy := _add_enemy(world, 1000.0, 0.0, 5)
+	enemy.distance_along = 50.0
 	_add_tower(world, Vector2(50, 0), 10.0, 5.0)
 	_add_tower(world, Vector2(50, 0), 10.0, 5.0)
 	var sim := BattleSim.new(world)
 
-	_run(sim, 1.0)
+	_run(sim, 2.0 * FRAME_60FPS)  # 恰好一個 tick：兩座塔剛開火，投射物尚未命中
 
-	assert_int(world.gold).override_failure_message(
-		"敵人應被擊殺並發放一次賞金"
-	).is_equal(5)
+	assert_float(enemy.hp).override_failure_message(
+		"傷害不可以在開火當下結算——命中還沒發生，敵人血量必須維持滿血"
+	).is_equal_approx(1000.0, 0.001)
 	assert_array(world.projectiles).override_failure_message(
-		"目標死亡後，仍在飛的投射物必須消失而非轉移目標"
+		"兩座塔剛開火那一 tick，兩發投射物都應該還在飛行中"
+	).has_size(2)
+
+func test_projectile_is_wasted_when_its_target_dies_first() -> void:
+	# 兩座塔對準同一隻敵人：近塔的投射物下一 tick 就命中並一擊斃命，
+	# 遠塔的投射物飛行速度慢、距離又長，命中前敵人已經死亡。
+	# 這個測試釘住「目標死亡的投射物會被釋放而非轉移目標」——
+	# 若實作改成幫飛行中的投射物重新鎖定最近的敵人，旁邊那隻無辜的
+	# 待轟敵人就會平白受傷，斷言會立刻失敗。
+	#
+	# 敵人的實際座標由 MovementSystem 每 tick 依 distance_along 從路徑重新換算,
+	# 直接指定 .position 在第一個 tick 就會被蓋掉,所以這裡一律用 distance_along
+	# 控制座標（_make_world 的路徑點都落在 x 軸上、取樣間距 100，換算是線性的）。
+	var world := _make_world()
+
+	var victim := _add_enemy(world, 5.0, 0.0, 5)
+	victim.distance_along = 100.0  # 換算座標 (100, 0)
+
+	var bystander := _add_enemy(world, 100.0, 0.0, 3)
+	# distance_along 故意比 victim 小，確保 TargetingSystem（挑 distance_along
+	# 最大者）兩座塔永遠選中 victim、不會選到它；換算座標 (90, 0) 離 victim 只有
+	# 10，緊鄰 victim，足以驗證傷害沒有轉移過來。
+	bystander.distance_along = 90.0
+
+	_add_tower(world, Vector2(100, 0), 10.0, 5.0)          # 近塔：距離 0,下一 tick 命中
+	_add_tower(world, Vector2(230, 0), 10.0, 5.0, 300.0)   # 遠塔：距離 130,飛行速度慢
+
+	var sim := BattleSim.new(world)
+	_run(sim, 8.0 * FRAME_60FPS)  # 4 個 tick：足夠近塔命中、victim 死亡、遠塔投射物被釋放
+
+	assert_bool(victim.alive).override_failure_message(
+		"近塔的投射物應該已經命中並擊殺 victim"
+	).is_false()
+	assert_int(world.gold).override_failure_message(
+		"victim 的賞金只能發放一次"
+	).is_equal(5)
+	assert_float(bystander.hp).override_failure_message(
+		"victim 死亡時，遠塔那發還在飛的投射物必須被釋放而非轉移到旁邊的 bystander 身上"
+	).is_equal_approx(100.0, 0.001)
+	assert_array(world.projectiles).override_failure_message(
+		"遠塔的投射物在確認目標已死後應該被釋放，不會一直卡在 world.projectiles 裡"
 	).has_size(0)

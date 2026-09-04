@@ -257,7 +257,11 @@ func test_every_tower_level_declares_projectile_fields() -> void:
 				).is_true()
 
 func test_projectiles_outrun_every_enemy() -> void:
-	# 命中保證的前提：投射物速度必須高於所有敵人，否則追不上
+	# 命中保證的前提：投射物速度必須高於所有敵人，否則追不上。
+	# 這裡拿來比較的是 base_speed（資料裡的 speed 欄位），這個檢查成立的前提是
+	# 狀態效果目前永遠不會把敵人的衍生速度推得比 base_speed 更高——只有減速，
+	# 沒有加速。未來若加入類似「狂暴/加速」的狀態效果，這個檢查就會失效，
+	# 需要改成拿「可能達到的最高速度」而不是 base_speed 來比較。
 	var fastest_enemy := 0.0
 	for enemy_id: StringName in _registry.enemies:
 		fastest_enemy = maxf(fastest_enemy, _registry.enemies[enemy_id]["speed"])

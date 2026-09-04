@@ -77,6 +77,12 @@ func _place_tower(tower_id: StringName, tower_position: Vector2) -> void:
 	tower.damage_type = StringName(def["damage_type"])
 	tower.attack_range = level_def["attack_range"]
 	tower.fire_interval = level_def["fire_interval"]
+	tower.projectile_speed = level_def["projectile_speed"]
+	tower.splash_radius = level_def["splash_radius"]
+	var on_hit_effects: Array[StringName] = []
+	for effect_id in level_def["on_hit_effects"]:
+		on_hit_effects.append(StringName(effect_id))
+	tower.on_hit_effects = on_hit_effects
 	_sim.world.add_tower(tower)
 
 	var view := TowerViewScript.new() as TowerView
