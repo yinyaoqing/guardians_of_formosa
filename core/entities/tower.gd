@@ -1,0 +1,18 @@
+class_name Tower
+extends RefCounted
+
+## 塔的邏輯狀態。純資料，行為由 systems/ 負責。
+## 特別注意：射程欄位叫 attack_range 而非 range——range 是 GDScript 內建函式。
+
+var id: int = 0
+var tower_id: StringName = &""
+var position: Vector2 = Vector2.ZERO
+var level: int = 1
+
+var damage: float = 0.0
+var damage_type: StringName = &"physical"
+var attack_range: float = 0.0
+var fire_interval: float = 1.0    ## 兩次攻擊的間隔秒數
+
+var cooldown: float = 0.0         ## 距離下次可攻擊的剩餘秒數
+var target_id: int = 0            ## 當前鎖定的敵人 id，0 表示無目標
