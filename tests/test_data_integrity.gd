@@ -290,7 +290,8 @@ func test_every_level_has_required_fields() -> void:
 	for level_id: StringName in _registry.levels:
 		var meta: Dictionary = _registry.levels[level_id]
 		for field: String in required:
-			assert_bool(meta.has(field)).override_failure_message(
+			var has_field: bool = meta.has(field) and str(meta[field]) != ""
+			assert_bool(has_field).override_failure_message(
 				"關卡 %s 缺少必填欄位 %s" % [level_id, field]
 			).is_true()
 
@@ -313,7 +314,11 @@ func test_sell_refund_ratio_is_within_zero_to_one() -> void:
 
 func test_level_available_towers_reference_existing_towers() -> void:
 	for level_id: StringName in _registry.levels:
-		for tower_id in _registry.levels[level_id]["available_towers"]:
+		var available_towers: Array = _registry.levels[level_id]["available_towers"]
+		assert_int(available_towers.size()).override_failure_message(
+			"關卡 %s 的 available_towers 是空的，無法建造任何塔，關卡無法通關" % level_id
+		).is_greater(0)
+		for tower_id in available_towers:
 			assert_bool(_registry.towers.has(StringName(tower_id))).override_failure_message(
 				"關卡 %s 的可用塔種引用了不存在的塔 %s" % [level_id, tower_id]
 			).is_true()
