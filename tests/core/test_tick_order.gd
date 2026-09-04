@@ -95,3 +95,27 @@ func test_effects_on_a_killed_enemy_are_returned_to_the_pool() -> void:
 	assert_int(world.effect_pool.free_count()).override_failure_message(
 		"死亡敵人身上的效果必須歸還池中，否則長戰役中池會逐漸耗盡"
 	).is_equal(free_count_borrowed + 1)
+
+func test_projectile_spawned_this_tick_does_not_move_this_tick() -> void:
+	# 證明 ProjectileSystem 排在 _tick_towers 之前。
+	# 若順序相反，投射物會在生成的同一 tick 就移動一格，每一發的飛行時間都少一 tick。
+	var world := _make_world()
+	_add_enemy(world, 0.0)                 # 停在路徑起點 (0, 0)
+
+	var tower := Tower.new()
+	tower.tower_id = &"archer_tower"
+	tower.position = Vector2(100, 0)
+	tower.damage = 1.0
+	tower.damage_type = DamageSystem.PHYSICAL
+	tower.attack_range = 1000.0
+	tower.fire_interval = 10.0             # 只讓它開一發
+	tower.projectile_speed = 600.0
+	world.add_tower(tower)
+
+	var sim := BattleSim.new(world)
+	sim.advance(FRAME)
+
+	assert_array(world.projectiles).has_size(1)
+	assert_float(world.projectiles[0].position.x).override_failure_message(
+		"這一 tick 生成的投射物不得在同一 tick 移動，代表 ProjectileSystem 排在 _tick_towers 之前"
+	).is_equal_approx(100.0, 0.001)

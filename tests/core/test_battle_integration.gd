@@ -36,6 +36,8 @@ func _add_tower(world: WorldState, pos: Vector2, damage: float, fire_interval: f
 	tower.damage = damage
 	tower.damage_type = DamageSystem.PHYSICAL
 	tower.fire_interval = fire_interval
+	tower.projectile_speed = 600.0
+	tower.splash_radius = 0.0
 	world.add_tower(tower)
 	return tower
 
@@ -87,7 +89,13 @@ func test_tower_out_of_range_does_not_damage() -> void:
 	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
 
 func test_fire_interval_limits_shots() -> void:
-	# 1 秒內、射速 0.5 秒一發，應打 2 發共 20 傷害，留下 980.0 HP
+	# 塔與敵人同座標，距離為 0：投射物於生成的下一 tick 立即命中
+	# （ProjectileSystem 排在 _tick_towers 之前，故 tick N 生成的投射物要到
+	# tick N+1 才被處理；那一 tick 的移動距離必然 >= 0，於是命中）。
+	# 因此每一發的傷害相對「開火即結算」延後恰好一個 tick：
+	# 第一發於 tick 1 開火、tick 2 命中；第二發於 tick 16 開火（射速 0.5 秒
+	# = 15 tick 冷卻）、tick 17 命中。兩發都仍落在 1 秒（30 tick）之內，
+	# 傷害總量不變：兩發共 20 傷害，留下 980.0 HP。
 	var world := _make_world()
 	var enemy := _add_enemy(world, 1000.0, 0.0, 5)
 	enemy.position = Vector2(50, 0)
@@ -171,3 +179,23 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	assert_bool(enemy.alive).is_false()
 	assert_int(world.gold).is_equal(starting_gold + bounty)
 	assert_int(world.lives).is_equal(starting_lives)
+
+func test_overkill_wastes_shots_because_damage_lands_on_impact() -> void:
+	# 兩座塔同時對一隻將死的敵人開火，第二發必須落空。
+	# 這個測試直接釘住「傷害在命中時結算」的設計決定——
+	# 若有人改回發射即結算，第二發會照樣扣血，測試立刻失敗。
+	var world := _make_world()
+	var enemy := _add_enemy(world, 15.0, 0.0, 5)
+	enemy.position = Vector2(50, 0)
+	_add_tower(world, Vector2(50, 0), 10.0, 5.0)
+	_add_tower(world, Vector2(50, 0), 10.0, 5.0)
+	var sim := BattleSim.new(world)
+
+	_run(sim, 1.0)
+
+	assert_int(world.gold).override_failure_message(
+		"敵人應被擊殺並發放一次賞金"
+	).is_equal(5)
+	assert_array(world.projectiles).override_failure_message(
+		"目標死亡後，仍在飛的投射物必須消失而非轉移目標"
+	).has_size(0)

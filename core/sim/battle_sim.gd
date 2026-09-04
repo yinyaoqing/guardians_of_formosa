@@ -21,6 +21,7 @@ var _accumulator: float = 0.0
 
 func _init(p_world: WorldState = null) -> void:
 	world = p_world if p_world != null else WorldState.new()
+	world.projectile_system = ProjectileSystem.new(world)
 
 ## 推進模擬。frame_delta 為渲染幀的實際經過秒數。
 ## 回傳本幀實際執行的 tick 數。
@@ -50,6 +51,7 @@ func _tick() -> void:
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
 	_rebuild_grid()
+	world.projectile_system.tick(TICK_DELTA)
 	_tick_towers()
 	_remove_dead()
 
@@ -66,14 +68,21 @@ func _rebuild_grid() -> void:
 		if enemy.alive:
 			world.grid.insert(enemy.id, enemy.position)
 
+## 塔只負責發射，不再認識傷害結算。
+## DamageSystem 的呼叫點因此收斂為兩處：投射物命中、DoT 結算，兩處都在系統層。
 func _tick_towers() -> void:
 	for tower: Tower in world.towers:
 		tower.cooldown = maxf(0.0, tower.cooldown - TICK_DELTA)
 		tower.target_id = TargetingSystem.find_first(tower, world.grid, world.enemies_by_id)
 		if tower.target_id == 0 or tower.cooldown > 0.0:
 			continue
-		var target: Enemy = world.enemies_by_id[tower.target_id]
-		DamageSystem.apply(target, tower.damage, tower.damage_type)
+		world.projectile_system.spawn(
+			tower,
+			tower.target_id,
+			tower.projectile_speed,
+			tower.splash_radius,
+			tower.on_hit_effects
+		)
 		tower.cooldown = tower.fire_interval
 
 ## 死亡與洩漏的敵人移出集合，並在此處統一發放賞金。

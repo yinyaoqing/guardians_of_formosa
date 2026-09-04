@@ -16,3 +16,7 @@ var fire_interval: float = 1.0    ## 兩次攻擊的間隔秒數
 
 var cooldown: float = 0.0         ## 距離下次可攻擊的剩餘秒數
 var target_id: int = 0            ## 當前鎖定的敵人 id，0 表示無目標
+
+var projectile_speed: float = 600.0     ## 像素 / 秒
+var splash_radius: float = 0.0          ## 0 表示單體
+var on_hit_effects: Array[StringName] = []

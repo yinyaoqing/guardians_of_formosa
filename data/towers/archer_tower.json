@@ -3,9 +3,9 @@
   "name_key": "tower.archer_tower.name",
   "damage_type": "physical",
   "levels": [
-    {"cost": 70,  "damage": 9.0,  "attack_range": 180.0, "fire_interval": 0.8},
-    {"cost": 130, "damage": 14.0, "attack_range": 190.0, "fire_interval": 0.75},
-    {"cost": 220, "damage": 22.0, "attack_range": 200.0, "fire_interval": 0.7}
+    {"cost": 70,  "damage": 9.0,  "attack_range": 180.0, "fire_interval": 0.8,  "projectile_speed": 600.0, "splash_radius": 0.0, "on_hit_effects": []},
+    {"cost": 130, "damage": 14.0, "attack_range": 190.0, "fire_interval": 0.75, "projectile_speed": 600.0, "splash_radius": 0.0, "on_hit_effects": []},
+    {"cost": 220, "damage": 22.0, "attack_range": 200.0, "fire_interval": 0.7,  "projectile_speed": 600.0, "splash_radius": 0.0, "on_hit_effects": []}
   ],
   "sprite": "res://game/assets/placeholder_tower.png"
 }

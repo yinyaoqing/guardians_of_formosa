@@ -24,6 +24,7 @@ const PROJECTILE_POOL_CAPACITY := 128
 
 var projectiles: Array[Projectile] = []
 var projectile_pool := ObjectPool.new(func() -> Projectile: return Projectile.new(), PROJECTILE_POOL_CAPACITY)
+var projectile_system: ProjectileSystem = null   ## 由 BattleSim 於建構時注入
 
 var _next_entity_id: int = 1
 

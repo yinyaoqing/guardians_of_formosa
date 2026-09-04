@@ -246,3 +246,31 @@ func test_every_effect_kind_has_at_least_one_definition() -> void:
 			("這個里程碑應該交付全部四種狀態效果 kind，但找不到任何 kind 為 %s 的效果。" % kind) +
 			"如果之後要刻意拿掉某個 kind，請刻意更新這個測試，而不是讓它默默地讓其他用 kind 過濾的測試（例如減速的 magnitude 範圍檢查）失去覆蓋、無害地通過。"
 		).is_true()
+
+func test_every_tower_level_declares_projectile_fields() -> void:
+	var required := ["projectile_speed", "splash_radius", "on_hit_effects"]
+	for tower_id: StringName in _registry.towers:
+		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+			for field: String in required:
+				assert_bool(level_def.has(field)).override_failure_message(
+					"塔 %s 的某個等級缺少投射物欄位 %s" % [tower_id, field]
+				).is_true()
+
+func test_projectiles_outrun_every_enemy() -> void:
+	# 命中保證的前提：投射物速度必須高於所有敵人，否則追不上
+	var fastest_enemy := 0.0
+	for enemy_id: StringName in _registry.enemies:
+		fastest_enemy = maxf(fastest_enemy, _registry.enemies[enemy_id]["speed"])
+	for tower_id: StringName in _registry.towers:
+		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+			assert_float(level_def["projectile_speed"]).override_failure_message(
+				"塔 %s 的投射物速度必須高於最快的敵人（%.1f），否則永遠追不上" % [tower_id, fastest_enemy]
+			).is_greater(fastest_enemy)
+
+func test_tower_on_hit_effects_reference_existing_effects() -> void:
+	for tower_id: StringName in _registry.towers:
+		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+			for effect_id in level_def["on_hit_effects"]:
+				assert_bool(_registry.status_effects.has(StringName(effect_id))).override_failure_message(
+					"塔 %s 引用了不存在的狀態效果 %s" % [tower_id, effect_id]
+				).is_true()
