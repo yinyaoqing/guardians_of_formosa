@@ -1529,10 +1529,16 @@ func test_every_tower_level_has_required_fields() -> void:
 func test_tower_upgrade_costs_increase() -> void:
 	for tower_id: StringName in _registry.towers:
 		var levels: Array = _registry.towers[tower_id]["levels"]
+		# 沒有這道守衛的話，levels 為空時整個迴圈不執行，測試會空轉通過
+		assert_int(levels.size()).override_failure_message(
+			"塔 %s 的 levels 陣列是空的，無法建造" % tower_id
+		).is_greater(0)
 		for i in range(1, levels.size()):
-			assert_int(levels[i]["cost"]).override_failure_message(
+			# JSON.parse_string() 一律把數字解析成 float，assert_int 會因型別失敗，
+			# 所以這裡必須先轉 int
+			assert_int(int(levels[i]["cost"])).override_failure_message(
 				"塔 %s 第 %d 級的造價必須高於前一級" % [tower_id, i + 1]
-			).is_greater(levels[i - 1]["cost"])
+			).is_greater(int(levels[i - 1]["cost"]))
 
 func test_tower_damage_types_are_known() -> void:
 	var known := [DamageSystem.PHYSICAL, DamageSystem.MAGIC, DamageSystem.TRUE_DAMAGE]
