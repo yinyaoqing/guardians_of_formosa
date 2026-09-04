@@ -21,7 +21,8 @@ func _add_enemy(world: WorldState, hp: float, speed: float, bounty: int) -> Enem
 	enemy.enemy_id = &"orc_grunt"
 	enemy.hp = hp
 	enemy.max_hp = hp
-	enemy.speed = speed
+	enemy.base_speed = speed
+	enemy.reset_derived_stats()
 	enemy.bounty = bounty
 	enemy.path_id = PATH_ID
 	world.add_enemy(enemy)

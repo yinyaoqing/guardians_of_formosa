@@ -21,9 +21,10 @@ func make_enemy(enemy_id: StringName, path_id: StringName) -> Enemy:
 	enemy.enemy_id = enemy_id
 	enemy.hp = def["hp"]
 	enemy.max_hp = def["hp"]
-	enemy.speed = def["speed"]
-	enemy.armor = def["armor"]
-	enemy.magic_resist = def["magic_resist"]
+	enemy.base_speed = def["speed"]
+	enemy.base_armor = def["armor"]
+	enemy.base_magic_resist = def["magic_resist"]
+	enemy.reset_derived_stats()
 	enemy.bounty = def["bounty"]
 	enemy.path_id = path_id
 	return enemy

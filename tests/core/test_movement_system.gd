@@ -16,7 +16,8 @@ func _make_enemy() -> Enemy:
 	enemy.enemy_id = &"orc_grunt"
 	enemy.hp = 100.0
 	enemy.max_hp = 100.0
-	enemy.speed = 50.0
+	enemy.base_speed = 50.0
+	enemy.reset_derived_stats()
 	enemy.path_id = PATH_ID
 	return enemy
 

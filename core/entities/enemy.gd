@@ -8,9 +8,6 @@ var enemy_id: StringName = &""
 
 var hp: float = 0.0
 var max_hp: float = 0.0
-var speed: float = 0.0            ## 像素 / 秒
-var armor: float = 0.0            ## 物理減免比例，0.0 ~ 0.95
-var magic_resist: float = 0.0     ## 魔法減免比例，0.0 ~ 0.95
 var bounty: int = 0               ## 擊殺獎勵金
 
 var path_id: StringName = &""
@@ -22,3 +19,27 @@ var leaked: bool = false          ## 已走到路徑終點，玩家扣血
 
 ## 攔截者的實體 id，0 表示未被攔截。M1 的士兵系統會用到。
 var blocked_by: int = 0
+
+## 基礎數值：資料載入時填入，之後永不寫入。
+## 狀態效果只改衍生值，基礎值必須保持乾淨，否則效果到期後無法還原。
+var base_speed: float = 0.0            ## 像素 / 秒
+var base_armor: float = 0.0            ## 物理減免比例，0.0 ~ 0.95
+var base_magic_resist: float = 0.0     ## 魔法減免比例，0.0 ~ 0.95
+
+## 衍生數值：每 tick 由 StatusSystem 依 active_effects 重算並覆寫。
+## 除 StatusSystem 外，任何程式碼都不得寫入這四個欄位。
+var speed: float = 0.0
+var armor: float = 0.0
+var magic_resist: float = 0.0
+var stunned: bool = false              ## 純供表現層顯示暈眩圖示
+
+## 生效中的狀態效果。實例來自物件池，由 StatusSystem 管理生滅。
+var active_effects: Array = []
+
+## 把基礎值複製到衍生值。資料載入後呼叫一次，
+## 之後每 tick 由 StatusSystem 在重算開頭呼叫。
+func reset_derived_stats() -> void:
+	speed = base_speed
+	armor = base_armor
+	magic_resist = base_magic_resist
+	stunned = false
