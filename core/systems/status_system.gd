@@ -41,6 +41,34 @@ func apply(enemy: Enemy, effect_def: Dictionary, source: StringName) -> void:
 	effect.remaining = duration
 	enemy.active_effects.append(effect)
 
+## 依生效中的效果重算敵人的衍生數值。
+## 每種 kind 取最強的一個，只套用一次——不相加。相加會讓多塔堆疊迅速失控。
+func recompute(enemy: Enemy) -> void:
+	enemy.reset_derived_stats()
+
+	var strongest_slow := 0.0
+	var strongest_armor_break := 0.0
+	var has_stun := false
+
+	for effect: StatusEffect in enemy.active_effects:
+		match effect.kind:
+			StatusEffect.KIND_SLOW:
+				strongest_slow = maxf(strongest_slow, effect.magnitude)
+			StatusEffect.KIND_STUN:
+				has_stun = true
+			StatusEffect.KIND_ARMOR_BREAK:
+				strongest_armor_break = maxf(strongest_armor_break, effect.magnitude)
+			StatusEffect.KIND_DOT:
+				pass   # DoT 不影響衍生數值，在 tick 中結算傷害
+
+	if has_stun:
+		enemy.speed = 0.0
+		enemy.stunned = true
+	else:
+		enemy.speed = enemy.base_speed * (1.0 - strongest_slow)
+
+	enemy.armor = maxf(0.0, enemy.base_armor - strongest_armor_break)
+
 func _find(enemy: Enemy, kind: StringName, source: StringName) -> StatusEffect:
 	for effect: StatusEffect in enemy.active_effects:
 		if effect.kind == kind and effect.source == source:

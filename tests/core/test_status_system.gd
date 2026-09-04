@@ -69,3 +69,56 @@ func test_dot_effect_records_damage_type() -> void:
 	var poison := {"id": "poison", "kind": "dot", "magnitude": 12.0, "duration": 4.0, "damage_type": "true"}
 	_system.apply(enemy, poison, &"poison_tower")
 	assert_str(enemy.active_effects[0].damage_type).is_equal("true")
+
+func test_slow_reduces_derived_speed_without_touching_base() -> void:
+	var enemy := _make_enemy()
+	_system.apply(enemy, CHILL, &"frost_tower")
+	_system.recompute(enemy)
+	assert_float(enemy.speed).is_equal_approx(65.0, 0.001)     # 100 × (1 − 0.35)
+	assert_float(enemy.base_speed).override_failure_message(
+		"基礎值絕對不得被狀態效果寫入，否則效果到期後無法還原"
+	).is_equal_approx(100.0, 0.001)
+
+func test_strongest_slow_wins_and_slows_are_not_summed() -> void:
+	# 0.35 與 0.60 相加會是 0.95，取最強應為 0.60
+	var enemy := _make_enemy()
+	_system.apply(enemy, CHILL, &"frost_tower")
+	_system.apply(enemy, DEEP_CHILL, &"ice_mage_tower")
+	_system.recompute(enemy)
+	assert_float(enemy.speed).override_failure_message(
+		"不同來源的減速取最強，不相加"
+	).is_equal_approx(40.0, 0.001)                              # 100 × (1 − 0.60)
+
+func test_stun_zeroes_speed_and_overrides_slow() -> void:
+	var enemy := _make_enemy()
+	var stun := {"id": "stun_shock", "kind": "stun", "duration": 1.0}
+	_system.apply(enemy, CHILL, &"frost_tower")
+	_system.apply(enemy, stun, &"shock_tower")
+	_system.recompute(enemy)
+	assert_float(enemy.speed).is_equal_approx(0.0, 0.001)
+	assert_bool(enemy.stunned).is_true()
+
+func test_armor_break_reduces_armor() -> void:
+	var enemy := _make_enemy()
+	var sunder := {"id": "sunder", "kind": "armor_break", "magnitude": 0.15, "duration": 5.0}
+	_system.apply(enemy, sunder, &"sunder_tower")
+	_system.recompute(enemy)
+	assert_float(enemy.armor).is_equal_approx(0.05, 0.001)      # 0.2 − 0.15
+
+func test_armor_break_cannot_push_armor_below_zero() -> void:
+	var enemy := _make_enemy()
+	var heavy_sunder := {"id": "heavy_sunder", "kind": "armor_break", "magnitude": 0.9, "duration": 5.0}
+	_system.apply(enemy, heavy_sunder, &"sunder_tower")
+	_system.recompute(enemy)
+	assert_float(enemy.armor).override_failure_message(
+		"護甲不得為負，否則會變成傷害放大"
+	).is_equal_approx(0.0, 0.001)
+
+func test_recompute_with_no_effects_restores_base_values() -> void:
+	var enemy := _make_enemy()
+	_system.apply(enemy, CHILL, &"frost_tower")
+	_system.recompute(enemy)
+	enemy.active_effects.clear()
+	_system.recompute(enemy)
+	assert_float(enemy.speed).is_equal_approx(100.0, 0.001)
+	assert_bool(enemy.stunned).is_false()
