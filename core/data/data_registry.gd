@@ -7,10 +7,12 @@ extends RefCounted
 
 var enemies: Dictionary = {}   ## StringName -> Dictionary
 var towers: Dictionary = {}    ## StringName -> Dictionary
+var status_effects: Dictionary = {}   ## StringName -> Dictionary
 
 func load_from_disk(root: String = "res://data") -> void:
 	enemies = _load_dir(root.path_join("enemies"))
 	towers = _load_dir(root.path_join("towers"))
+	status_effects = _load_dir(root.path_join("status_effects"))
 
 ## 依 id 建出一個 Enemy 實體。id 引用失敗時直接報錯——
 ## 靜默回傳 null 會讓錯誤在很遠的地方才炸開。
@@ -21,9 +23,10 @@ func make_enemy(enemy_id: StringName, path_id: StringName) -> Enemy:
 	enemy.enemy_id = enemy_id
 	enemy.hp = def["hp"]
 	enemy.max_hp = def["hp"]
-	enemy.speed = def["speed"]
-	enemy.armor = def["armor"]
-	enemy.magic_resist = def["magic_resist"]
+	enemy.base_speed = def["speed"]
+	enemy.base_armor = def["armor"]
+	enemy.base_magic_resist = def["magic_resist"]
+	enemy.reset_derived_stats()
 	enemy.bounty = def["bounty"]
 	enemy.path_id = path_id
 	return enemy

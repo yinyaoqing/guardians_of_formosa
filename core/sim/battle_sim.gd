@@ -21,6 +21,7 @@ var _accumulator: float = 0.0
 
 func _init(p_world: WorldState = null) -> void:
 	world = p_world if p_world != null else WorldState.new()
+	world.projectile_system = ProjectileSystem.new(world)
 
 ## 推進模擬。frame_delta 為渲染幀的實際經過秒數。
 ## 回傳本幀實際執行的 tick 數。
@@ -46,9 +47,11 @@ func tick_progress() -> float:
 
 func _tick() -> void:
 	tick_count += 1
+	world.status_system.tick(world.enemies, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
 	_rebuild_grid()
+	world.projectile_system.tick(TICK_DELTA)
 	_tick_towers()
 	_remove_dead()
 
@@ -65,24 +68,37 @@ func _rebuild_grid() -> void:
 		if enemy.alive:
 			world.grid.insert(enemy.id, enemy.position)
 
+## 塔只負責發射，不再認識傷害結算。
+## DamageSystem 的呼叫點因此收斂為兩處：投射物命中、DoT 結算，兩處都在系統層。
 func _tick_towers() -> void:
 	for tower: Tower in world.towers:
 		tower.cooldown = maxf(0.0, tower.cooldown - TICK_DELTA)
 		tower.target_id = TargetingSystem.find_first(tower, world.grid, world.enemies_by_id)
 		if tower.target_id == 0 or tower.cooldown > 0.0:
 			continue
-		var target: Enemy = world.enemies_by_id[tower.target_id]
-		DamageSystem.apply(target, tower.damage, tower.damage_type)
+		world.projectile_system.spawn(
+			tower,
+			tower.target_id,
+			tower.projectile_speed,
+			tower.splash_radius,
+			tower.on_hit_effects
+		)
 		tower.cooldown = tower.fire_interval
-		if not target.alive and not target.leaked:
-			world.gold += target.bounty
 
-## 死亡與洩漏的敵人移出集合。M0 直接移除；M1 會改成先播死亡動畫再移除。
+## 死亡與洩漏的敵人移出集合，並在此處統一發放賞金。
+## 傷害來源不只一處（塔、投射物、DoT），賞金邏輯若跟著複製會失去單一事實來源；
+## 這裡本來就走訪所有死亡的敵人，且 leaked 旗標剛好能區分「被擊殺」與「走到終點」。
 func _remove_dead() -> void:
 	var survivors: Array[Enemy] = []
 	for enemy: Enemy in world.enemies:
 		if enemy.alive:
 			survivors.append(enemy)
-		else:
-			world.enemies_by_id.erase(enemy.id)
+			continue
+		if not enemy.leaked:
+			world.gold += enemy.bounty
+		# 效果實例的歸還交給 StatusSystem——它是效果池的唯一擁有者。
+		# 若這裡自己抓 world.effect_pool 來釋放，一旦有人用不同的池建構
+		# StatusSystem（測試裡每一個都是這樣建的），兩邊帳目就會分家。
+		world.status_system.release_all(enemy)
+		world.enemies_by_id.erase(enemy.id)
 	world.enemies = survivors

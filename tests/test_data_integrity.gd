@@ -107,6 +107,15 @@ func test_no_duplicate_ids_across_data_files() -> void:
 		"data/towers 底下有 %d 個 .json 檔，但註冊表只有 %d 筆——代表有重複的 id 欄位互相覆蓋" % [tower_file_count, _registry.towers.size()]
 	).is_equal(tower_file_count)
 
+	var status_effects_dir := DirAccess.open("res://data/status_effects")
+	var status_effect_file_count := 0
+	for file_name in status_effects_dir.get_files():
+		if file_name.ends_with(".json"):
+			status_effect_file_count += 1
+	assert_int(_registry.status_effects.size()).override_failure_message(
+		"data/status_effects 底下有 %d 個 .json 檔，但註冊表只有 %d 筆——代表有重複的 id 欄位互相覆蓋" % [status_effect_file_count, _registry.status_effects.size()]
+	).is_equal(status_effect_file_count)
+
 ## make_enemy 是下一個任務會直接依賴的入口，之前完全沒有測試覆蓋。
 func test_make_enemy_builds_entity_from_data() -> void:
 	var def: Dictionary = _registry.enemies[&"orc_grunt"]
@@ -131,7 +140,7 @@ func test_make_enemy_builds_entity_from_data() -> void:
 
 ## 檔名和 id 欄位若脫鉤，程式碼引用時容易對錯檔案。
 func test_json_id_matches_filename() -> void:
-	for dir_path: String in ["res://data/enemies", "res://data/towers"]:
+	for dir_path: String in ["res://data/enemies", "res://data/towers", "res://data/status_effects"]:
 		var dir := DirAccess.open(dir_path)
 		for file_name in dir.get_files():
 			if not file_name.ends_with(".json"):
@@ -145,3 +154,127 @@ func test_json_id_matches_filename() -> void:
 			assert_bool(expected_id == actual_id).override_failure_message(
 				"檔案 %s 的 id 欄位是 %s，與檔名不符（應為 %s）" % [full_path, actual_id, expected_id]
 			).is_true()
+
+func test_at_least_one_status_effect_is_loaded() -> void:
+	assert_int(_registry.status_effects.size()).is_greater(0)
+
+func test_every_status_effect_has_known_kind() -> void:
+	var known := [
+		StatusEffect.KIND_SLOW,
+		StatusEffect.KIND_STUN,
+		StatusEffect.KIND_DOT,
+		StatusEffect.KIND_ARMOR_BREAK,
+	]
+	for effect_id: StringName in _registry.status_effects:
+		var kind := StringName(_registry.status_effects[effect_id]["kind"])
+		assert_bool(known.has(kind)).override_failure_message(
+			"狀態效果 %s 的 kind「%s」不是已知的四種之一" % [effect_id, kind]
+		).is_true()
+
+func test_every_status_effect_has_positive_duration() -> void:
+	for effect_id: StringName in _registry.status_effects:
+		assert_float(_registry.status_effects[effect_id]["duration"]).override_failure_message(
+			"狀態效果 %s 的 duration 必須為正" % effect_id
+		).is_greater(0.0)
+
+func test_magnitude_is_positive_except_for_stun() -> void:
+	# 暈眩不使用 magnitude，允許缺漏；其餘三種必須有正值
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		if StringName(def["kind"]) == StatusEffect.KIND_STUN:
+			continue
+		assert_bool(def.has("magnitude")).override_failure_message(
+			"狀態效果 %s 缺少 magnitude" % effect_id
+		).is_true()
+		assert_float(def["magnitude"]).override_failure_message(
+			"狀態效果 %s 的 magnitude 必須為正" % effect_id
+		).is_greater(0.0)
+
+func test_slow_magnitude_is_within_zero_to_one() -> void:
+	# 超過 1.0 會讓速度變成負數
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		if StringName(def["kind"]) != StatusEffect.KIND_SLOW:
+			continue
+		assert_float(def["magnitude"]).override_failure_message(
+			"減速效果 %s 的 magnitude 必須落在 0.0 與 1.0 之間" % effect_id
+		).is_between(0.0, 1.0)
+
+func test_dot_effects_declare_a_known_damage_type() -> void:
+	var known := [DamageSystem.PHYSICAL, DamageSystem.MAGIC, DamageSystem.TRUE_DAMAGE]
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		if StringName(def["kind"]) != StatusEffect.KIND_DOT:
+			continue
+		assert_bool(def.has("damage_type")).override_failure_message(
+			"持續傷害效果 %s 缺少 damage_type" % effect_id
+		).is_true()
+		assert_bool(known.has(StringName(def["damage_type"]))).override_failure_message(
+			"持續傷害效果 %s 的 damage_type 不是已知類型" % effect_id
+		).is_true()
+
+## name_key 沒有必填檢查的話，缺漏只會在 UI 上顯示空白文字才會被發現。
+## magnitude 刻意不列入必填：暈眩效果本來就不使用 magnitude，
+## 這個例外已經由 test_magnitude_is_positive_except_for_stun 涵蓋。
+func test_every_status_effect_has_required_fields() -> void:
+	var required := ["id", "name_key", "kind", "duration"]
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		for field: String in required:
+			var has_field: bool = def.has(field) and str(def[field]) != ""
+			assert_bool(has_field).override_failure_message(
+				"狀態效果 %s 缺少必填欄位 %s" % [effect_id, field]
+			).is_true()
+
+## 若某個 kind 的效果全部被刪除，用 kind 過濾再迴圈的測試（例如減速的 magnitude
+## 範圍檢查）會因為迴圈根本沒有執行而「無害地」通過，等於默默失去整個 kind 的覆蓋。
+## 這個測試確保四種 kind 都至少有一個已載入的效果在把關。
+func test_every_effect_kind_has_at_least_one_definition() -> void:
+	var known_kinds := [
+		StatusEffect.KIND_SLOW,
+		StatusEffect.KIND_STUN,
+		StatusEffect.KIND_DOT,
+		StatusEffect.KIND_ARMOR_BREAK,
+	]
+	var seen_kinds: Array = []
+	for effect_id: StringName in _registry.status_effects:
+		var kind := StringName(_registry.status_effects[effect_id]["kind"])
+		if not seen_kinds.has(kind):
+			seen_kinds.append(kind)
+	for kind: StringName in known_kinds:
+		assert_bool(seen_kinds.has(kind)).override_failure_message(
+			("這個里程碑應該交付全部四種狀態效果 kind，但找不到任何 kind 為 %s 的效果。" % kind) +
+			"如果之後要刻意拿掉某個 kind，請刻意更新這個測試，而不是讓它默默地讓其他用 kind 過濾的測試（例如減速的 magnitude 範圍檢查）失去覆蓋、無害地通過。"
+		).is_true()
+
+func test_every_tower_level_declares_projectile_fields() -> void:
+	var required := ["projectile_speed", "splash_radius", "on_hit_effects"]
+	for tower_id: StringName in _registry.towers:
+		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+			for field: String in required:
+				assert_bool(level_def.has(field)).override_failure_message(
+					"塔 %s 的某個等級缺少投射物欄位 %s" % [tower_id, field]
+				).is_true()
+
+func test_projectiles_outrun_every_enemy() -> void:
+	# 命中保證的前提：投射物速度必須高於所有敵人，否則追不上。
+	# 這裡拿來比較的是 base_speed（資料裡的 speed 欄位），這個檢查成立的前提是
+	# 狀態效果目前永遠不會把敵人的衍生速度推得比 base_speed 更高——只有減速，
+	# 沒有加速。未來若加入類似「狂暴/加速」的狀態效果，這個檢查就會失效，
+	# 需要改成拿「可能達到的最高速度」而不是 base_speed 來比較。
+	var fastest_enemy := 0.0
+	for enemy_id: StringName in _registry.enemies:
+		fastest_enemy = maxf(fastest_enemy, _registry.enemies[enemy_id]["speed"])
+	for tower_id: StringName in _registry.towers:
+		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+			assert_float(level_def["projectile_speed"]).override_failure_message(
+				"塔 %s 的投射物速度必須高於最快的敵人（%.1f），否則永遠追不上" % [tower_id, fastest_enemy]
+			).is_greater(fastest_enemy)
+
+func test_tower_on_hit_effects_reference_existing_effects() -> void:
+	for tower_id: StringName in _registry.towers:
+		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+			for effect_id in level_def["on_hit_effects"]:
+				assert_bool(_registry.status_effects.has(StringName(effect_id))).override_failure_message(
+					"塔 %s 引用了不存在的狀態效果 %s" % [tower_id, effect_id]
+				).is_true()

@@ -1,0 +1,6 @@
+{
+	"id": "stun_shock",
+	"name_key": "status.stun_shock.name",
+	"kind": "stun",
+	"duration": 1.0
+}

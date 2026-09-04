@@ -21,13 +21,14 @@ func _add_enemy(world: WorldState, hp: float, speed: float, bounty: int) -> Enem
 	enemy.enemy_id = &"orc_grunt"
 	enemy.hp = hp
 	enemy.max_hp = hp
-	enemy.speed = speed
+	enemy.base_speed = speed
+	enemy.reset_derived_stats()
 	enemy.bounty = bounty
 	enemy.path_id = PATH_ID
 	world.add_enemy(enemy)
 	return enemy
 
-func _add_tower(world: WorldState, pos: Vector2, damage: float, fire_interval: float) -> Tower:
+func _add_tower(world: WorldState, pos: Vector2, damage: float, fire_interval: float, projectile_speed: float = 600.0) -> Tower:
 	var tower := Tower.new()
 	tower.tower_id = &"archer_tower"
 	tower.position = pos
@@ -35,6 +36,8 @@ func _add_tower(world: WorldState, pos: Vector2, damage: float, fire_interval: f
 	tower.damage = damage
 	tower.damage_type = DamageSystem.PHYSICAL
 	tower.fire_interval = fire_interval
+	tower.projectile_speed = projectile_speed
+	tower.splash_radius = 0.0
 	world.add_tower(tower)
 	return tower
 
@@ -86,7 +89,16 @@ func test_tower_out_of_range_does_not_damage() -> void:
 	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
 
 func test_fire_interval_limits_shots() -> void:
-	# 1 秒內、射速 0.5 秒一發，應打 2 發共 20 傷害，留下 980.0 HP
+	# 塔與敵人同座標，距離為 0：投射物於生成的下一 tick 立即命中
+	# （ProjectileSystem 排在 _tick_towers 之前，故 tick N 生成的投射物要到
+	# tick N+1 才被處理；那一 tick 的移動距離必然 >= 0，於是命中）。
+	# 因此每一發的傷害相對「開火即結算」延後恰好一個 tick：
+	# 第一發於 tick 1 開火、tick 2 命中。第二發理論上該在 15 tick 冷卻
+	# （射速 0.5 秒）後、也就是 tick 16 開火，但 cooldown 是逐 tick 以浮點數
+	# 減去 TICK_DELTA（1.0/30.0）：連續 15 次從 0.5 減去 1/30，殘留的浮點
+	# 誤差約 9.7e-17（並非精確的 0），使 tick 16 當下 cooldown 仍 > 0，
+	# 於是實際上第二發於 tick 17 開火、tick 18 命中。兩發都仍落在 1 秒
+	# （30 tick）之內，傷害總量不變：兩發共 20 傷害，留下 980.0 HP。
 	var world := _make_world()
 	var enemy := _add_enemy(world, 1000.0, 0.0, 5)
 	enemy.position = Vector2(50, 0)
@@ -148,6 +160,12 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	tower.damage_type = StringName(tower_def["damage_type"])
 	tower.attack_range = level_def["attack_range"]
 	tower.fire_interval = level_def["fire_interval"]
+	tower.projectile_speed = level_def["projectile_speed"]
+	tower.splash_radius = level_def["splash_radius"]
+	var on_hit_effects: Array[StringName] = []
+	for effect_id in level_def["on_hit_effects"]:
+		on_hit_effects.append(StringName(effect_id))
+	tower.on_hit_effects = on_hit_effects
 	world.add_tower(tower)
 
 	var starting_gold := world.gold
@@ -170,3 +188,193 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	assert_bool(enemy.alive).is_false()
 	assert_int(world.gold).is_equal(starting_gold + bounty)
 	assert_int(world.lives).is_equal(starting_lives)
+	assert_float(tower.projectile_speed).override_failure_message(
+		"Tower.projectile_speed 沒有從關卡資料複製過去——改 data/towers/archer_tower.json 的 projectile_speed 不會有任何效果"
+	).is_equal_approx(float(level_def["projectile_speed"]), 0.001)
+
+func test_damage_is_not_applied_at_fire_time() -> void:
+	# 驗證傷害在命中時結算，而非開火時結算。兩座塔同時對敵人開火，
+	# 敵人血量充足（1000 HP vs 每發 10 傷害）。推進恰好一個 tick，
+	# 也就是兩座塔剛開火的那一 tick，立刻檢查。若傷害在「發射當下」結算，
+	# 敵人此刻就該已經掉血；但本專案設計傷害要到「命中那一 tick」才結算，
+	# 所以敵人應該還是滿血，兩發投射物都還在飛行中、尚未被消耗。
+	# 敵人的實際座標由 MovementSystem 每 tick 依 distance_along 從路徑重新換算
+	# （position_at），直接指定 .position 會在第一個 tick 就被蓋掉,所以這裡改用
+	# distance_along 來控制座標——_make_world 的路徑點都落在 x 軸上、取樣間距 100，
+	# 所以 distance_along = 50.0 換算回來正好是 (50, 0)。
+	var world := _make_world()
+	var enemy := _add_enemy(world, 1000.0, 0.0, 5)
+	enemy.distance_along = 50.0
+	_add_tower(world, Vector2(50, 0), 10.0, 5.0)
+	_add_tower(world, Vector2(50, 0), 10.0, 5.0)
+	var sim := BattleSim.new(world)
+
+	_run(sim, 2.0 * FRAME_60FPS)  # 恰好一個 tick：兩座塔剛開火，投射物尚未命中
+
+	assert_float(enemy.hp).override_failure_message(
+		"傷害不可以在開火當下結算——命中還沒發生，敵人血量必須維持滿血"
+	).is_equal_approx(1000.0, 0.001)
+	assert_array(world.projectiles).override_failure_message(
+		"兩座塔剛開火那一 tick，兩發投射物都應該還在飛行中"
+	).has_size(2)
+
+func test_projectile_is_wasted_when_its_target_dies_first() -> void:
+	# 兩座塔對準同一隻敵人：近塔的投射物下一 tick 就命中並一擊斃命，
+	# 遠塔的投射物飛行速度慢、距離又長，命中前敵人已經死亡。
+	# 這個測試釘住「目標死亡的投射物會被釋放而非轉移目標」——
+	# 若實作改成幫飛行中的投射物重新鎖定最近的敵人，旁邊那隻無辜的
+	# 待轟敵人就會平白受傷，斷言會立刻失敗。
+	#
+	# 敵人的實際座標由 MovementSystem 每 tick 依 distance_along 從路徑重新換算,
+	# 直接指定 .position 在第一個 tick 就會被蓋掉,所以這裡一律用 distance_along
+	# 控制座標（_make_world 的路徑點都落在 x 軸上、取樣間距 100，換算是線性的）。
+	var world := _make_world()
+
+	var victim := _add_enemy(world, 5.0, 0.0, 5)
+	victim.distance_along = 100.0  # 換算座標 (100, 0)
+
+	var bystander := _add_enemy(world, 100.0, 0.0, 3)
+	# distance_along 故意比 victim 小，確保 TargetingSystem（挑 distance_along
+	# 最大者）兩座塔永遠選中 victim、不會選到它；換算座標 (90, 0) 離 victim 只有
+	# 10，緊鄰 victim，足以驗證傷害沒有轉移過來。
+	bystander.distance_along = 90.0
+
+	_add_tower(world, Vector2(100, 0), 10.0, 5.0)          # 近塔：距離 0,下一 tick 命中
+	_add_tower(world, Vector2(230, 0), 10.0, 5.0, 300.0)   # 遠塔：距離 130,飛行速度慢
+
+	var sim := BattleSim.new(world)
+	_run(sim, 8.0 * FRAME_60FPS)  # 4 個 tick：足夠近塔命中、victim 死亡、遠塔投射物被釋放
+
+	assert_bool(victim.alive).override_failure_message(
+		"近塔的投射物應該已經命中並擊殺 victim"
+	).is_false()
+	assert_int(world.gold).override_failure_message(
+		"victim 的賞金只能發放一次"
+	).is_equal(5)
+	assert_float(bystander.hp).override_failure_message(
+		"victim 死亡時，遠塔那發還在飛的投射物必須被釋放而非轉移到旁邊的 bystander 身上"
+	).is_equal_approx(100.0, 0.001)
+	assert_array(world.projectiles).override_failure_message(
+		"遠塔的投射物在確認目標已死後應該被釋放，不會一直卡在 world.projectiles 裡"
+	).has_size(0)
+
+## Fix 1 的迴歸守衛：world.effect_defs 過去只在測試裡手動賦值,實機的
+## battle_scene.gd 從未呼叫過任何注入方法,導致所有 on_hit_effects 在正式
+## 遊戲裡都是啞的。這裡驗證 WorldState.apply_definitions 本身確實把
+## DataRegistry 載入的定義灌進 world.effect_defs——battle_scene.gd 是否
+## 呼叫了它是另一回事,但至少「忘了接線」不會再無聲無息。
+func test_apply_definitions_wires_effect_defs_from_the_registry() -> void:
+	var registry := DataRegistry.new()
+	registry.load_from_disk()
+
+	var world := WorldState.new()
+	world.apply_definitions(registry)
+
+	assert_bool(world.effect_defs.is_empty()).override_failure_message(
+		"apply_definitions 必須把 DataRegistry 載入的狀態效果定義灌進 world.effect_defs"
+	).is_false()
+	assert_bool(world.effect_defs.has(&"chill")).override_failure_message(
+		"world.effect_defs 應包含出貨的 chill 效果定義(data/status_effects/chill.json)"
+	).is_true()
+
+## Fix 5 的浸泡測試:池的斷言到目前為止都只涵蓋單一物件、單一 tick,
+## 真正的洩漏只會在一整場戰鬥的規模下才會現形。這裡連續生成數十隻敵人、
+## 讓一座塔持續開火並施加 on_hit 效果,經歷死亡、洩漏與效果到期後,
+## 驗證投射物池與效果池都確實回滿。
+func test_pools_return_to_full_capacity_after_a_long_battle() -> void:
+	var world := _make_world()
+	var starting_lives := world.lives
+	world.effect_defs[&"chill"] = {"id": "chill", "kind": "slow", "magnitude": 0.3, "duration": 1.0}
+
+	var tower := _add_tower(world, Vector2(150, 0), 5.0, 0.2, 600.0)
+	tower.attack_range = 500.0  # 覆蓋整條路徑,確保塔全程都有目標可打
+	tower.on_hit_effects.assign([&"chill"] as Array[StringName])
+
+	var sim := BattleSim.new(world)
+
+	const SPAWN_INTERVAL := 0.75
+	const SPAWN_PHASE_SECONDS := 20.0
+	const TOTAL_TICKS := 900   # 30 秒,含尾端 10 秒淨空期
+
+	var spawn_timer := 0.0
+	var elapsed := 0.0
+	var spawn_toggle := false
+
+	for tick_i in TOTAL_TICKS:
+		elapsed += BattleSim.TICK_DELTA
+		if elapsed <= SPAWN_PHASE_SECONDS:
+			spawn_timer -= BattleSim.TICK_DELTA
+			if spawn_timer <= 0.0:
+				spawn_timer = SPAWN_INTERVAL
+				if spawn_toggle:
+					_add_enemy(world, 10.0, 40.0, 3)     # 血薄,會被塔擊殺
+				else:
+					_add_enemy(world, 5000.0, 250.0, 3)  # 血厚腳快,會洩漏到終點
+				spawn_toggle = not spawn_toggle
+		sim.advance(BattleSim.TICK_DELTA)   # 每次呼叫剛好推進一個 tick
+
+	# 驗證戰鬥確實發生過：空戰場的池結果會自動滿足,因此需要證明至少殺死與洩漏了敵人
+	assert_int(world.gold).override_failure_message(
+		"浸泡測試無意義,除非戰鬥實際擊殺並支付賞金——空戰場的池結果會自動滿足池滿檢驗"
+	).is_greater(0)
+	assert_bool(world.lives < starting_lives).override_failure_message(
+		"浸泡測試無意義,除非戰鬥實際讓敵人洩漏到路徑終點——空戰場的池結果會自動滿足池滿檢驗"
+	).is_true()
+
+	# 驗證戰鬥已結束：任何仍在場上的敵人會持著池內物件,導致下方池檢驗失敗時指向錯誤的根本原因
+	assert_array(world.enemies).override_failure_message(
+		"場上仍有敵人未清理,它們持著已分配的池內狀態效果實例,下方的池檢驗會因此失敗——原因不是洩漏,而是戰鬥未完成"
+	).has_size(0)
+
+	assert_array(world.projectiles).override_failure_message(
+		"整場戰鬥結束後仍有投射物殘留在 world.projectiles,代表命中或釋放邏輯漏掉了某些飛行中的投射物"
+	).has_size(0)
+	assert_int(world.projectile_pool.free_count()).override_failure_message(
+		"投射物池未回滿:代表某些投射物被取用後從未歸還,真實對戰中池會無上限增長"
+	).is_equal(world.projectile_pool.capacity())
+	assert_int(world.effect_pool.free_count()).override_failure_message(
+		"效果池未回滿:代表某些狀態效果實例被取用後從未歸還,真實對戰中池會無上限增長"
+	).is_equal(world.effect_pool.capacity())
+
+func test_shipped_data_drives_a_full_projectile_and_status_chain() -> void:
+	# 端到端：用真實 JSON 資料，塔發射投射物、命中、造成傷害並施加減速。
+	# 不寫死任何平衡數字，全部從 registry 讀，數值調整時不需修改本測試。
+	var registry := DataRegistry.new()
+	registry.load_from_disk()
+
+	var world := _make_world()
+	world.effect_defs = registry.status_effects
+
+	var enemy := registry.make_enemy(&"orc_grunt", PATH_ID)
+	enemy.position = Vector2(50, 0)
+	world.add_enemy(enemy)
+
+	var tower_def: Dictionary = registry.towers[&"archer_tower"]
+	var level_def: Dictionary = tower_def["levels"][0]
+	var tower := Tower.new()
+	tower.tower_id = &"archer_tower"
+	tower.position = Vector2(50, 0)
+	tower.damage = level_def["damage"]
+	tower.damage_type = StringName(tower_def["damage_type"])
+	tower.attack_range = level_def["attack_range"]
+	tower.fire_interval = level_def["fire_interval"]
+	tower.projectile_speed = level_def["projectile_speed"]
+	tower.splash_radius = level_def["splash_radius"]
+	tower.on_hit_effects.assign([&"chill"])
+	world.add_tower(tower)
+
+	var sim := BattleSim.new(world)
+	_run(sim, 2.0)
+
+	assert_bool(enemy.hp < enemy.max_hp).override_failure_message(
+		"塔應已透過投射物對敵人造成傷害"
+	).is_true()
+	assert_array(enemy.active_effects).override_failure_message(
+		"命中應施加 on_hit_effects 中的減速"
+	).has_size(1)
+	assert_bool(enemy.speed < enemy.base_speed).override_failure_message(
+		"減速必須反映在衍生速度上，且基礎值不得被改動"
+	).is_true()
+	assert_float(enemy.base_speed).override_failure_message(
+		"基礎速度必須維持 JSON 中的原值"
+	).is_equal_approx(registry.enemies[&"orc_grunt"]["speed"], 0.001)

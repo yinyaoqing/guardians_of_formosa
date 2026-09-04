@@ -5,8 +5,9 @@ func _make_enemy(armor: float, magic_resist: float) -> Enemy:
 	enemy.id = 1
 	enemy.hp = 100.0
 	enemy.max_hp = 100.0
-	enemy.armor = armor
-	enemy.magic_resist = magic_resist
+	enemy.base_armor = armor
+	enemy.base_magic_resist = magic_resist
+	enemy.reset_derived_stats()
 	return enemy
 
 func test_physical_damage_is_reduced_by_armor() -> void:

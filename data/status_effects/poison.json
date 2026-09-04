@@ -1,0 +1,8 @@
+{
+	"id": "poison",
+	"name_key": "status.poison.name",
+	"kind": "dot",
+	"magnitude": 12.0,
+	"duration": 4.0,
+	"damage_type": "true"
+}

@@ -1,0 +1,7 @@
+{
+	"id": "chill",
+	"name_key": "status.chill.name",
+	"kind": "slow",
+	"magnitude": 0.35,
+	"duration": 2.5
+}
