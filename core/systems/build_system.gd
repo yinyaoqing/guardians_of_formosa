@@ -13,6 +13,8 @@ static func apply(world: WorldState, intent: GameIntent) -> void:
 	match intent.kind:
 		GameIntent.KIND_BUILD:
 			_build(world, intent)
+		GameIntent.KIND_UPGRADE:
+			_upgrade(world, intent)
 		_:
 			push_error("BuildSystem 收到未知的 intent kind: %s" % intent.kind)
 
@@ -43,6 +45,30 @@ static func _build(world: WorldState, intent: GameIntent) -> void:
 	_apply_level_stats(tower, def, 1)
 	world.add_tower(tower)
 	slot.occupied_by = tower.id
+
+static func _upgrade(world: WorldState, intent: GameIntent) -> void:
+	var tower := _find_tower(world, intent.entity_id)
+	if tower == null:
+		return
+
+	var def: Dictionary = world.tower_defs[tower.tower_id]
+	var levels: Array = def["levels"]
+	# 等級自 1 起算，所以下一級在陣列中的索引正好是目前的 level
+	if tower.level >= levels.size():
+		return
+
+	var cost := int(levels[tower.level]["cost"])
+	if world.gold < cost:
+		return
+
+	world.gold -= cost
+	_apply_level_stats(tower, def, tower.level + 1)
+
+static func _find_tower(world: WorldState, entity_id: int) -> Tower:
+	for tower: Tower in world.towers:
+		if tower.id == entity_id:
+			return tower
+	return null
 
 ## 把指定等級的數值套到塔上。等級自 1 起算，對應 levels 陣列的索引 level - 1。
 static func _apply_level_stats(tower: Tower, def: Dictionary, level: int) -> void:

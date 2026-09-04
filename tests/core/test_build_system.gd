@@ -168,3 +168,46 @@ func test_building_a_tower_not_available_in_this_level_changes_nothing() -> void
 	).has_size(0)
 	assert_int(world.gold).is_equal(200)
 	assert_int(_first_slot(world).occupied_by).is_equal(0)
+
+## 蓋一座塔並回傳它，方便升級與賣出的測試取用
+func _build_one(world: WorldState) -> Tower:
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"archer_tower"))
+	return world.towers[0]
+
+func test_upgrading_raises_level_and_stats_and_spends_gold() -> void:
+	var world := _make_world(300)
+	var tower := _build_one(world)             # 花 70，剩 230
+	BuildSystem.apply(world, GameIntent.upgrade(tower.id))
+	assert_int(tower.level).is_equal(2)
+	assert_float(tower.damage).is_equal_approx(14.0, 0.001)
+	assert_float(tower.projectile_speed).override_failure_message(
+		"升級必須重新套用該等級的全部數值，不能只改傷害"
+	).is_equal_approx(610.0, 0.001)
+	assert_int(world.gold).is_equal(100)       # 230 − 130
+
+func test_upgrading_at_max_level_is_rejected() -> void:
+	var world := _make_world(1000)
+	var tower := _build_one(world)
+	BuildSystem.apply(world, GameIntent.upgrade(tower.id))
+	BuildSystem.apply(world, GameIntent.upgrade(tower.id))   # 到第 3 級
+	var gold_at_max := world.gold
+	BuildSystem.apply(world, GameIntent.upgrade(tower.id))   # 應被拒絕
+	assert_int(tower.level).override_failure_message(
+		"塔只有三級，不得升到第四級"
+	).is_equal(3)
+	assert_int(world.gold).override_failure_message(
+		"被拒絕的升級不得扣款"
+	).is_equal(gold_at_max)
+
+func test_upgrading_without_enough_gold_is_rejected() -> void:
+	var world := _make_world(100)              # 蓋完剩 30，升級要 130
+	var tower := _build_one(world)
+	BuildSystem.apply(world, GameIntent.upgrade(tower.id))
+	assert_int(tower.level).is_equal(1)
+	assert_int(world.gold).is_equal(30)
+
+func test_upgrading_a_tower_that_no_longer_exists_is_rejected() -> void:
+	# 塔可能在指令排隊期間被賣掉，這是正常競態而非錯誤
+	var world := _make_world(300)
+	BuildSystem.apply(world, GameIntent.upgrade(9999))
+	assert_int(world.gold).is_equal(300)
