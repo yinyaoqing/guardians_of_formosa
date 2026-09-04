@@ -27,9 +27,9 @@ func _init(p_world: WorldState = null) -> void:
 ## 回傳本幀實際執行的 tick 數。
 func advance(frame_delta: float) -> int:
 	if paused:
-		# 排空佇列不受暫停阻擋:建造與賣出正是玩家暫停下來規劃時該做的事,
-		# 佇列若在暫停時只進不出,恢復的那一刻就會一次套用整個積壓的佇列。
-		# 其餘 tick 步驟(移動、戰鬥……)則照舊完全不跑。
+		# 排空佇列不受暫停阻擋：建造與賣出正是玩家暫停下來規劃時該做的事，
+		# 佇列若在暫停時只進不出，恢復的那一刻就會一次套用整個積壓的佇列。
+		# 其餘 tick 步驟（移動、戰鬥……）則照舊完全不跑。
 		_apply_pending_intents()
 		return 0
 	_accumulator += frame_delta * speed_multiplier
@@ -64,9 +64,13 @@ func _tick() -> void:
 ## 排隊到 tick 內套用，讓所有改變世界的事情都發生在明確的位置。
 ## 排第一是為了讓這一 tick 蓋好的塔這一 tick 就能開火，
 ## 賣掉的塔在能開火之前就消失——兩者都符合直覺且不需要特例。
-## B1 只有一個去處,intent 的 kind 分派全交給 BuildSystem 自己做——
-## 兩處各維護一份同樣的 kind 清單,日後加一種 kind 就得記得同步改兩處。
-## 等之後的里程碑引入不屬於 BuildSystem 的 intent(法術、英雄……),
+##
+## 唯一的例外是暫停中：advance() 在 paused 時仍會呼叫本函式再提前返回，
+## 那些變更因此落在任何 tick 之外、不帶 tick 編號。取捨的理由見設計規格 §2.1。
+##
+## kind 的分派全交給 BuildSystem 自己做，這裡不重複一份同樣的清單——
+## 兩處各維護一份，日後加一種 kind 就得記得同步改兩處。
+## 等之後的里程碑引入不屬於 BuildSystem 的 intent（法術、英雄……），
 ## 這裡才需要變成真正依 kind 分派到不同系統的路由器。
 func _apply_pending_intents() -> void:
 	for intent: GameIntent in world.pending_intents:
