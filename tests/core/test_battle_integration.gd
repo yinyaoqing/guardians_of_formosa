@@ -283,6 +283,7 @@ func test_apply_definitions_wires_effect_defs_from_the_registry() -> void:
 ## 驗證投射物池與效果池都確實回滿。
 func test_pools_return_to_full_capacity_after_a_long_battle() -> void:
 	var world := _make_world()
+	var starting_lives := world.lives
 	world.effect_defs[&"chill"] = {"id": "chill", "kind": "slow", "magnitude": 0.3, "duration": 1.0}
 
 	var tower := _add_tower(world, Vector2(150, 0), 5.0, 0.2, 600.0)
@@ -311,6 +312,19 @@ func test_pools_return_to_full_capacity_after_a_long_battle() -> void:
 					_add_enemy(world, 5000.0, 250.0, 3)  # 血厚腳快,會洩漏到終點
 				spawn_toggle = not spawn_toggle
 		sim.advance(BattleSim.TICK_DELTA)   # 每次呼叫剛好推進一個 tick
+
+	# 驗證戰鬥確實發生過：空戰場的池結果會自動滿足,因此需要證明至少殺死與洩漏了敵人
+	assert_int(world.gold).override_failure_message(
+		"浸泡測試無意義,除非戰鬥實際擊殺並支付賞金——空戰場的池結果會自動滿足池滿檢驗"
+	).is_greater(0)
+	assert_bool(world.lives < starting_lives).override_failure_message(
+		"浸泡測試無意義,除非戰鬥實際讓敵人洩漏到路徑終點——空戰場的池結果會自動滿足池滿檢驗"
+	).is_true()
+
+	# 驗證戰鬥已結束：任何仍在場上的敵人會持著池內物件,導致下方池檢驗失敗時指向錯誤的根本原因
+	assert_array(world.enemies).override_failure_message(
+		"場上仍有敵人未清理,它們持著已分配的池內狀態效果實例,下方的池檢驗會因此失敗——原因不是洩漏,而是戰鬥未完成"
+	).has_size(0)
 
 	assert_array(world.projectiles).override_failure_message(
 		"整場戰鬥結束後仍有投射物殘留在 world.projectiles,代表命中或釋放邏輯漏掉了某些飛行中的投射物"
