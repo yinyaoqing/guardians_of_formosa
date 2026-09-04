@@ -258,24 +258,29 @@ func test_projectile_is_wasted_when_its_target_dies_first() -> void:
 		"遠塔的投射物在確認目標已死後應該被釋放，不會一直卡在 world.projectiles 裡"
 	).has_size(0)
 
-## Fix 1 的迴歸守衛：world.effect_defs 過去只在測試裡手動賦值,實機的
-## battle_scene.gd 從未呼叫過任何注入方法,導致所有 on_hit_effects 在正式
-## 遊戲裡都是啞的。這裡驗證 WorldState.apply_definitions 本身確實把
-## DataRegistry 載入的定義灌進 world.effect_defs——battle_scene.gd 是否
-## 呼叫了它是另一回事,但至少「忘了接線」不會再無聲無息。
-func test_apply_definitions_wires_effect_defs_from_the_registry() -> void:
+func test_configure_for_level_wires_everything_the_world_needs() -> void:
+	# 每多一項注入就多一個「要記得接線」的地方。M1-A 的最終 review 抓到漏接
+	# effect_defs 導致狀態效果在遊戲中無聲失效，所以這裡逐項守住。
 	var registry := DataRegistry.new()
 	registry.load_from_disk()
 
 	var world := WorldState.new()
-	world.apply_definitions(registry)
+	world.configure_for_level(registry, &"level_01")
 
-	assert_bool(world.effect_defs.is_empty()).override_failure_message(
-		"apply_definitions 必須把 DataRegistry 載入的狀態效果定義灌進 world.effect_defs"
-	).is_false()
-	assert_bool(world.effect_defs.has(&"chill")).override_failure_message(
-		"world.effect_defs 應包含出貨的 chill 效果定義(data/status_effects/chill.json)"
-	).is_true()
+	var meta: Dictionary = registry.levels[&"level_01"]
+
+	assert_int(world.effect_defs.size()).override_failure_message(
+		"未注入狀態效果定義，命中效果會在遊戲中無聲失效"
+	).is_greater(0)
+	assert_int(world.tower_defs.size()).override_failure_message(
+		"未注入塔的定義，建塔會找不到資料"
+	).is_greater(0)
+	assert_int(world.available_towers.size()).override_failure_message(
+		"未注入本關可用塔種，所有建造都會被拒絕"
+	).is_equal(meta["available_towers"].size())
+	assert_float(world.sell_refund_ratio).is_equal_approx(meta["sell_refund_ratio"], 0.001)
+	assert_int(world.gold).is_equal(int(meta["starting_gold"]))
+	assert_int(world.lives).is_equal(int(meta["starting_lives"]))
 
 ## Fix 5 的浸泡測試:池的斷言到目前為止都只涵蓋單一物件、單一 tick,
 ## 真正的洩漏只會在一整場戰鬥的規模下才會現形。這裡連續生成數十隻敵人、

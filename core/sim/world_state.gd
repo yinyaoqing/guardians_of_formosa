@@ -11,12 +11,23 @@ var paths: Dictionary = {}          ## StringName -> PathData
 ## core/ 不自行讀檔，維持可在無檔案系統的情況下被測試。
 var effect_defs: Dictionary = {}   ## StringName -> Dictionary
 
+## 塔的 JSON 定義與本關可用的塔種，同樣由 configure_for_level 注入。
+var tower_defs: Dictionary = {}              ## StringName -> Dictionary
+var available_towers: Array[StringName] = []
+var sell_refund_ratio: float = 0.0
+
 var gold: int = 0
 var lives: int = 20
 
 ## 每 tick 由 BattleSim 重建的查詢結構
 var grid := UniformGrid.new()
 var enemies_by_id: Dictionary = {}  ## int -> Enemy
+
+var build_slots: Array[BuildSlot] = []
+var build_slots_by_id: Dictionary = {}   ## int -> BuildSlot
+
+## 待處理的玩家意圖。BattleSim 於 tick 第一步排空並套用。
+var pending_intents: Array[GameIntent] = []
 
 const EFFECT_POOL_CAPACITY := 64
 
@@ -32,10 +43,27 @@ var projectile_system: ProjectileSystem = null   ## 由 BattleSim 於建構時�
 
 var _next_entity_id: int = 1
 
-## 把資料定義注入世界。core/ 不讀檔，所以定義由呼叫端自 DataRegistry 取得後傳入。
-## 集中在這裡是為了讓「忘了接線」只會發生一次，而不是每加一種定義就多一個要記得的地方。
-func apply_definitions(registry: DataRegistry) -> void:
+## 依關卡把整個世界配置好：資料定義、可用塔種、起始資源。
+## core/ 不讀檔，所以定義由呼叫端自 DataRegistry 取得後傳入。
+##
+## 一次呼叫涵蓋全部，是為了讓「忘了接線」只會發生一次，而不是每加一項注入
+## 就多一個要記得的地方。M1-A 的最終 review 正是抓到漏接 effect_defs，
+## 導致命中狀態效果在實際遊戲中完全失效，而所有測試照樣通過。
+func configure_for_level(registry: DataRegistry, level_id: StringName) -> void:
+	assert(registry.levels.has(level_id), "找不到關卡定義: %s" % level_id)
+	var meta: Dictionary = registry.levels[level_id]
+
 	effect_defs = registry.status_effects
+	tower_defs = registry.towers
+
+	var towers_for_level: Array[StringName] = []
+	for tower_id in meta["available_towers"]:
+		towers_for_level.append(StringName(tower_id))
+	available_towers = towers_for_level
+
+	sell_refund_ratio = meta["sell_refund_ratio"]
+	gold = int(meta["starting_gold"])
+	lives = int(meta["starting_lives"])
 
 func add_enemy(enemy: Enemy) -> void:
 	if enemy.id == 0:
@@ -47,6 +75,15 @@ func add_tower(tower: Tower) -> void:
 	if tower.id == 0:
 		tower.id = next_id()
 	towers.append(tower)
+
+func add_build_slot(slot: BuildSlot) -> void:
+	if slot.id == 0:
+		slot.id = next_id()
+	build_slots.append(slot)
+	build_slots_by_id[slot.id] = slot
+
+func queue_intent(intent: GameIntent) -> void:
+	pending_intents.append(intent)
 
 ## 配發一個全新的實體 id。敵人、塔、投射物共用同一個遞增計數器，
 ## 確保 id 在型別之間也不重複。

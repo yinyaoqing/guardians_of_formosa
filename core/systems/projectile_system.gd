@@ -85,7 +85,7 @@ func _hit_one(projectile: Projectile, enemy: Enemy) -> void:
 	for effect_id in projectile.on_hit_effects:
 		# 用 has() 而非 get(..., {}) 判斷存在與否：資料完整性測試只能保證
 		# data/ 內部 id 互相對得上，看不到 effect_defs 是否真的被表現層灌進
-		# WorldState（見 WorldState.apply_definitions）。萬一忘了接線，
+		# WorldState（見 WorldState.configure_for_level）。萬一忘了接線，
 		# 這裡就是唯一能在測試中炸開的地方；push_error 留給出貨版本，
 		# assert 則讓開發與測試期間的失敗夠大聲，不會被靜靜吞掉。
 		if not _world.effect_defs.has(effect_id):

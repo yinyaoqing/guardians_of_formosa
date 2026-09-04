@@ -8,11 +8,13 @@ extends RefCounted
 var enemies: Dictionary = {}   ## StringName -> Dictionary
 var towers: Dictionary = {}    ## StringName -> Dictionary
 var status_effects: Dictionary = {}   ## StringName -> Dictionary
+var levels: Dictionary = {}    ## StringName -> Dictionary
 
 func load_from_disk(root: String = "res://data") -> void:
 	enemies = _load_dir(root.path_join("enemies"))
 	towers = _load_dir(root.path_join("towers"))
 	status_effects = _load_dir(root.path_join("status_effects"))
+	levels = _load_level_dirs(root.path_join("levels"))
 
 ## 依 id 建出一個 Enemy 實體。id 引用失敗時直接報錯——
 ## 靜默回傳 null 會讓錯誤在很遠的地方才炸開。
@@ -45,4 +47,21 @@ func _load_dir(dir_path: String) -> Dictionary:
 		var def: Dictionary = parsed
 		assert(def.has("id"), "資料檔缺少 id 欄位: %s" % full_path)
 		result[StringName(def["id"])] = def
+	return result
+
+## 關卡的目錄形狀與其他資料不同：一個關卡一個目錄，檔案固定叫 meta.json，
+## 身分由目錄名承載。因此不能沿用 _load_dir。
+func _load_level_dirs(dir_path: String) -> Dictionary:
+	var result: Dictionary = {}
+	var dir := DirAccess.open(dir_path)
+	assert(dir != null, "找不到關卡目錄: %s" % dir_path)
+	for sub_dir in dir.get_directories():
+		var meta_path := dir_path.path_join(sub_dir).path_join("meta.json")
+		assert(FileAccess.file_exists(meta_path), "關卡目錄缺少 meta.json: %s" % sub_dir)
+		var text := FileAccess.get_file_as_string(meta_path)
+		var parsed: Variant = JSON.parse_string(text)
+		assert(parsed is Dictionary, "JSON 格式錯誤: %s" % meta_path)
+		var meta: Dictionary = parsed
+		assert(meta.has("id"), "關卡 meta 缺少 id 欄位: %s" % meta_path)
+		result[StringName(meta["id"])] = meta
 	return result

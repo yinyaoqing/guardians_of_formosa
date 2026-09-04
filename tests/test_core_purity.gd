@@ -35,14 +35,15 @@ func test_core_scripts_do_not_depend_on_nodes() -> void:
 
 ## 源代碼文本檢查，故意不執行 battle_scene 而檢查它的源碼。
 ## 因為 headless 測試套件根本不執行場景腳本，所以必須用靜態檢查守住這個架構規則。
-## 若不呼叫 apply_definitions，狀態效果就在遊戲中無聲失效，同時每項測試仍照常通過。
-func test_battle_scene_wires_effect_definitions() -> void:
+## 若不呼叫 configure_for_level，整個世界都不會被配置——資料定義、可用塔種、
+## 起始金幣與生命全部缺失，而每項測試仍照常通過。
+func test_battle_scene_configures_the_world_for_its_level() -> void:
 	var battle_scene_path := "res://game/level/battle_scene.gd"
 	var source := FileAccess.get_file_as_string(battle_scene_path)
-	assert_bool(source.contains("apply_definitions")).override_failure_message(
+	assert_bool(source.contains("configure_for_level")).override_failure_message(
 		"表現層必須在 WorldState 中注入資料定義，因為 core/ 不讀檔案。\n" +
 		"headless 測試套件不執行場景腳本，所以沒有其他測試能抓到這個漏洞。\n" +
-		"缺少 apply_definitions() 呼叫會導致命中狀態效果在遊戲中無聲失效，同時每項測試都通過。\n" +
+		"缺少 configure_for_level() 呼叫會導致整個世界都不會被配置——資料定義、可用塔種、起始金幣與生命全部缺失，同時每項測試都通過。\n" +
 		"詳見 CLAUDE.md 分層架構和 tests/test_core_purity.gd 註解。"
 	).is_true()
 
