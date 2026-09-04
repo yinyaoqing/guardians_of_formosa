@@ -1,0 +1,92 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "sdxl_vae_fp16_fix.safetensors"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "1",
+        1
+      ],
+      "text": "2D cartoon video game character sprite for a tower defense game, hand-painted digital illustration, full body of a single standing character, head to toe fully visible, 3/4 front view, centered, isolated on a plain flat neutral background. SUBJECT: a 17th-century Han Chinese Ming dynasty musketeer of Koxinga's army in Taiwan. East Asian face, clean-shaven, hair in a topknot under a conical lacquered iron helmet. Deep terracotta red Ming military tunic, cloth leg wraps, BARE FEET. Holding a long matchlock arquebus. STYLE: bold simplified cartoon shapes, gouache mineral pigment texture, dense fine linework in dark umber and deep green instead of black, flat decorative color fields, short bold brushstrokes, terracotta red against deep jade green, harsh noon light from upper left, short hard cast shadow to the lower right. PALETTE: terracotta #B5442E, deep ochre #8C3A22, banyan green #2F5B3A, sand #C9A96B, oyster white #E8DCC6, indigo #2C5470, gamboge #E0A93B, burnt umber linework #3A2A22. PROPORTIONS: 4 heads tall, solid weighty build, readable silhouette at 128 pixels."
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "1",
+        1
+      ],
+      "text": "chibi, 2-head-tall, thick uniform black outline, glossy plastic, rim lighting, anime, manga, western fantasy, Kingdom Rush style, neon colors, purple, magenta, teal, pastel, photorealism, 3D render, watermark, text, signature, queue hairstyle, braid, shaved forehead, Qing dynasty uniform, samurai armor, ashigaru, boots, shoes, portrait, bust, half body, waist up, cropped, close-up, headshot, two people, multiple characters, turnaround sheet, multiple views, armor display, costume plate, museum illustration, aged paper, parchment, paper texture, torn edges, sepia, watercolor wash, botanical plate, Persian, Ottoman, Mughal, Indian miniature, turban, beard, moustache, bright orange"
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 832,
+      "height": 1216,
+      "batch_size": 4
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "seed": 16610430,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ],
+      "filename_prefix": "a0_v3_zheng"
+    }
+  }
+}
