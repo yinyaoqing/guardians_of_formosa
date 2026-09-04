@@ -154,6 +154,11 @@ func test_building_on_a_nonexistent_slot_changes_nothing() -> void:
 
 func test_building_an_unknown_tower_type_changes_nothing() -> void:
 	var world := _make_world(200)
+	# 刻意把這個 id 放進 available_towers,使它通過第三道守衛(本關可用清單),
+	# 讓真正要測的第二道守衛(tower_defs.has())成為唯一還擋著它的關卡。
+	# 若不這麼做,不存在於 tower_defs 的 id 也必然不存在於 available_towers,
+	# 第三道守衛會搶先擋下,第二道守衛就完全沒被測到。
+	world.available_towers.append(&"no_such_tower")
 	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"no_such_tower"))
 	assert_array(world.towers).has_size(0)
 	assert_int(world.gold).is_equal(200)
@@ -253,4 +258,28 @@ func test_selling_a_tower_that_no_longer_exists_is_rejected() -> void:
 	BuildSystem.apply(world, GameIntent.sell(9999))
 	assert_int(world.gold).override_failure_message(
 		"賣一座不存在的塔不得憑空產生金幣"
+	).is_equal(200)
+
+# 以下兩個測試涵蓋一種資料錯誤：呼叫端把「建塔點 id」誤傳成 sell / upgrade
+# 要的「塔的實體 id」。因為所有實體共用同一個全域 id 計數器（不分塔、敵人、
+# 建塔點、投射物），_find_tower 光看「找不到」無法分辨這是正常競態（塔剛被
+# 賣掉）還是呼叫端傳錯了型別；但因為 id 空間是共用的，可以額外檢查這個 id
+# 是否剛好對得上一個建塔點，對得上就代表是後者，屬於資料錯誤，必須噴出來。
+
+func test_upgrading_with_a_slot_id_instead_of_a_tower_id_changes_nothing() -> void:
+	var world := _make_world(300)
+	var slot_id := _first_slot(world).id
+	BuildSystem.apply(world, GameIntent.upgrade(slot_id))
+	assert_array(world.towers).has_size(0)
+	assert_int(world.gold).override_failure_message(
+		"把建塔點 id 當成塔 id 傳給 upgrade 是資料錯誤，不得改動世界"
+	).is_equal(300)
+
+func test_selling_with_a_slot_id_instead_of_a_tower_id_changes_nothing() -> void:
+	var world := _make_world(200)
+	var slot_id := _first_slot(world).id
+	BuildSystem.apply(world, GameIntent.sell(slot_id))
+	assert_array(world.towers).has_size(0)
+	assert_int(world.gold).override_failure_message(
+		"把建塔點 id 當成塔 id 傳給 sell 是資料錯誤，不得憑空產生金幣"
 	).is_equal(200)

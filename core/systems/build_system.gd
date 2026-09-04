@@ -51,6 +51,12 @@ static func _build(world: WorldState, intent: GameIntent) -> void:
 static func _upgrade(world: WorldState, intent: GameIntent) -> void:
 	var tower := _find_tower(world, intent.entity_id)
 	if tower == null:
+		# 找不到塔通常是正常競態(升級指令排隊期間塔已被賣掉),靜默忽略即可。
+		# 但實體 id 空間跨型別共用同一個計數器,所以能在此分辨出另一種情況:
+		# 這個 id 剛好對得上某個建塔點——代表呼叫端把 slot id 當成 tower id 傳了進來,
+		# 那不是競態,是呼叫端傳錯型別的資料錯誤,必須噴出來讓人看見。
+		if world.build_slots_by_id.has(intent.entity_id):
+			push_error("upgrade intent 的 entity_id=%d 是建塔點 id,不是塔的 id" % intent.entity_id)
 		return
 
 	var def: Dictionary = world.tower_defs[tower.tower_id]
@@ -69,6 +75,11 @@ static func _upgrade(world: WorldState, intent: GameIntent) -> void:
 static func _sell(world: WorldState, intent: GameIntent) -> void:
 	var tower := _find_tower(world, intent.entity_id)
 	if tower == null:
+		# 見 _upgrade 中的同一段說明:實體 id 全域共用一個計數器,
+		# 所以能分辨「id 對得上建塔點」(呼叫端傳錯型別,資料錯誤,要噴)
+		# 與「id 誰都對不上」(塔剛好被賣過了,正常競態,靜默即可)。
+		if world.build_slots_by_id.has(intent.entity_id):
+			push_error("sell intent 的 entity_id=%d 是建塔點 id,不是塔的 id" % intent.entity_id)
 		return
 
 	var def: Dictionary = world.tower_defs[tower.tower_id]
