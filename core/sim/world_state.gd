@@ -20,6 +20,11 @@ const EFFECT_POOL_CAPACITY := 64
 var effect_pool := ObjectPool.new(func() -> StatusEffect: return StatusEffect.new(), EFFECT_POOL_CAPACITY)
 var status_system := StatusSystem.new(effect_pool)
 
+const PROJECTILE_POOL_CAPACITY := 128
+
+var projectiles: Array[Projectile] = []
+var projectile_pool := ObjectPool.new(func() -> Projectile: return Projectile.new(), PROJECTILE_POOL_CAPACITY)
+
 var _next_entity_id: int = 1
 
 func add_enemy(enemy: Enemy) -> void:
