@@ -34,7 +34,7 @@ var magic_resist: float = 0.0
 var stunned: bool = false              ## 純供表現層顯示暈眩圖示
 
 ## 生效中的狀態效果。實例來自物件池，由 StatusSystem 管理生滅。
-var active_effects: Array = []
+var active_effects: Array[StatusEffect] = []
 
 ## 把基礎值複製到衍生值。資料載入後呼叫一次，
 ## 之後每 tick 由 StatusSystem 在重算開頭呼叫。
