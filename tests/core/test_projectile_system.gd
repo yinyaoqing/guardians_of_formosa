@@ -86,7 +86,8 @@ func test_projectile_vanishes_when_target_dies_mid_flight() -> void:
 
 func test_each_spawn_gets_a_fresh_instance_id() -> void:
 	# 池會重複使用同一個物件，但 id 必須每次都不同，
-	# 否則表現層的舊 view 可能誤綁到新的投射物
+	# 否則表現層的舊 view 可能誤綁到新的投射物；
+	# 同時確認物件本身確實被重用，而非每次配置新物件
 	var world := _make_world()
 	var enemy := _add_enemy(world, Vector2(60, 0), 1000.0)
 	var tower := _make_tower(world, Vector2(0, 0))
@@ -95,6 +96,9 @@ func test_each_spawn_gets_a_fresh_instance_id() -> void:
 	var first_id := first.instance_id
 	system.tick(0.5)                       # 命中並歸還
 	var second := system.spawn(tower, enemy.id, 600.0, 0.0, [] as Array[StringName])
+	assert_bool(is_same(first, second)).override_failure_message(
+		"池應該重複使用同一個投射物物件；若每次都配置新物件，instance_id 的遞增就沒有意義了"
+	).is_true()
 	assert_int(second.instance_id).override_failure_message(
 		"重複使用的投射物必須取得全新的 instance_id"
 	).is_greater(first_id)
