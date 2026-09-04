@@ -47,6 +47,7 @@ func tick_progress() -> float:
 
 func _tick() -> void:
 	tick_count += 1
+	_apply_pending_intents()
 	world.status_system.tick(world.enemies, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
@@ -54,6 +55,19 @@ func _tick() -> void:
 	world.projectile_system.tick(TICK_DELTA)
 	_tick_towers()
 	_remove_dead()
+
+## tick 的第一步。輸入發生在渲染幀上，模擬跑固定步長，兩者不對齊；
+## 排隊到 tick 內套用，讓所有改變世界的事情都發生在明確的位置。
+## 排第一是為了讓這一 tick 蓋好的塔這一 tick 就能開火，
+## 賣掉的塔在能開火之前就消失——兩者都符合直覺且不需要特例。
+func _apply_pending_intents() -> void:
+	for intent: GameIntent in world.pending_intents:
+		match intent.kind:
+			GameIntent.KIND_BUILD, GameIntent.KIND_SELL, GameIntent.KIND_UPGRADE:
+				BuildSystem.apply(world, intent)
+			_:
+				push_error("BattleSim 收到未知的 intent kind: %s" % intent.kind)
+	world.pending_intents.clear()
 
 ## 走到終點的敵人扣玩家一條命，並立刻移出戰場（避免重複扣血）
 func _collect_leaked() -> void:

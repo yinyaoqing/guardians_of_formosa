@@ -119,3 +119,55 @@ func test_projectile_spawned_this_tick_does_not_move_this_tick() -> void:
 	assert_float(world.projectiles[0].position.x).override_failure_message(
 		"這一 tick 生成的投射物不得在同一 tick 移動，代表 ProjectileSystem 排在 _tick_towers 之前"
 	).is_equal_approx(100.0, 0.001)
+
+## 一個配置好、有一個空建塔點與一隻停住的敵人的世界
+func _make_buildable_world() -> WorldState:
+	var world := _make_world()
+	world.tower_defs = {
+		&"archer_tower": {
+			"id": "archer_tower",
+			"damage_type": "physical",
+			"levels": [
+				{"cost": 70, "damage": 9.0, "attack_range": 500.0, "fire_interval": 0.8,
+				 "projectile_speed": 600.0, "splash_radius": 0.0, "on_hit_effects": []},
+			],
+		}
+	}
+	world.available_towers = [&"archer_tower"] as Array[StringName]
+	world.gold = 200
+	var slot := BuildSlot.new()
+	slot.position = Vector2(100, 0)
+	world.add_build_slot(slot)
+	return world
+
+func test_intent_queued_before_a_tick_is_applied_in_that_tick() -> void:
+	var world := _make_buildable_world()
+	var sim := BattleSim.new(world)
+	world.queue_intent(GameIntent.build(world.build_slots[0].id, &"archer_tower"))
+
+	sim.advance(FRAME)
+
+	assert_array(world.towers).override_failure_message(
+		"排隊的意圖必須在下一個 tick 就被套用"
+	).has_size(1)
+	assert_array(world.pending_intents).override_failure_message(
+		"套用後佇列必須清空，否則同一筆指令會被重複執行"
+	).has_size(0)
+
+func test_a_tower_built_this_tick_can_fire_this_tick() -> void:
+	# 證明意圖套用排在 tick 的第一步。若挪到 tick 尾端，
+	# 這一 tick 蓋的塔要等下一 tick 才會鎖定目標，冷卻也不會啟動。
+	var world := _make_buildable_world()
+	_add_enemy(world, 0.0)                 # 停在路徑起點 (0, 0)，在射程 500 內
+	var sim := BattleSim.new(world)
+	world.queue_intent(GameIntent.build(world.build_slots[0].id, &"archer_tower"))
+
+	sim.advance(FRAME)
+
+	var tower: Tower = world.towers[0]
+	assert_int(tower.target_id).override_failure_message(
+		"這一 tick 蓋好的塔，這一 tick 就該鎖定得到目標——代表意圖套用排在 tick 第一步"
+	).is_greater(0)
+	assert_float(tower.cooldown).override_failure_message(
+		"這一 tick 蓋好的塔，這一 tick 就該開得了火"
+	).is_greater(0.0)
