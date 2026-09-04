@@ -57,6 +57,14 @@
 
 建立可執行的 Godot 專案與可運作的測試框架。此任務的驗收就是「一個最小測試能跑起來並通過」——若 GdUnit4 的 CLI 路徑或斷言 API 與本計畫所寫不同，此任務會立刻暴露，而不會變成後續任務的潛在錯誤。
 
+> **實際執行結果（已完成）**
+>
+> - Godot **4.7.2**，安裝於 `C:\Users\yinya\tools\godot\`（刻意避開 OneDrive 與含中文的路徑）。`~/.local/bin/` 下放了 `godot`（bash）與 `godot.cmd`（cmd/PowerShell）兩個捷徑，都指向 `Godot_v4.7.2-stable_win64_console.exe`——console 版才會把 stdout 接回終端機，headless 測試需要。
+> - `project.godot` 以命令列直接撰寫後跑 `godot --headless --path . --import`，未經編輯器 GUI。
+> - GdUnit4 **6.2.1** 以 `git clone https://github.com/MikeSchulze/gdUnit4.git` 取得後複製 `addons/gdUnit4`，未經 AssetLib GUI。`bin/GdUnitCmdTool.gd` 路徑與本計畫原本假設一致。
+> - **冒煙測試抓到一項差異**：GdUnit4 6.2.1 預設拒絕 headless 執行（exit 103），必須加 `--ignoreHeadlessMode`。本計畫所有測試指令均已補上此旗標。我們的測試是純邏輯、不涉及 `InputEvent`，該檢查對本專案不適用。
+> - 冒煙測試 7/7 通過，exit 0。七種斷言 API（`is_equal`、`is_equal_approx`、`is_true`/`is_false`、`contains`、`has_size`、`is_greater`、`is_between`、`override_failure_message`）全部確認可用。
+
 **Files:**
 - Create: `project.godot`（由 Godot 編輯器產生後修改）
 - Create: `.gitignore`, `.gitattributes`, `.godot-version`, `CLAUDE.md`
@@ -65,7 +73,7 @@
 
 **Interfaces:**
 - Consumes: 無
-- Produces: 可執行的測試命令 `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests`
+- Produces: 可執行的測試命令 `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests`
 
 - [ ] **Step 1: 安裝 Godot 4.x 並鎖定版本**
 
@@ -215,7 +223,7 @@ func test_custom_failure_message_api() -> void:
 - [ ] **Step 10: 執行測試**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 Expected: 5 個測試全部通過，行程結束碼為 0。
@@ -247,7 +255,7 @@ Expected: 5 個測試全部通過，行程結束碼為 0。
 ## 測試
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 UI 與畫面不做自動化測試，人工驗收。
@@ -320,7 +328,7 @@ func test_position_exactly_at_end_returns_last_point() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_path_data.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_path_data.gd
 ```
 
 Expected: FAIL，錯誤訊息指出識別字 `PathData` 未定義。
@@ -367,7 +375,7 @@ func position_at(distance: float) -> Vector2:
 - [ ] **Step 4: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_path_data.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_path_data.gd
 ```
 
 Expected: 6 個測試全部 PASS。
@@ -450,7 +458,7 @@ func test_huge_frame_delta_is_capped_and_backlog_discarded() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_sim.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_sim.gd
 ```
 
 Expected: FAIL，識別字 `BattleSim` 未定義。
@@ -471,7 +479,7 @@ const TICK_RATE := 30
 const TICK_DELTA := 1.0 / float(TICK_RATE)
 
 ## 單幀最多執行的 tick 數。卡頓後若無上限地補跑積欠的 tick，
-## 會讓下一幀更慢、積欠更多，形成死亡螺旋。超過上限就丟棄積欠。
+## 會讓下一幀更慢、積欠更多，形成死亡螺旋。真正積欠過多時丟棄積欠。
 const MAX_TICKS_PER_FRAME := 8
 
 var tick_count: int = 0
@@ -491,7 +499,10 @@ func advance(frame_delta: float) -> int:
 		_accumulator -= TICK_DELTA
 		_tick()
 		ticks += 1
-	if ticks == MAX_TICKS_PER_FRAME:
+	# 只在真的還積欠超過一個 tick 時才丟棄。「跑滿上限」不等於「積欠很多」——
+	# 高速度倍率配低幀率會正好跑滿上限卻只剩極小零頭，那個零頭必須留給下一幀，
+	# 否則模擬會悄悄跑得比設定的倍率慢。
+	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks
 
@@ -502,7 +513,7 @@ func _tick() -> void:
 - [ ] **Step 4: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_sim.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_sim.gd
 ```
 
 Expected: 5 個測試全部 PASS。
@@ -599,7 +610,7 @@ func test_blocked_enemy_does_not_advance() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_movement_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_movement_system.gd
 ```
 
 Expected: FAIL，識別字 `Enemy` 未定義。
@@ -663,7 +674,7 @@ static func tick(enemies: Array, paths: Dictionary, delta: float) -> void:
 - [ ] **Step 5: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_movement_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_movement_system.gd
 ```
 
 Expected: 6 個測試全部 PASS。
@@ -747,7 +758,7 @@ func test_negative_coordinates_are_handled() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_uniform_grid.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_uniform_grid.gd
 ```
 
 Expected: FAIL，識別字 `UniformGrid` 未定義。
@@ -805,7 +816,7 @@ func _cell_of(position: Vector2) -> Vector2i:
 - [ ] **Step 4: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_uniform_grid.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_uniform_grid.gd
 ```
 
 Expected: 7 個測試全部 PASS。
@@ -819,7 +830,143 @@ git commit -m "feat(core): 新增 UniformGrid 空間索引"
 
 ---
 
-### Task 6: Tower 實體與 TargetingSystem
+### Task 6: DamageSystem
+
+**Files:**
+- Create: `core/systems/damage_system.gd`
+- Test: `tests/core/test_damage_system.gd`
+
+**Interfaces:**
+- Consumes: `Enemy`（Task 4）
+- Produces:
+  - `DamageSystem.PHYSICAL: StringName`、`DamageSystem.MAGIC: StringName`、`DamageSystem.TRUE_DAMAGE: StringName`
+  - `DamageSystem.apply(enemy: Enemy, amount: float, damage_type: StringName) -> float`（回傳實際造成的傷害）
+
+這是**唯一的傷害結算入口**。塔防的技術債幾乎都長在傷害計算散落各處，所以這條規則寫進 CLAUDE.md 並由 code review 把關。
+
+- [ ] **Step 1: 寫失敗的測試**
+
+Create `tests/core/test_damage_system.gd`:
+
+```gdscript
+extends GdUnitTestSuite
+
+func _make_enemy(armor: float, magic_resist: float) -> Enemy:
+	var enemy := Enemy.new()
+	enemy.id = 1
+	enemy.hp = 100.0
+	enemy.max_hp = 100.0
+	enemy.armor = armor
+	enemy.magic_resist = magic_resist
+	return enemy
+
+func test_physical_damage_is_reduced_by_armor() -> void:
+	var enemy := _make_enemy(0.5, 0.0)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(50.0, 0.001)
+	assert_float(enemy.hp).is_equal_approx(50.0, 0.001)
+
+func test_magic_damage_ignores_armor_and_uses_magic_resist() -> void:
+	var enemy := _make_enemy(0.9, 0.25)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.MAGIC)
+	assert_float(dealt).is_equal_approx(75.0, 0.001)
+
+func test_true_damage_ignores_all_reduction() -> void:
+	var enemy := _make_enemy(0.9, 0.9)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.TRUE_DAMAGE)
+	assert_float(dealt).is_equal_approx(100.0, 0.001)
+
+func test_lethal_damage_marks_enemy_dead_and_clamps_hp_to_zero() -> void:
+	var enemy := _make_enemy(0.0, 0.0)
+	DamageSystem.apply(enemy, 250.0, DamageSystem.PHYSICAL)
+	assert_bool(enemy.alive).is_false()
+	assert_float(enemy.hp).is_equal_approx(0.0, 0.001)
+
+func test_damage_to_dead_enemy_deals_nothing() -> void:
+	var enemy := _make_enemy(0.0, 0.0)
+	enemy.alive = false
+	var dealt := DamageSystem.apply(enemy, 50.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(0.0, 0.001)
+
+func test_full_armor_reduction_deals_no_damage_but_does_not_heal() -> void:
+	var enemy := _make_enemy(1.0, 0.0)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(0.0, 0.001)
+	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+```bash
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_damage_system.gd
+```
+
+Expected: FAIL，識別字 `DamageSystem` 未定義。
+
+- [ ] **Step 3: 寫最小實作**
+
+Create `core/systems/damage_system.gd`:
+
+```gdscript
+class_name DamageSystem
+extends RefCounted
+
+## 唯一的傷害結算入口。任何塔、法術、英雄都不得自行計算傷害減免——
+## 傷害計算一旦散落各處，數值平衡就無法推理，這是塔防最常見的技術債來源。
+##
+## 結算順序固定：
+##   1. 依傷害類型取得減免比例
+##   2. 套用減免
+##   3. 扣血
+##   4. 判定死亡
+
+const PHYSICAL := &"physical"
+const MAGIC := &"magic"
+const TRUE_DAMAGE := &"true"
+
+## 對敵人造成傷害，回傳實際造成的傷害值。
+static func apply(enemy: Enemy, amount: float, damage_type: StringName) -> float:
+	if not enemy.alive:
+		return 0.0
+
+	var reduction := 0.0
+	match damage_type:
+		PHYSICAL:
+			reduction = enemy.armor
+		MAGIC:
+			reduction = enemy.magic_resist
+		TRUE_DAMAGE:
+			reduction = 0.0
+		_:
+			push_error("未知的傷害類型: %s" % damage_type)
+			return 0.0
+
+	var dealt := maxf(0.0, amount * (1.0 - reduction))
+	enemy.hp -= dealt
+	if enemy.hp <= 0.0:
+		enemy.hp = 0.0
+		enemy.alive = false
+	return dealt
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+```bash
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_damage_system.gd
+```
+
+Expected: 6 個測試全部 PASS。
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add core/systems/damage_system.gd tests/core/test_damage_system.gd
+git commit -m "feat(core): 新增 DamageSystem 統一傷害結算"
+```
+
+---
+
+### Task 7: Tower 實體與 TargetingSystem
 
 **Files:**
 - Create: `core/entities/tower.gd`
@@ -827,7 +974,7 @@ git commit -m "feat(core): 新增 UniformGrid 空間索引"
 - Test: `tests/core/test_targeting_system.gd`
 
 **Interfaces:**
-- Consumes: `Enemy`（Task 4）、`UniformGrid`（Task 5）
+- Consumes: `Enemy`（Task 4）、`UniformGrid`（Task 5）、`DamageSystem`（Task 6）
 - Produces:
   - `Tower.new() -> Tower`，欄位：`id: int`、`tower_id: StringName`、`position: Vector2`、`level: int`、`damage: float`、`damage_type: StringName`、`attack_range: float`、`fire_interval: float`、`cooldown: float`、`target_id: int`
   - `TargetingSystem.find_first(tower: Tower, grid: UniformGrid, enemies_by_id: Dictionary) -> int`（回傳敵人 id，找不到回傳 0）
@@ -911,7 +1058,7 @@ func test_leaked_enemy_is_skipped() -> void:
 - [ ] **Step 2: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_targeting_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_targeting_system.gd
 ```
 
 Expected: FAIL，識別字 `Tower` 未定義。
@@ -973,178 +1120,17 @@ static func find_first(tower: Tower, grid: UniformGrid, enemies_by_id: Dictionar
 
 - [ ] **Step 5: 執行測試確認通過**
 
-測試引用了 `DamageSystem.PHYSICAL`，該常數在 Task 7 才建立。先把測試中的 `DamageSystem.PHYSICAL` 暫時改為 `&"physical"`，執行測試：
-
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_targeting_system.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_targeting_system.gd
 ```
 
-Expected: 6 個測試全部 PASS。Task 7 完成後再改回 `DamageSystem.PHYSICAL`。
+Expected: 6 個測試全部 PASS。
 
 - [ ] **Step 6: 提交**
 
 ```bash
 git add core/entities/tower.gd core/systems/targeting_system.gd tests/core/test_targeting_system.gd
 git commit -m "feat(core): 新增 Tower 實體與 TargetingSystem First 策略"
-```
-
----
-
-### Task 7: DamageSystem
-
-**Files:**
-- Create: `core/systems/damage_system.gd`
-- Modify: `tests/core/test_targeting_system.gd`（把暫用的 `&"physical"` 改回 `DamageSystem.PHYSICAL`）
-- Test: `tests/core/test_damage_system.gd`
-
-**Interfaces:**
-- Consumes: `Enemy`（Task 4）
-- Produces:
-  - `DamageSystem.PHYSICAL: StringName`、`DamageSystem.MAGIC: StringName`、`DamageSystem.TRUE_DAMAGE: StringName`
-  - `DamageSystem.apply(enemy: Enemy, amount: float, damage_type: StringName) -> float`（回傳實際造成的傷害）
-
-這是**唯一的傷害結算入口**。塔防的技術債幾乎都長在傷害計算散落各處，所以這條規則寫進 CLAUDE.md 並由 code review 把關。
-
-- [ ] **Step 1: 寫失敗的測試**
-
-Create `tests/core/test_damage_system.gd`:
-
-```gdscript
-extends GdUnitTestSuite
-
-func _make_enemy(armor: float, magic_resist: float) -> Enemy:
-	var enemy := Enemy.new()
-	enemy.id = 1
-	enemy.hp = 100.0
-	enemy.max_hp = 100.0
-	enemy.armor = armor
-	enemy.magic_resist = magic_resist
-	return enemy
-
-func test_physical_damage_is_reduced_by_armor() -> void:
-	var enemy := _make_enemy(0.5, 0.0)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
-	assert_float(dealt).is_equal_approx(50.0, 0.001)
-	assert_float(enemy.hp).is_equal_approx(50.0, 0.001)
-
-func test_magic_damage_ignores_armor_and_uses_magic_resist() -> void:
-	var enemy := _make_enemy(0.9, 0.25)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.MAGIC)
-	assert_float(dealt).is_equal_approx(75.0, 0.001)
-
-func test_true_damage_ignores_all_reduction() -> void:
-	var enemy := _make_enemy(0.9, 0.9)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.TRUE_DAMAGE)
-	assert_float(dealt).is_equal_approx(100.0, 0.001)
-
-func test_lethal_damage_marks_enemy_dead_and_clamps_hp_to_zero() -> void:
-	var enemy := _make_enemy(0.0, 0.0)
-	DamageSystem.apply(enemy, 250.0, DamageSystem.PHYSICAL)
-	assert_bool(enemy.alive).is_false()
-	assert_float(enemy.hp).is_equal_approx(0.0, 0.001)
-
-func test_damage_to_dead_enemy_deals_nothing() -> void:
-	var enemy := _make_enemy(0.0, 0.0)
-	enemy.alive = false
-	var dealt := DamageSystem.apply(enemy, 50.0, DamageSystem.PHYSICAL)
-	assert_float(dealt).is_equal_approx(0.0, 0.001)
-
-func test_full_armor_reduction_deals_no_damage_but_does_not_heal() -> void:
-	var enemy := _make_enemy(1.0, 0.0)
-	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
-	assert_float(dealt).is_equal_approx(0.0, 0.001)
-	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
-```
-
-- [ ] **Step 2: 執行測試確認失敗**
-
-```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
-```
-
-Expected: FAIL，識別字 `DamageSystem` 未定義。
-
-- [ ] **Step 3: 寫最小實作**
-
-Create `core/systems/damage_system.gd`:
-
-```gdscript
-class_name DamageSystem
-extends RefCounted
-
-## 唯一的傷害結算入口。任何塔、法術、英雄都不得自行計算傷害減免——
-## 傷害計算一旦散落各處，數值平衡就無法推理，這是塔防最常見的技術債來源。
-##
-## 結算順序固定：
-##   1. 依傷害類型取得減免比例
-##   2. 套用減免
-##   3. 扣血
-##   4. 判定死亡
-
-const PHYSICAL := &"physical"
-const MAGIC := &"magic"
-const TRUE_DAMAGE := &"true"
-
-## 對敵人造成傷害，回傳實際造成的傷害值。
-static func apply(enemy: Enemy, amount: float, damage_type: StringName) -> float:
-	if not enemy.alive:
-		return 0.0
-
-	var reduction := 0.0
-	match damage_type:
-		PHYSICAL:
-			reduction = enemy.armor
-		MAGIC:
-			reduction = enemy.magic_resist
-		TRUE_DAMAGE:
-			reduction = 0.0
-		_:
-			push_error("未知的傷害類型: %s" % damage_type)
-			return 0.0
-
-	var dealt := maxf(0.0, amount * (1.0 - reduction))
-	enemy.hp -= dealt
-	if enemy.hp <= 0.0:
-		enemy.hp = 0.0
-		enemy.alive = false
-	return dealt
-```
-
-- [ ] **Step 4: 執行測試確認通過**
-
-```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_damage_system.gd
-```
-
-Expected: 6 個測試全部 PASS。
-
-- [ ] **Step 5: 把 TargetingSystem 測試改回具名常數**
-
-在 `tests/core/test_targeting_system.gd` 的 `_make_tower()` 中，把：
-
-```gdscript
-	tower.damage_type = &"physical"
-```
-
-改回：
-
-```gdscript
-	tower.damage_type = DamageSystem.PHYSICAL
-```
-
-- [ ] **Step 6: 執行全部測試**
-
-```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
-```
-
-Expected: 全部通過。
-
-- [ ] **Step 7: 提交**
-
-```bash
-git add core/systems/damage_system.gd tests/core/test_damage_system.gd tests/core/test_targeting_system.gd
-git commit -m "feat(core): 新增 DamageSystem 統一傷害結算"
 ```
 
 ---
@@ -1309,7 +1295,7 @@ func test_fire_interval_limits_shots() -> void:
 - [ ] **Step 3: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_integration.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_integration.gd
 ```
 
 Expected: FAIL，`BattleSim.new()` 不接受參數。
@@ -1330,7 +1316,7 @@ const TICK_RATE := 30
 const TICK_DELTA := 1.0 / float(TICK_RATE)
 
 ## 單幀最多執行的 tick 數。卡頓後若無上限地補跑積欠的 tick，
-## 會讓下一幀更慢、積欠更多，形成死亡螺旋。超過上限就丟棄積欠。
+## 會讓下一幀更慢、積欠更多，形成死亡螺旋。真正積欠過多時丟棄積欠。
 const MAX_TICKS_PER_FRAME := 8
 
 var world: WorldState
@@ -1354,7 +1340,10 @@ func advance(frame_delta: float) -> int:
 		_accumulator -= TICK_DELTA
 		_tick()
 		ticks += 1
-	if ticks == MAX_TICKS_PER_FRAME:
+	# 只在真的還積欠超過一個 tick 時才丟棄。「跑滿上限」不等於「積欠很多」——
+	# 高速度倍率配低幀率會正好跑滿上限卻只剩極小零頭，那個零頭必須留給下一幀，
+	# 否則模擬會悄悄跑得比設定的倍率慢。
+	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks
 
@@ -1407,7 +1396,7 @@ func _remove_dead() -> void:
 `tests/core/test_battle_sim.gd` 中的 `BattleSim.new()` 現在會建立空的 `WorldState`，測試仍應通過。執行確認：
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/core/test_battle_sim.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/core/test_battle_sim.gd
 ```
 
 Expected: 5 個測試全部 PASS。若失敗，檢查 `_init` 的預設參數是否正確。
@@ -1415,7 +1404,7 @@ Expected: 5 個測試全部 PASS。若失敗，檢查 `_init` 的預設參數是
 - [ ] **Step 6: 執行整合測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 Expected: 全部測試 PASS。
@@ -1540,10 +1529,16 @@ func test_every_tower_level_has_required_fields() -> void:
 func test_tower_upgrade_costs_increase() -> void:
 	for tower_id: StringName in _registry.towers:
 		var levels: Array = _registry.towers[tower_id]["levels"]
+		# 沒有這道守衛的話，levels 為空時整個迴圈不執行，測試會空轉通過
+		assert_int(levels.size()).override_failure_message(
+			"塔 %s 的 levels 陣列是空的，無法建造" % tower_id
+		).is_greater(0)
 		for i in range(1, levels.size()):
-			assert_int(levels[i]["cost"]).override_failure_message(
+			# JSON.parse_string() 一律把數字解析成 float，assert_int 會因型別失敗，
+			# 所以這裡必須先轉 int
+			assert_int(int(levels[i]["cost"])).override_failure_message(
 				"塔 %s 第 %d 級的造價必須高於前一級" % [tower_id, i + 1]
-			).is_greater(levels[i - 1]["cost"])
+			).is_greater(int(levels[i - 1]["cost"]))
 
 func test_tower_damage_types_are_known() -> void:
 	var known := [DamageSystem.PHYSICAL, DamageSystem.MAGIC, DamageSystem.TRUE_DAMAGE]
@@ -1569,7 +1564,7 @@ func test_every_referenced_sprite_path_exists() -> void:
 - [ ] **Step 4: 執行測試確認失敗**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/test_data_integrity.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/test_data_integrity.gd
 ```
 
 Expected: FAIL，識別字 `DataRegistry` 未定義。
@@ -1670,7 +1665,7 @@ Create `README.md`:
 ## 執行測試
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 ## 換機或重建匯出設定時的必要步驟
@@ -1684,7 +1679,7 @@ godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://
 - [ ] **Step 8: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 Expected: 全部測試 PASS，包含 8 個資料完整性測試。
@@ -1765,7 +1760,7 @@ func _collect_gd_files(root: String) -> Array[String]:
 - [ ] **Step 2: 執行測試確認通過**
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/test_core_purity.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/test_core_purity.gd
 ```
 
 Expected: PASS。目前 `core/` 下的所有類別都是 `extends RefCounted`。
@@ -1775,7 +1770,7 @@ Expected: PASS。目前 `core/` 下的所有類別都是 `extends RefCounted`。
 暫時在 `core/entities/enemy.gd` 開頭加一行註解 `# .tscn`，重跑測試：
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/test_core_purity.gd
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests/test_core_purity.gd
 ```
 
 Expected: FAIL，錯誤訊息指出 `res://core/entities/enemy.gd 含有被禁止的 Node 依賴 '.tscn'`。
@@ -2113,7 +2108,7 @@ Expected: workflow 成功，所有測試通過。
         run: $GODOT_BIN --headless --path . --import
 
       - name: 執行測試
-        run: $GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+        run: $GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 ```
 
 - [ ] **Step 5: M0 完成驗收**
@@ -2121,7 +2116,7 @@ Expected: workflow 成功，所有測試通過。
 確認以下全部成立：
 
 ```bash
-godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 git status --short
 ```
 

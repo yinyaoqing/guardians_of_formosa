@@ -1,0 +1,11 @@
+{
+  "id": "archer_tower",
+  "name_key": "tower.archer_tower.name",
+  "damage_type": "physical",
+  "levels": [
+    {"cost": 70,  "damage": 9.0,  "attack_range": 180.0, "fire_interval": 0.8},
+    {"cost": 130, "damage": 14.0, "attack_range": 190.0, "fire_interval": 0.75},
+    {"cost": 220, "damage": 22.0, "attack_range": 200.0, "fire_interval": 0.7}
+  ],
+  "sprite": "res://game/assets/placeholder_tower.png"
+}

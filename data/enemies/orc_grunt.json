@@ -1,0 +1,11 @@
+{
+  "id": "orc_grunt",
+  "name_key": "enemy.orc_grunt.name",
+  "hp": 120.0,
+  "speed": 45.0,
+  "armor": 0.2,
+  "magic_resist": 0.0,
+  "bounty": 6,
+  "sprite": "res://game/assets/placeholder_enemy.png",
+  "frame_count": 8
+}

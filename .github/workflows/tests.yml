@@ -1,0 +1,44 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gdunit4:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Read Godot version
+        id: godot_version
+        run: echo "version=$(cat .godot-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Download Godot
+        env:
+          GODOT_VERSION: ${{ steps.godot_version.outputs.version }}
+        run: |
+          curl -L -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          mkdir -p godot-bin
+          unzip -q godot.zip -d godot-bin
+          # 官方 zip 的內部結構在不同版本間不一致：有時二進位檔在根目錄，
+          # 有時包在一層同名資料夾裡（Windows 版就是後者）。用 find 定位兩種都能work。
+          GODOT_BIN="$(find godot-bin -type f -name 'Godot_v*_linux.x86_64' | head -1)"
+          if [ -z "$GODOT_BIN" ]; then
+            echo "在解壓內容中找不到 Godot 二進位檔："
+            find godot-bin -maxdepth 2
+            exit 1
+          fi
+          chmod +x "$GODOT_BIN"
+          echo "GODOT=$(pwd)/${GODOT_BIN}" >> "$GITHUB_ENV"
+
+      - name: Import project
+        run: "$GODOT --headless --path . --import || true"
+
+      - name: Run GdUnit4 test suite
+        run: "$GODOT --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests"

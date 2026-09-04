@@ -1,0 +1,18 @@
+# Godot 4 產生的匯入快取與暫存
+.godot/
+/android/
+*.tmp
+*.translation
+
+# 匯出設定含本機路徑與金鑰，不進版控
+export_presets.cfg
+
+# AI 生成的原始美術素材不進 git（見規格 8.2）
+# 以本地 + 雲端硬碟備份，只有裁切壓縮後的成品進 game/assets/
+art_src/
+
+# subagent-driven-development 的進度暫存
+.superpowers/
+
+# GdUnit4 產生的測試報告
+reports/
