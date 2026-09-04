@@ -57,6 +57,9 @@ func test_every_tower_level_has_required_fields() -> void:
 func test_tower_upgrade_costs_increase() -> void:
 	for tower_id: StringName in _registry.towers:
 		var levels: Array = _registry.towers[tower_id]["levels"]
+		assert_int(levels.size()).override_failure_message(
+			"塔 %s 的 levels 陣列是空的，無法建造" % tower_id
+		).is_greater(0)
 		for i in range(1, levels.size()):
 			assert_int(int(levels[i]["cost"])).override_failure_message(
 				"塔 %s 第 %d 級的造價必須高於前一級" % [tower_id, i + 1]
