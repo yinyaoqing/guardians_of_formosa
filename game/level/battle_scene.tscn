@@ -14,3 +14,17 @@ script = ExtResource("1_bscn0")
 curve = SubResource("Curve2D_bscn0")
 
 [node name="Views" type="Node2D" parent="."]
+
+[node name="BuildSlots" type="Node2D" parent="."]
+
+[node name="Slot0" type="Marker2D" parent="BuildSlots"]
+position = Vector2(400, 200)
+
+[node name="Slot1" type="Marker2D" parent="BuildSlots"]
+position = Vector2(400, 450)
+
+[node name="Slot2" type="Marker2D" parent="BuildSlots"]
+position = Vector2(900, 480)
+
+[node name="Slot3" type="Marker2D" parent="BuildSlots"]
+position = Vector2(1400, 480)

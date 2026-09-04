@@ -19,6 +19,7 @@ const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 
 @onready var _path_node: Path2D = $MainPath
 @onready var _view_root: Node2D = $Views
+@onready var _build_slots_root: Node2D = $BuildSlots
 
 var _registry := DataRegistry.new()
 var _sim: BattleSim
@@ -35,7 +36,12 @@ func _ready() -> void:
 	world.paths[MAIN_PATH_ID] = _bake_path(_path_node)
 
 	_sim = BattleSim.new(world)
-	_place_tower(&"archer_tower", Vector2(400, 200))
+	_bake_build_slots(world)
+
+	# 過渡程式碼：真正的建塔 UI 要到 B3 才有，在那之前開場自動蓋一座塔，
+	# 讓畫面維持可玩。刻意走意圖佇列而非直接建造，順便替新路徑做煙霧測試。
+	# B3 接上 UI 時刪除本段。
+	world.queue_intent(GameIntent.build(world.build_slots[0].id, &"archer_tower"))
 
 func _process(delta: float) -> void:
 	_spawn_timer -= delta
@@ -59,6 +65,14 @@ func _bake_path(path_node: Path2D) -> PathData:
 		points.append(curve.sample_baked(float(i) * PATH_SAMPLE_SPACING))
 	return PathData.new(points, PATH_SAMPLE_SPACING)
 
+## 把場景中的 Marker2D 烘焙成 BuildSlot 交給 core/。
+## core/ 不認得 Marker2D，與 Path2D → PathData 是同一個分層邊界。
+func _bake_build_slots(world: WorldState) -> void:
+	for marker in _build_slots_root.get_children():
+		var slot := BuildSlot.new()
+		slot.position = marker.position
+		world.add_build_slot(slot)
+
 func _spawn_enemy(enemy_id: StringName) -> void:
 	var enemy := _registry.make_enemy(enemy_id, MAIN_PATH_ID)
 	# 先把座標設到路徑起點再建 view。否則 view 會先出現在原點，
@@ -70,30 +84,6 @@ func _spawn_enemy(enemy_id: StringName) -> void:
 	view.setup(enemy.id, _registry.enemies[enemy_id]["sprite"], enemy.position)
 	_view_root.add_child(view)
 	_enemy_views[enemy.id] = view
-
-func _place_tower(tower_id: StringName, tower_position: Vector2) -> void:
-	var def: Dictionary = _registry.towers[tower_id]
-	var level_def: Dictionary = def["levels"][0]
-
-	var tower := Tower.new()
-	tower.tower_id = tower_id
-	tower.position = tower_position
-	tower.damage = level_def["damage"]
-	tower.damage_type = StringName(def["damage_type"])
-	tower.attack_range = level_def["attack_range"]
-	tower.fire_interval = level_def["fire_interval"]
-	tower.projectile_speed = level_def["projectile_speed"]
-	tower.splash_radius = level_def["splash_radius"]
-	var on_hit_effects: Array[StringName] = []
-	for effect_id in level_def["on_hit_effects"]:
-		on_hit_effects.append(StringName(effect_id))
-	tower.on_hit_effects = on_hit_effects
-	_sim.world.add_tower(tower)
-
-	var view := TowerViewScript.new() as TowerView
-	view.setup(tower.id, def["sprite"], tower_position)
-	_view_root.add_child(view)
-	_tower_views[tower.id] = view
 
 ## 每個邏輯 tick 後同步一次：推進插值目標、清掉已死亡的 view
 func _sync_views() -> void:
@@ -109,6 +99,19 @@ func _sync_views() -> void:
 			_enemy_views.erase(view_id)
 
 	for tower: Tower in _sim.world.towers:
+		if not _tower_views.has(tower.id):
+			var view := TowerViewScript.new() as TowerView
+			view.setup(tower.id, _registry.towers[tower.tower_id]["sprite"], tower.position)
+			_view_root.add_child(view)
+			_tower_views[tower.id] = view
+
+	for view_id: int in _tower_views.keys():
+		if _find_tower_view_owner(view_id) == null:
+			var view: TowerView = _tower_views[view_id]
+			view.queue_free()
+			_tower_views.erase(view_id)
+
+	for tower: Tower in _sim.world.towers:
 		if tower.target_id == 0:
 			continue
 		var target: Enemy = _sim.world.enemies_by_id.get(tower.target_id)
@@ -116,6 +119,13 @@ func _sync_views() -> void:
 			_tower_views[tower.id].aim_at(target.position)
 
 	_sync_projectile_views()
+
+## 賣塔之後對應的 view 要跟著消失。塔的數量少，線性搜尋即可。
+func _find_tower_view_owner(view_id: int) -> Tower:
+	for tower: Tower in _sim.world.towers:
+		if tower.id == view_id:
+			return tower
+	return null
 
 ## 投射物的生滅比敵人頻繁得多，且身分是 instance_id 而非實體 id。
 ## 新出現的建 view、已消失的釋放 view。
