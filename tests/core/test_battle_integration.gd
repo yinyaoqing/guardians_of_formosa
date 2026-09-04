@@ -258,6 +258,70 @@ func test_projectile_is_wasted_when_its_target_dies_first() -> void:
 		"遠塔的投射物在確認目標已死後應該被釋放，不會一直卡在 world.projectiles 裡"
 	).has_size(0)
 
+## Fix 1 的迴歸守衛：world.effect_defs 過去只在測試裡手動賦值,實機的
+## battle_scene.gd 從未呼叫過任何注入方法,導致所有 on_hit_effects 在正式
+## 遊戲裡都是啞的。這裡驗證 WorldState.apply_definitions 本身確實把
+## DataRegistry 載入的定義灌進 world.effect_defs——battle_scene.gd 是否
+## 呼叫了它是另一回事,但至少「忘了接線」不會再無聲無息。
+func test_apply_definitions_wires_effect_defs_from_the_registry() -> void:
+	var registry := DataRegistry.new()
+	registry.load_from_disk()
+
+	var world := WorldState.new()
+	world.apply_definitions(registry)
+
+	assert_bool(world.effect_defs.is_empty()).override_failure_message(
+		"apply_definitions 必須把 DataRegistry 載入的狀態效果定義灌進 world.effect_defs"
+	).is_false()
+	assert_bool(world.effect_defs.has(&"chill")).override_failure_message(
+		"world.effect_defs 應包含出貨的 chill 效果定義(data/status_effects/chill.json)"
+	).is_true()
+
+## Fix 5 的浸泡測試:池的斷言到目前為止都只涵蓋單一物件、單一 tick,
+## 真正的洩漏只會在一整場戰鬥的規模下才會現形。這裡連續生成數十隻敵人、
+## 讓一座塔持續開火並施加 on_hit 效果,經歷死亡、洩漏與效果到期後,
+## 驗證投射物池與效果池都確實回滿。
+func test_pools_return_to_full_capacity_after_a_long_battle() -> void:
+	var world := _make_world()
+	world.effect_defs[&"chill"] = {"id": "chill", "kind": "slow", "magnitude": 0.3, "duration": 1.0}
+
+	var tower := _add_tower(world, Vector2(150, 0), 5.0, 0.2, 600.0)
+	tower.attack_range = 500.0  # 覆蓋整條路徑,確保塔全程都有目標可打
+	tower.on_hit_effects.assign([&"chill"] as Array[StringName])
+
+	var sim := BattleSim.new(world)
+
+	const SPAWN_INTERVAL := 0.75
+	const SPAWN_PHASE_SECONDS := 20.0
+	const TOTAL_TICKS := 900   # 30 秒,含尾端 10 秒淨空期
+
+	var spawn_timer := 0.0
+	var elapsed := 0.0
+	var spawn_toggle := false
+
+	for tick_i in TOTAL_TICKS:
+		elapsed += BattleSim.TICK_DELTA
+		if elapsed <= SPAWN_PHASE_SECONDS:
+			spawn_timer -= BattleSim.TICK_DELTA
+			if spawn_timer <= 0.0:
+				spawn_timer = SPAWN_INTERVAL
+				if spawn_toggle:
+					_add_enemy(world, 10.0, 40.0, 3)     # 血薄,會被塔擊殺
+				else:
+					_add_enemy(world, 5000.0, 250.0, 3)  # 血厚腳快,會洩漏到終點
+				spawn_toggle = not spawn_toggle
+		sim.advance(BattleSim.TICK_DELTA)   # 每次呼叫剛好推進一個 tick
+
+	assert_array(world.projectiles).override_failure_message(
+		"整場戰鬥結束後仍有投射物殘留在 world.projectiles,代表命中或釋放邏輯漏掉了某些飛行中的投射物"
+	).has_size(0)
+	assert_int(world.projectile_pool.free_count()).override_failure_message(
+		"投射物池未回滿:代表某些投射物被取用後從未歸還,真實對戰中池會無上限增長"
+	).is_equal(world.projectile_pool.capacity())
+	assert_int(world.effect_pool.free_count()).override_failure_message(
+		"效果池未回滿:代表某些狀態效果實例被取用後從未歸還,真實對戰中池會無上限增長"
+	).is_equal(world.effect_pool.capacity())
+
 func test_shipped_data_drives_a_full_projectile_and_status_chain() -> void:
 	# 端到端：用真實 JSON 資料，塔發射投射物、命中、造成傷害並施加減速。
 	# 不寫死任何平衡數字，全部從 registry 讀，數值調整時不需修改本測試。

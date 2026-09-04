@@ -69,6 +69,14 @@ func recompute(enemy: Enemy) -> void:
 
 	enemy.armor = maxf(0.0, enemy.base_armor - strongest_armor_break)
 
+## 歸還敵人身上所有生效中的效果。敵人離場時呼叫，否則池會逐漸耗盡。
+## 由 StatusSystem 負責是因為它是效果實例的唯一擁有者——若呼叫端各自持有池的參照，
+## 兩份帳就會分家，一邊洩漏、一邊重複釋放。
+func release_all(enemy: Enemy) -> void:
+	for effect: StatusEffect in enemy.active_effects:
+		_pool.release(effect)
+	enemy.active_effects.clear()
+
 func _find(enemy: Enemy, kind: StringName, source: StringName) -> StatusEffect:
 	for effect: StatusEffect in enemy.active_effects:
 		if effect.kind == kind and effect.source == source:

@@ -58,13 +58,19 @@ func tick(delta: float) -> void:
 ## 命中結算。傷害一律經過 DamageSystem，此處不做任何減免計算。
 ## 範圍內全額傷害，不做距離衰減——衰減會讓數值難以推理。
 func _on_impact(projectile: Projectile, target: Enemy) -> void:
+	# 主目標一律直接命中，不透過 grid 查詢——grid 是否在本 tick 已經重建
+	# 是 BattleSim._tick 的排程細節，主目標受不受傷不該取決於那個排程。
+	# 也因此必須先命中主目標，再把它從半徑迴圈中排除，否則會被打兩次。
+	_hit_one(projectile, target)
+
 	if projectile.splash_radius <= 0.0:
-		_hit_one(projectile, target)
 		return
 
 	# grid 是 broad phase，回傳的候選需自行做精確距離判定
 	var radius_squared := projectile.splash_radius * projectile.splash_radius
 	for candidate_id in _world.grid.query_radius(projectile.position, projectile.splash_radius):
+		if candidate_id == target.id:
+			continue
 		var enemy: Enemy = _world.enemies_by_id.get(candidate_id)
 		if enemy == null or not enemy.alive or enemy.leaked:
 			continue
@@ -77,10 +83,16 @@ func _on_impact(projectile: Projectile, target: Enemy) -> void:
 func _hit_one(projectile: Projectile, enemy: Enemy) -> void:
 	DamageSystem.apply(enemy, projectile.damage, projectile.damage_type)
 	for effect_id in projectile.on_hit_effects:
-		var def: Dictionary = _world.effect_defs.get(effect_id, {})
-		if def.is_empty():
+		# 用 has() 而非 get(..., {}) 判斷存在與否：資料完整性測試只能保證
+		# data/ 內部 id 互相對得上，看不到 effect_defs 是否真的被表現層灌進
+		# WorldState（見 WorldState.apply_definitions）。萬一忘了接線，
+		# 這裡就是唯一能在測試中炸開的地方；push_error 留給出貨版本，
+		# assert 則讓開發與測試期間的失敗夠大聲，不會被靜靜吞掉。
+		if not _world.effect_defs.has(effect_id):
 			push_error("投射物引用了不存在的狀態效果: %s" % effect_id)
+			assert(false, "投射物引用了不存在的狀態效果: %s" % effect_id)
 			continue
+		var def: Dictionary = _world.effect_defs[effect_id]
 		_world.status_system.apply(enemy, def, projectile.source_tower_id)
 
 func _despawn(index: int) -> void:

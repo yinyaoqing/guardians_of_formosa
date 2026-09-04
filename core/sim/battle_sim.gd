@@ -96,12 +96,9 @@ func _remove_dead() -> void:
 			continue
 		if not enemy.leaked:
 			world.gold += enemy.bounty
-		_release_effects(enemy)
+		# 效果實例的歸還交給 StatusSystem——它是效果池的唯一擁有者。
+		# 若這裡自己抓 world.effect_pool 來釋放，一旦有人用不同的池建構
+		# StatusSystem（測試裡每一個都是這樣建的），兩邊帳目就會分家。
+		world.status_system.release_all(enemy)
 		world.enemies_by_id.erase(enemy.id)
 	world.enemies = survivors
-
-## 敵人離場時把它身上的效果實例歸還池中，否則池會逐漸耗盡。
-func _release_effects(enemy: Enemy) -> void:
-	for effect: StatusEffect in enemy.active_effects:
-		world.effect_pool.release(effect)
-	enemy.active_effects.clear()

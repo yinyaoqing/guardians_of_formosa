@@ -180,6 +180,24 @@ func test_single_target_projectile_does_not_splash() -> void:
 		"splash_radius 為 0 時只能打到主目標"
 	).is_equal_approx(100.0, 0.001)
 
+## Fix 4 的迴歸守衛:主目標必須無條件被打到,不能只靠 grid 查詢碰巧命中。
+## 這裡刻意不建 grid(維持空白),模擬 grid 尚未於本 tick 重建的情境——
+## 若命中邏輯又退回「只靠 grid.query_radius 回傳主目標」,這裡就會失敗。
+func test_splash_damages_its_target_even_if_the_grid_is_stale() -> void:
+	var world := _make_world()
+	var primary := _add_enemy(world, Vector2(60, 0), 100.0)
+	var tower := _make_tower(world, Vector2(0, 0))
+	# world.grid 故意留空,不插入 primary——這正是重現 bug 的關鍵設定
+
+	var system := ProjectileSystem.new(world)
+	system.spawn(tower, primary.id, 600.0, 50.0, [] as Array[StringName])
+	system.tick(0.5)
+
+	assert_float(primary.hp).override_failure_message(
+		"splash 投射物的主目標必須直接命中,不能只靠 grid 查詢是否剛好回傳它——" +
+		"grid 是否已在本 tick 重建是 BattleSim 的排程細節,主目標受不受傷不該取決於它"
+	).is_equal_approx(80.0, 0.001)
+
 func test_on_hit_effect_is_applied_to_the_target() -> void:
 	var world := _make_world()
 	world.effect_defs[&"chill"] = {"id": "chill", "kind": "slow", "magnitude": 0.5, "duration": 3.0}

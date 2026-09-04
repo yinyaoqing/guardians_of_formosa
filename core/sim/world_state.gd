@@ -32,6 +32,11 @@ var projectile_system: ProjectileSystem = null   ## 由 BattleSim 於建構時�
 
 var _next_entity_id: int = 1
 
+## 把資料定義注入世界。core/ 不讀檔，所以定義由呼叫端自 DataRegistry 取得後傳入。
+## 集中在這裡是為了讓「忘了接線」只會發生一次，而不是每加一種定義就多一個要記得的地方。
+func apply_definitions(registry: DataRegistry) -> void:
+	effect_defs = registry.status_effects
+
 func add_enemy(enemy: Enemy) -> void:
 	if enemy.id == 0:
 		enemy.id = next_id()

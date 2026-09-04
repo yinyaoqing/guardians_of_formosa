@@ -25,6 +25,7 @@ func _ready() -> void:
 	_registry.load_from_disk()
 
 	var world := WorldState.new()
+	world.apply_definitions(_registry)
 	world.paths[MAIN_PATH_ID] = _bake_path(_path_node)
 	world.gold = 200
 	world.lives = 20
