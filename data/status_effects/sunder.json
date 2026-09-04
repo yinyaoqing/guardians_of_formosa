@@ -1,0 +1,7 @@
+{
+	"id": "sunder",
+	"name_key": "status.sunder.name",
+	"kind": "armor_break",
+	"magnitude": 0.15,
+	"duration": 5.0
+}

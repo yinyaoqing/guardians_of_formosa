@@ -145,3 +145,61 @@ func test_json_id_matches_filename() -> void:
 			assert_bool(expected_id == actual_id).override_failure_message(
 				"檔案 %s 的 id 欄位是 %s，與檔名不符（應為 %s）" % [full_path, actual_id, expected_id]
 			).is_true()
+
+func test_at_least_one_status_effect_is_loaded() -> void:
+	assert_int(_registry.status_effects.size()).is_greater(0)
+
+func test_every_status_effect_has_known_kind() -> void:
+	var known := [
+		StatusEffect.KIND_SLOW,
+		StatusEffect.KIND_STUN,
+		StatusEffect.KIND_DOT,
+		StatusEffect.KIND_ARMOR_BREAK,
+	]
+	for effect_id: StringName in _registry.status_effects:
+		var kind := StringName(_registry.status_effects[effect_id]["kind"])
+		assert_bool(known.has(kind)).override_failure_message(
+			"狀態效果 %s 的 kind「%s」不是已知的四種之一" % [effect_id, kind]
+		).is_true()
+
+func test_every_status_effect_has_positive_duration() -> void:
+	for effect_id: StringName in _registry.status_effects:
+		assert_float(_registry.status_effects[effect_id]["duration"]).override_failure_message(
+			"狀態效果 %s 的 duration 必須為正" % effect_id
+		).is_greater(0.0)
+
+func test_magnitude_is_positive_except_for_stun() -> void:
+	# 暈眩不使用 magnitude，允許缺漏；其餘三種必須有正值
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		if StringName(def["kind"]) == StatusEffect.KIND_STUN:
+			continue
+		assert_bool(def.has("magnitude")).override_failure_message(
+			"狀態效果 %s 缺少 magnitude" % effect_id
+		).is_true()
+		assert_float(def["magnitude"]).override_failure_message(
+			"狀態效果 %s 的 magnitude 必須為正" % effect_id
+		).is_greater(0.0)
+
+func test_slow_magnitude_is_within_zero_to_one() -> void:
+	# 超過 1.0 會讓速度變成負數
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		if StringName(def["kind"]) != StatusEffect.KIND_SLOW:
+			continue
+		assert_float(def["magnitude"]).override_failure_message(
+			"減速效果 %s 的 magnitude 必須落在 0.0 與 1.0 之間" % effect_id
+		).is_between(0.0, 1.0)
+
+func test_dot_effects_declare_a_known_damage_type() -> void:
+	var known := [DamageSystem.PHYSICAL, DamageSystem.MAGIC, DamageSystem.TRUE_DAMAGE]
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		if StringName(def["kind"]) != StatusEffect.KIND_DOT:
+			continue
+		assert_bool(def.has("damage_type")).override_failure_message(
+			"持續傷害效果 %s 缺少 damage_type" % effect_id
+		).is_true()
+		assert_bool(known.has(StringName(def["damage_type"]))).override_failure_message(
+			"持續傷害效果 %s 的 damage_type 不是已知類型" % effect_id
+		).is_true()
