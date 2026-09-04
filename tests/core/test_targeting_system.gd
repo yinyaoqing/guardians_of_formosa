@@ -9,6 +9,7 @@ func _make_tower() -> Tower:
 	tower.damage = 10.0
 	tower.damage_type = DamageSystem.PHYSICAL
 	tower.fire_interval = 1.0
+	tower.projectile_speed = 600.0
 	return tower
 
 func _make_enemy(id: int, pos: Vector2, distance_along: float) -> Enemy:

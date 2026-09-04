@@ -192,20 +192,16 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 		"Tower.projectile_speed 沒有從關卡資料複製過去——改 data/towers/archer_tower.json 的 projectile_speed 不會有任何效果"
 	).is_equal_approx(float(level_def["projectile_speed"]), 0.001)
 
-func test_overkill_wastes_shots_because_damage_lands_on_impact() -> void:
-	# 兩座塔同時對同一隻敵人開火，且塔與敵人同座標（距離 0）。
+func test_damage_is_not_applied_at_fire_time() -> void:
+	# 驗證傷害在命中時結算，而非開火時結算。兩座塔同時對敵人開火，
+	# 敵人血量充足（1000 HP vs 每發 10 傷害）。推進恰好一個 tick，
+	# 也就是兩座塔剛開火的那一 tick，立刻檢查。若傷害在「發射當下」結算，
+	# 敵人此刻就該已經掉血；但本專案設計傷害要到「命中那一 tick」才結算，
+	# 所以敵人應該還是滿血，兩發投射物都還在飛行中、尚未被消耗。
 	# 敵人的實際座標由 MovementSystem 每 tick 依 distance_along 從路徑重新換算
 	# （position_at），直接指定 .position 會在第一個 tick 就被蓋掉,所以這裡改用
-	# distance_along 來控制座標——_make_world 的路徑點都落在 x 軸上、取樣間距
-	# 100,所以 distance_along = 50.0 換算回來正好是 (50, 0)。
-	# 只推進恰好一個 tick——也就是兩座塔開火的那個 tick——立刻檢查：
-	# 若傷害在「發射當下」結算，敵人此刻就該已經掉血；本專案的設計是
-	# 傷害要到「命中那一 tick」才結算（命中最快也要等到下一個 tick，
-	# 見 ProjectileSystem 排在 _tick_towers 之前的順序），所以此刻敵人
-	# 應該還是滿血，兩發投射物都還在飛行中、尚未被消耗。
-	# 這個時間點才是真正能分辨「發射即結算」與「命中才結算」兩種實作的地方——
-	# 距離為 0 讓兩發後續會在同一個 tick 命中,不能拿來證明「浪費」,
-	# 只有「開火當下有沒有立刻扣血」能分辨。
+	# distance_along 來控制座標——_make_world 的路徑點都落在 x 軸上、取樣間距 100，
+	# 所以 distance_along = 50.0 換算回來正好是 (50, 0)。
 	var world := _make_world()
 	var enemy := _add_enemy(world, 1000.0, 0.0, 5)
 	enemy.distance_along = 50.0

@@ -28,6 +28,7 @@ func _make_tower(world: WorldState, pos: Vector2) -> Tower:
 	tower.damage_type = DamageSystem.PHYSICAL
 	tower.attack_range = 500.0
 	tower.fire_interval = 1.0
+	tower.projectile_speed = 600.0
 	world.add_tower(tower)
 	return tower
 
