@@ -28,13 +28,38 @@ func test_added_build_slot_gets_an_entity_id_and_is_indexed() -> void:
 func test_build_slots_share_the_entity_id_space_with_other_entities() -> void:
 	# id 跨型別不重複，是「實體 id 永不衝突」這條性質的一部分
 	var world := WorldState.new()
-	var slot := BuildSlot.new()
-	world.add_build_slot(slot)
+
+	# 交錯添加不同類型實體，驗證它們取 id 的順序
+	var slot1 := BuildSlot.new()
+	slot1.position = Vector2(100, 100)
+	world.add_build_slot(slot1)
+	var id1 := slot1.id
+
 	var enemy := Enemy.new()
 	world.add_enemy(enemy)
-	assert_bool(slot.id != enemy.id).override_failure_message(
-		"建塔點與敵人的 id 必須來自同一個計數器，不得重複"
-	).is_true()
+	var id2 := enemy.id
+
+	var slot2 := BuildSlot.new()
+	slot2.position = Vector2(200, 200)
+	world.add_build_slot(slot2)
+	var id3 := slot2.id
+
+	var tower := Tower.new()
+	tower.position = Vector2(300, 300)
+	world.add_tower(tower)
+	var id4 := tower.id
+
+	# 所有實體 id 應連續遞增，表示他們共用同一個計數器
+	# 若各型別有獨立計數器，這個測試會失敗
+	assert_int(id2).is_equal(id1 + 1).override_failure_message(
+		"建塔點與敵人的 id 必須來自同一個計數器，不得重複。per-type 計數器會導致型別間 id 衝突"
+	)
+	assert_int(id3).is_equal(id2 + 1).override_failure_message(
+		"建塔點與敵人的 id 必須來自同一個計數器，不得重複。per-type 計數器會導致型別間 id 衝突"
+	)
+	assert_int(id4).is_equal(id3 + 1).override_failure_message(
+		"建塔點與敵人的 id 必須來自同一個計數器，不得重複。per-type 計數器會導致型別間 id 衝突"
+	)
 
 func test_queued_intents_accumulate() -> void:
 	var world := WorldState.new()
