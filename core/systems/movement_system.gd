@@ -10,6 +10,9 @@ static func tick(enemies: Array, paths: Dictionary, delta: float) -> void:
 			continue
 		if enemy.blocked_by != 0:
 			continue
+		if not paths.has(enemy.path_id):
+			push_error("MovementSystem: 敵人 id=%d 引用了不存在的路徑 path_id=%s" % [enemy.id, enemy.path_id])
+			continue
 		var path: PathData = paths[enemy.path_id]
 		enemy.distance_along += enemy.speed * delta
 		if enemy.distance_along >= path.total_length():

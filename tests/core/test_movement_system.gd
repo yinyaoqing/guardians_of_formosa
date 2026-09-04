@@ -56,3 +56,12 @@ func test_blocked_enemy_does_not_advance() -> void:
 	enemy.blocked_by = 42
 	MovementSystem.tick([enemy], _make_paths(), 1.0)
 	assert_float(enemy.distance_along).is_equal_approx(0.0, 0.001)
+
+func test_unknown_path_id_does_not_crash() -> void:
+	# path_id 由關卡場景提供，不受 tests/test_data_integrity.gd 的 JSON 檢查保護，
+	# 是 core/ 內唯一沒有其他防線的壞資料路徑。這裡只驗證行為（不崩潰、不推進），
+	# 至於 push_error 是否印出訊息由 GdUnit4 自行處理，不在斷言範圍內。
+	var enemy := _make_enemy()
+	enemy.path_id = &"missing_path"
+	MovementSystem.tick([enemy], _make_paths(), 1.0)
+	assert_float(enemy.distance_along).is_equal_approx(0.0, 0.001)
