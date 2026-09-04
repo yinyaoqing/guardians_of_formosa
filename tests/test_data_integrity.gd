@@ -278,3 +278,57 @@ func test_tower_on_hit_effects_reference_existing_effects() -> void:
 				assert_bool(_registry.status_effects.has(StringName(effect_id))).override_failure_message(
 					"塔 %s 引用了不存在的狀態效果 %s" % [tower_id, effect_id]
 				).is_true()
+
+func test_at_least_one_level_is_loaded() -> void:
+	assert_int(_registry.levels.size()).is_greater(0)
+
+func test_every_level_has_required_fields() -> void:
+	var required := [
+		"id", "name_key", "starting_gold", "starting_lives",
+		"sell_refund_ratio", "available_towers",
+	]
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+		for field: String in required:
+			assert_bool(meta.has(field)).override_failure_message(
+				"關卡 %s 缺少必填欄位 %s" % [level_id, field]
+			).is_true()
+
+func test_every_level_has_sane_starting_resources() -> void:
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+		assert_float(meta["starting_gold"]).override_failure_message(
+			"關卡 %s 的起始金幣必須為正" % level_id
+		).is_greater(0.0)
+		assert_float(meta["starting_lives"]).override_failure_message(
+			"關卡 %s 的起始生命必須為正" % level_id
+		).is_greater(0.0)
+
+func test_sell_refund_ratio_is_within_zero_to_one() -> void:
+	# 大於 1 等於賣塔賺錢，玩家可以無限套利
+	for level_id: StringName in _registry.levels:
+		assert_float(_registry.levels[level_id]["sell_refund_ratio"]).override_failure_message(
+			"關卡 %s 的退款比例必須落在 0 與 1 之間，否則賣塔會變成無限套利" % level_id
+		).is_between(0.0, 1.0)
+
+func test_level_available_towers_reference_existing_towers() -> void:
+	for level_id: StringName in _registry.levels:
+		for tower_id in _registry.levels[level_id]["available_towers"]:
+			assert_bool(_registry.towers.has(StringName(tower_id))).override_failure_message(
+				"關卡 %s 的可用塔種引用了不存在的塔 %s" % [level_id, tower_id]
+			).is_true()
+
+func test_level_directory_name_matches_its_id() -> void:
+	# 關卡的形狀與 enemies/towers 不同：檔案固定叫 meta.json，
+	# 所以身分由「目錄名」承載，既有的檔名一致守衛套不上來。
+	var dir := DirAccess.open("res://data/levels")
+	assert_bool(dir != null).is_true()
+	var count := 0
+	for sub_dir in dir.get_directories():
+		count += 1
+		assert_bool(_registry.levels.has(StringName(sub_dir))).override_failure_message(
+			"關卡目錄 %s 底下的 meta.json 其 id 與目錄名不符" % sub_dir
+		).is_true()
+	assert_int(_registry.levels.size()).override_failure_message(
+		"關卡目錄數與註冊表大小不符，表示有兩個關卡宣告了同一個 id 而互相覆蓋"
+	).is_equal(count)
