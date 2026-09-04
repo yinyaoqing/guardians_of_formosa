@@ -40,6 +40,10 @@ func advance(frame_delta: float) -> int:
 		_accumulator = 0.0
 	return ticks
 
+## 幀內進度 0.0 ~ 1.0，供表現層做渲染插值使用
+func tick_progress() -> float:
+	return clampf(_accumulator / TICK_DELTA, 0.0, 1.0)
+
 func _tick() -> void:
 	tick_count += 1
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
