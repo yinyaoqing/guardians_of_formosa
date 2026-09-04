@@ -11,14 +11,20 @@ const SPAWN_INTERVAL := 1.5
 
 const EnemyViewScript := preload("res://game/views/enemy_view.gd")
 const TowerViewScript := preload("res://game/views/tower_view.gd")
+const ProjectileViewScript := preload("res://game/views/projectile_view.gd")
+
+## 置換用的投射物貼圖。之後應改為依 Projectile.projectile_id 從資料查表，
+## 目前只有一種塔，寫成常數即可。
+const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 
 @onready var _path_node: Path2D = $MainPath
 @onready var _view_root: Node2D = $Views
 
 var _registry := DataRegistry.new()
 var _sim: BattleSim
-var _enemy_views: Dictionary = {}   ## int -> EnemyView
-var _tower_views: Dictionary = {}   ## int -> TowerView
+var _enemy_views: Dictionary = {}       ## int -> EnemyView
+var _tower_views: Dictionary = {}       ## int -> TowerView
+var _projectile_views: Dictionary = {}  ## instance_id -> ProjectileView
 var _spawn_timer: float = 0.0
 
 func _ready() -> void:
@@ -111,8 +117,34 @@ func _sync_views() -> void:
 		if target != null:
 			_tower_views[tower.id].aim_at(target.position)
 
+	_sync_projectile_views()
+
+## 投射物的生滅比敵人頻繁得多，且身分是 instance_id 而非實體 id。
+## 新出現的建 view、已消失的釋放 view。
+func _sync_projectile_views() -> void:
+	var live: Dictionary = {}
+	for projectile: Projectile in _sim.world.projectiles:
+		live[projectile.instance_id] = true
+		var view: ProjectileView = _projectile_views.get(projectile.instance_id)
+		if view == null:
+			# 生成當下的座標就是發射它的塔，從那裡開始插值才不會從原點滑進來
+			view = ProjectileViewScript.new() as ProjectileView
+			view.setup(projectile.instance_id, PROJECTILE_SPRITE, projectile.position)
+			_view_root.add_child(view)
+			_projectile_views[projectile.instance_id] = view
+		else:
+			view.on_tick(projectile.position)
+
+	for view_id: int in _projectile_views.keys():
+		if not live.has(view_id):
+			var view: ProjectileView = _projectile_views[view_id]
+			view.queue_free()
+			_projectile_views.erase(view_id)
+
 ## 每個渲染幀插值一次，讓 30Hz 的邏輯看起來是 60fps 的平滑移動
 func _interpolate_views() -> void:
 	var alpha := _sim.tick_progress()
 	for view: EnemyView in _enemy_views.values():
+		view.interpolate(alpha)
+	for view: ProjectileView in _projectile_views.values():
 		view.interpolate(alpha)
