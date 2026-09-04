@@ -42,3 +42,21 @@ func test_full_armor_reduction_deals_no_damage_but_does_not_heal() -> void:
 	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
 	assert_float(dealt).is_equal_approx(0.0, 0.001)
 	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
+
+func test_negative_armor_does_not_amplify_damage() -> void:
+	var enemy := _make_enemy(-1.0, 0.0)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(100.0, 0.001)
+	assert_float(enemy.hp).is_equal_approx(0.0, 0.001)
+
+func test_negative_magic_resist_does_not_amplify_damage() -> void:
+	var enemy := _make_enemy(0.0, -0.5)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.MAGIC)
+	assert_float(dealt).is_equal_approx(100.0, 0.001)
+	assert_float(enemy.hp).is_equal_approx(0.0, 0.001)
+
+func test_reduction_above_one_deals_no_damage_and_does_not_heal() -> void:
+	var enemy := _make_enemy(1.5, 0.0)
+	var dealt := DamageSystem.apply(enemy, 100.0, DamageSystem.PHYSICAL)
+	assert_float(dealt).is_equal_approx(0.0, 0.001)
+	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)

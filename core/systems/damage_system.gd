@@ -31,6 +31,10 @@ static func apply(enemy: Enemy, amount: float, damage_type: StringName) -> float
 			push_error("未知的傷害類型: %s" % damage_type)
 			return 0.0
 
+	# 減免比例必須夾限在 [0, 1]。敵人的 armor 與 magic_resist 是公開欄位，
+	# 下個里程碑的破甲狀態效果會直接寫入這些欄位。若沒夾限，負值會變成傷害放大。
+	reduction = clampf(reduction, 0.0, 1.0)
+
 	var dealt := maxf(0.0, amount * (1.0 - reduction))
 	enemy.hp -= dealt
 	if enemy.hp <= 0.0:
