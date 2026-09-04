@@ -103,3 +103,54 @@ func test_each_spawn_gets_a_fresh_instance_id() -> void:
 	assert_int(second.instance_id).override_failure_message(
 		"重複使用的投射物必須取得全新的 instance_id"
 	).is_greater(first_id)
+
+func test_splash_damages_every_enemy_in_radius() -> void:
+	var world := _make_world()
+	var primary := _add_enemy(world, Vector2(60, 0), 100.0)
+	var nearby := _add_enemy(world, Vector2(90, 0), 100.0)
+	var tower := _make_tower(world, Vector2(0, 0))
+	# ProjectileSystem 用的是 grid，測試中需自行建好
+	world.grid.clear()
+	world.grid.insert(primary.id, primary.position)
+	world.grid.insert(nearby.id, nearby.position)
+
+	var system := ProjectileSystem.new(world)
+	system.spawn(tower, primary.id, 600.0, 50.0, [] as Array[StringName])
+	system.tick(0.5)
+
+	assert_float(primary.hp).is_equal_approx(80.0, 0.001)
+	assert_float(nearby.hp).override_failure_message(
+		"半徑內的敵人必須受到全額傷害，不做距離衰減"
+	).is_equal_approx(80.0, 0.001)
+
+func test_splash_spares_enemies_outside_the_radius() -> void:
+	var world := _make_world()
+	var primary := _add_enemy(world, Vector2(60, 0), 100.0)
+	var distant := _add_enemy(world, Vector2(400, 0), 100.0)
+	var tower := _make_tower(world, Vector2(0, 0))
+	world.grid.clear()
+	world.grid.insert(primary.id, primary.position)
+	world.grid.insert(distant.id, distant.position)
+
+	var system := ProjectileSystem.new(world)
+	system.spawn(tower, primary.id, 600.0, 50.0, [] as Array[StringName])
+	system.tick(0.5)
+
+	assert_float(distant.hp).is_equal_approx(100.0, 0.001)
+
+func test_single_target_projectile_does_not_splash() -> void:
+	var world := _make_world()
+	var primary := _add_enemy(world, Vector2(60, 0), 100.0)
+	var nearby := _add_enemy(world, Vector2(70, 0), 100.0)
+	var tower := _make_tower(world, Vector2(0, 0))
+	world.grid.clear()
+	world.grid.insert(primary.id, primary.position)
+	world.grid.insert(nearby.id, nearby.position)
+
+	var system := ProjectileSystem.new(world)
+	system.spawn(tower, primary.id, 600.0, 0.0, [] as Array[StringName])
+	system.tick(0.5)
+
+	assert_float(nearby.hp).override_failure_message(
+		"splash_radius 為 0 時只能打到主目標"
+	).is_equal_approx(100.0, 0.001)

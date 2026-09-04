@@ -56,8 +56,21 @@ func tick(delta: float) -> void:
 		projectile.position += to_target.normalized() * step
 
 ## 命中結算。傷害一律經過 DamageSystem，此處不做任何減免計算。
+## 範圍內全額傷害，不做距離衰減——衰減會讓數值難以推理。
 func _on_impact(projectile: Projectile, target: Enemy) -> void:
-	DamageSystem.apply(target, projectile.damage, projectile.damage_type)
+	if projectile.splash_radius <= 0.0:
+		DamageSystem.apply(target, projectile.damage, projectile.damage_type)
+		return
+
+	# grid 是 broad phase，回傳的候選需自行做精確距離判定
+	var radius_squared := projectile.splash_radius * projectile.splash_radius
+	for candidate_id in _world.grid.query_radius(projectile.position, projectile.splash_radius):
+		var enemy: Enemy = _world.enemies_by_id.get(candidate_id)
+		if enemy == null or not enemy.alive or enemy.leaked:
+			continue
+		if projectile.position.distance_squared_to(enemy.position) > radius_squared:
+			continue
+		DamageSystem.apply(enemy, projectile.damage, projectile.damage_type)
 
 func _despawn(index: int) -> void:
 	var projectile: Projectile = _world.projectiles[index]
