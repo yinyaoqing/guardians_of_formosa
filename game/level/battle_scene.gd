@@ -31,10 +31,8 @@ func _ready() -> void:
 	_registry.load_from_disk()
 
 	var world := WorldState.new()
-	world.apply_definitions(_registry)
+	world.configure_for_level(_registry, &"level_01")
 	world.paths[MAIN_PATH_ID] = _bake_path(_path_node)
-	world.gold = 200
-	world.lives = 20
 
 	_sim = BattleSim.new(world)
 	_place_tower(&"archer_tower", Vector2(400, 200))
