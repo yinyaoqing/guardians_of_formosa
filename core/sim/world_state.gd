@@ -14,17 +14,28 @@ var lives: int = 20
 var grid := UniformGrid.new()
 var enemies_by_id: Dictionary = {}  ## int -> Enemy
 
+const EFFECT_POOL_CAPACITY := 64
+
+## 狀態效果實例池與其系統。實例走池化，避免戰鬥迴圈中配置新物件。
+var effect_pool := ObjectPool.new(func() -> StatusEffect: return StatusEffect.new(), EFFECT_POOL_CAPACITY)
+var status_system := StatusSystem.new(effect_pool)
+
 var _next_entity_id: int = 1
 
 func add_enemy(enemy: Enemy) -> void:
 	if enemy.id == 0:
-		enemy.id = _next_entity_id
-		_next_entity_id += 1
+		enemy.id = next_id()
 	enemies.append(enemy)
 	enemies_by_id[enemy.id] = enemy
 
 func add_tower(tower: Tower) -> void:
 	if tower.id == 0:
-		tower.id = _next_entity_id
-		_next_entity_id += 1
+		tower.id = next_id()
 	towers.append(tower)
+
+## 配發一個全新的實體 id。敵人、塔、投射物共用同一個遞增計數器，
+## 確保 id 在型別之間也不重複。
+func next_id() -> int:
+	var id := _next_entity_id
+	_next_entity_id += 1
+	return id

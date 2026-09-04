@@ -46,6 +46,7 @@ func tick_progress() -> float:
 
 func _tick() -> void:
 	tick_count += 1
+	world.status_system.tick(world.enemies, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
 	_rebuild_grid()
@@ -74,15 +75,24 @@ func _tick_towers() -> void:
 		var target: Enemy = world.enemies_by_id[tower.target_id]
 		DamageSystem.apply(target, tower.damage, tower.damage_type)
 		tower.cooldown = tower.fire_interval
-		if not target.alive and not target.leaked:
-			world.gold += target.bounty
 
-## 死亡與洩漏的敵人移出集合。M0 直接移除；M1 會改成先播死亡動畫再移除。
+## 死亡與洩漏的敵人移出集合，並在此處統一發放賞金。
+## 傷害來源不只一處（塔、投射物、DoT），賞金邏輯若跟著複製會失去單一事實來源；
+## 這裡本來就走訪所有死亡的敵人，且 leaked 旗標剛好能區分「被擊殺」與「走到終點」。
 func _remove_dead() -> void:
 	var survivors: Array[Enemy] = []
 	for enemy: Enemy in world.enemies:
 		if enemy.alive:
 			survivors.append(enemy)
-		else:
-			world.enemies_by_id.erase(enemy.id)
+			continue
+		if not enemy.leaked:
+			world.gold += enemy.bounty
+		_release_effects(enemy)
+		world.enemies_by_id.erase(enemy.id)
 	world.enemies = survivors
+
+## 敵人離場時把它身上的效果實例歸還池中，否則池會逐漸耗盡。
+func _release_effects(enemy: Enemy) -> void:
+	for effect: StatusEffect in enemy.active_effects:
+		world.effect_pool.release(effect)
+	enemy.active_effects.clear()
