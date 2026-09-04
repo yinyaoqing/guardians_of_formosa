@@ -19,3 +19,6 @@ reports/
 
 # Python 快取
 __pycache__/
+
+# 並行開發用的 git worktree（美術軌與程式軌各占一個工作目錄）
+.worktrees/
