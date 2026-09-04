@@ -107,6 +107,15 @@ func test_no_duplicate_ids_across_data_files() -> void:
 		"data/towers 底下有 %d 個 .json 檔，但註冊表只有 %d 筆——代表有重複的 id 欄位互相覆蓋" % [tower_file_count, _registry.towers.size()]
 	).is_equal(tower_file_count)
 
+	var status_effects_dir := DirAccess.open("res://data/status_effects")
+	var status_effect_file_count := 0
+	for file_name in status_effects_dir.get_files():
+		if file_name.ends_with(".json"):
+			status_effect_file_count += 1
+	assert_int(_registry.status_effects.size()).override_failure_message(
+		"data/status_effects 底下有 %d 個 .json 檔，但註冊表只有 %d 筆——代表有重複的 id 欄位互相覆蓋" % [status_effect_file_count, _registry.status_effects.size()]
+	).is_equal(status_effect_file_count)
+
 ## make_enemy 是下一個任務會直接依賴的入口，之前完全沒有測試覆蓋。
 func test_make_enemy_builds_entity_from_data() -> void:
 	var def: Dictionary = _registry.enemies[&"orc_grunt"]
@@ -131,7 +140,7 @@ func test_make_enemy_builds_entity_from_data() -> void:
 
 ## 檔名和 id 欄位若脫鉤，程式碼引用時容易對錯檔案。
 func test_json_id_matches_filename() -> void:
-	for dir_path: String in ["res://data/enemies", "res://data/towers"]:
+	for dir_path: String in ["res://data/enemies", "res://data/towers", "res://data/status_effects"]:
 		var dir := DirAccess.open(dir_path)
 		for file_name in dir.get_files():
 			if not file_name.ends_with(".json"):
@@ -202,4 +211,38 @@ func test_dot_effects_declare_a_known_damage_type() -> void:
 		).is_true()
 		assert_bool(known.has(StringName(def["damage_type"]))).override_failure_message(
 			"持續傷害效果 %s 的 damage_type 不是已知類型" % effect_id
+		).is_true()
+
+## name_key 沒有必填檢查的話，缺漏只會在 UI 上顯示空白文字才會被發現。
+## magnitude 刻意不列入必填：暈眩效果本來就不使用 magnitude，
+## 這個例外已經由 test_magnitude_is_positive_except_for_stun 涵蓋。
+func test_every_status_effect_has_required_fields() -> void:
+	var required := ["id", "name_key", "kind", "duration"]
+	for effect_id: StringName in _registry.status_effects:
+		var def: Dictionary = _registry.status_effects[effect_id]
+		for field: String in required:
+			var has_field: bool = def.has(field) and str(def[field]) != ""
+			assert_bool(has_field).override_failure_message(
+				"狀態效果 %s 缺少必填欄位 %s" % [effect_id, field]
+			).is_true()
+
+## 若某個 kind 的效果全部被刪除，用 kind 過濾再迴圈的測試（例如減速的 magnitude
+## 範圍檢查）會因為迴圈根本沒有執行而「無害地」通過，等於默默失去整個 kind 的覆蓋。
+## 這個測試確保四種 kind 都至少有一個已載入的效果在把關。
+func test_every_effect_kind_has_at_least_one_definition() -> void:
+	var known_kinds := [
+		StatusEffect.KIND_SLOW,
+		StatusEffect.KIND_STUN,
+		StatusEffect.KIND_DOT,
+		StatusEffect.KIND_ARMOR_BREAK,
+	]
+	var seen_kinds: Array = []
+	for effect_id: StringName in _registry.status_effects:
+		var kind := StringName(_registry.status_effects[effect_id]["kind"])
+		if not seen_kinds.has(kind):
+			seen_kinds.append(kind)
+	for kind: StringName in known_kinds:
+		assert_bool(seen_kinds.has(kind)).override_failure_message(
+			("這個里程碑應該交付全部四種狀態效果 kind，但找不到任何 kind 為 %s 的效果。" % kind) +
+			"如果之後要刻意拿掉某個 kind，請刻意更新這個測試，而不是讓它默默地讓其他用 kind 過濾的測試（例如減速的 magnitude 範圍檢查）失去覆蓋、無害地通過。"
 		).is_true()
