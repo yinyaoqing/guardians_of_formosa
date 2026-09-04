@@ -124,6 +124,10 @@ func test_splash_damages_every_enemy_in_radius() -> void:
 	).is_equal_approx(80.0, 0.001)
 
 func test_splash_spares_enemies_outside_the_radius() -> void:
+	# 此測試中的遠敵已被 broad phase 本身過濾，
+	# 所以即使刪除精確圓形判定也不會失敗。
+	# test_splash_spares_an_enemy_inside_the_query_square_but_outside_the_circle 才是
+	# 真正測試精確判定的測試。
 	var world := _make_world()
 	var primary := _add_enemy(world, Vector2(60, 0), 100.0)
 	var distant := _add_enemy(world, Vector2(400, 0), 100.0)
@@ -137,6 +141,27 @@ func test_splash_spares_enemies_outside_the_radius() -> void:
 	system.tick(0.5)
 
 	assert_float(distant.hp).is_equal_approx(100.0, 0.001)
+
+func test_splash_spares_an_enemy_inside_the_query_square_but_outside_the_circle() -> void:
+	# grid 的 broad phase 回傳的候選是以正方形覆蓋目標位置的所有格子，
+	# 所以可能包含距離超過半徑的敵人。此處驗證精確的圓形判定確實會排除這些敵人。
+	var world := _make_world()
+	var primary := _add_enemy(world, Vector2(60, 0), 100.0)
+	var near_miss := _add_enemy(world, Vector2(105, 45), 100.0)
+	var tower := _make_tower(world, Vector2(0, 0))
+	world.grid.clear()
+	world.grid.insert(primary.id, primary.position)
+	world.grid.insert(near_miss.id, near_miss.position)
+
+	var system := ProjectileSystem.new(world)
+	system.spawn(tower, primary.id, 600.0, 50.0, [] as Array[StringName])
+	system.tick(0.5)
+
+	assert_float(primary.hp).is_equal_approx(80.0, 0.001)
+	assert_float(near_miss.hp).override_failure_message(
+		"grid 是 broad phase，只能初篩候選。精確的圓形距離判定才能排除位在查詢方形內、" +
+		"但圓形外的敵人。若此判定被刪除，near_miss 會被誤傷"
+	).is_equal_approx(100.0, 0.001)
 
 func test_single_target_projectile_does_not_splash() -> void:
 	var world := _make_world()
