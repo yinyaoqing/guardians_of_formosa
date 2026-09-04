@@ -1,0 +1,58 @@
+{
+  "_doc": "A1 階段 B：把階段 A 的正確服飾重新上成卡通風格。兩階段分離的理由見 docs/art/A1-findings.md §7——史料參考圖本身就是油畫或服飾圖鑑，IP-Adapter 會忠實地把「那個媒介」一起搬過來，餵圖鑑又要卡通本身就是矛盾的要求。實測即使把 IP-Adapter 權重壓到 0.30 仍壓不掉。故改為：階段 A 只負責服飾正確，階段 B 只負責風格。",
+
+  "_usage": [
+    "1. 先跑 a1_unit_ref_pose.api.json 得到服飾正確但畫風是圖鑑的圖。",
+    "2. 把該圖複製到 comfyui/input/stage_a.png（或改節點 9 的檔名）。",
+    "3. 跑本檔。denoise 0.50 實測最佳——0.65 會在背景長出雜點，更低則風格轉不過來。",
+    "4. prompt 只放風格與色票，不要再餵參考圖，否則圖鑑風會被重新帶回來。"
+  ],
+
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "sd_xl_base_1.0.safetensors" }
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "sdxl_vae_fp16_fix.safetensors" }
+  },
+  "9": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "stage_a.png", "upload": "image" }
+  },
+  "16": {
+    "class_type": "VAEEncode",
+    "inputs": { "pixels": ["9", 0], "vae": ["2", 0] }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "clip": ["1", 1], "text": "placeholder positive — 由 generate_batch.py 依清單填入" }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "clip": ["1", 1], "text": "placeholder negative" }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["1", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["16", 0],
+      "seed": 16610430,
+      "steps": 28,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.5
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["6", 0], "vae": ["2", 0] }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["7", 0], "filename_prefix": "a1_stage_b" }
+  }
+}

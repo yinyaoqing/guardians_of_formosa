@@ -1,0 +1,157 @@
+{
+  "_doc": "第一章：熱蘭遮 1661 資產清單。欄位 subject 為 prompt 主體區塊，其餘由 generate_batch.py 依 cat 與 fac 組裝。對應規格：chapter-01-zeelandia-design.md §3、§4；art-direction-bible.md §3、§4。",
+
+  "shared": {
+    "style": "STYLE: simple flat cartoon game art, clean bold simplified shapes, minimal internal detail, large readable areas of flat color, simple shading with at most two tones per color, colored linework in dark umber and deep green instead of black with slightly varying line weight, strong warm-cool contrast of terracotta red against deep jade green, light from the upper left with one short hard cast shadow, cheerful clean and easy to read.",
+    "_style_note": "2026-09-04 改為簡單卡通化（使用者指示）。原本的膠彩顆粒／色層堆疊／粗筆觸描述已移除。保留的區隔點：彩色描邊（非粗黑均勻）、限定色域、左上平光、4 頭身。此改動與美術聖經 §1.1「上色」列的『膠彩質感：可見礦物顆粒、色層堆疊』相牴觸，該規格需一併修訂。",
+    "palette": "PALETTE: terracotta #B5442E, deep ochre #8C3A22, banyan green #2F5B3A, ink green #1E4029, jade #5C8A4A, sand #C9A96B, sun-bleached sand #D9C08E, oyster-lime white #E8DCC6, indigo #2C5470, tidal teal #3E7A94, gamboge #E0A93B, cinnabar #A8332B, burnt umber linework #3A2A22.",
+    "negative_base": "chibi, 2-head-tall proportions, thick uniform black outline, glossy plastic rendering, rim lighting, anime, manga, western fantasy, neon colors, purple, magenta, teal, pastel, blurred background, bokeh, depth of field, photorealism, 3D render, blender render, watermark, text, signature, caption, turnaround sheet, multiple views, character design sheet, prop callouts, costume plate, museum illustration, aged paper, parchment, paper texture, torn edges, sepia, botanical plate, japanese, kimono, ronin, samurai, geta sandals, ukiyo-e, woodblock print, seamless pattern, tileable texture, texture swatch",
+    "_negative_base_note": "japanese / ukiyo-e / kimono 等詞是實測回填：SDXL 對「17 世紀東亞 + 手繪」的預設先驗是日本，西拉雅與漢人單位會穩定跑成日本浪人。seamless pattern 一組則是 prop 類跑成無縫貼片圖案的對策。見 docs/art/A1-findings.md。"
+  },
+
+  "framing": {
+    "unit": "full body game sprite of a single standing character, head to toe fully visible, 3/4 front view, centered, isolated on a plain flat neutral background.",
+    "building": "a single hand-painted 2D game building asset drawn from a slightly raised three-quarter angle, one complete structure sitting on its own small patch of ground, centered, isolated on a plain flat neutral background.",
+    "prop": "a single hand-painted 2D game prop drawn from a slightly raised three-quarter angle, one small object sitting on its own small patch of ground, centered, isolated on a plain flat neutral background.",
+    "vessel": "single 3/4 side view game asset of a whole ship seen from slightly above, entire hull and rigging visible, centered, isolated on a plain flat neutral background.",
+    "scene": "top-down 3/4 isometric tower defense battle map, wide establishing view.",
+    "icon": "single centered game UI icon, one simple bold readable shape, thick contrasting border, isolated on a plain flat neutral background."
+  },
+
+  "proportions": {
+    "unit": "PROPORTIONS: 4 heads tall, sturdy simplified build, clear shoulder mass, bold readable silhouette at 128 pixels, simplified hands and face.",
+    "building": "PROPORTIONS: compact chunky simplified game asset, bold readable silhouette at 192 pixels.",
+    "prop": "PROPORTIONS: compact chunky simplified game asset, bold readable silhouette at 128 pixels.",
+    "vessel": "PROPORTIONS: compact chunky simplified game asset, bold readable silhouette at 192 pixels.",
+    "scene": "",
+    "icon": "PROPORTIONS: bold simple shape, readable at 64 pixels."
+  },
+
+  "size": {
+    "_note": "單位最終只有 128px，用 832x1216 生成是浪費——降到 768x1024 約快 40%，省下的時間換更多候選張數，對「10 選 1」比解析度重要。場景與 UI 大圖不降。",
+    "unit": [768, 1024],
+    "building": [896, 896],
+    "prop": [896, 896],
+    "vessel": [1024, 768],
+    "scene": [1344, 768],
+    "icon": [768, 768]
+  },
+
+  "negatives": {
+    "zheng": "queue hairstyle, braid, shaved forehead, Qing dynasty uniform, Qing green standard army, samurai armor, ashigaru, japanese, boots, shoes, generic oriental warrior",
+    "voc": "full plate armor, cuirassier, morion helmet, breastplate, matching uniform, winter wool coat, musketeer tabard, european castle, cold climate",
+    "siraya": "feather headdress, native american, war paint, tribal mask, Polynesian tattoo, generic tribal, Atayal pattern, Paiwan pattern, headhunter",
+    "han": "Qing dynasty, queue hairstyle, kung fu movie, wuxia, silk robe, mandarin official",
+    "none": ""
+  },
+
+  "negatives_by_cat": {
+    "unit": "portrait, bust, half body, waist up, cropped, close-up, headshot, two people, crowd, group",
+    "building": "people, characters, crowd, landscape, scenery, wide vista, architectural elevation drawing",
+    "prop": "people, characters, crowd, landscape, scenery, wide vista, still life painting, furniture, table",
+    "vessel": "cropped, close-up, partial hull",
+    "scene": "single character, portrait",
+    "icon": "detailed scene, background, landscape, full body character"
+  },
+
+  "assets": [
+    {"id": "tower_musket_t1", "cat": "unit", "fac": "voc", "name": "銃樓一級：火繩槍手",
+     "subject": "a Dutch East India Company matchlock musketeer defending tropical Formosa in 1661. Loose worn off-white linen shirt, knee breeches, wide-brimmed felt hat, leather shoes. A bandolier across the chest with twelve wooden powder containers forming a clear diagonal line. Holding a long matchlock musket with a visibly lit glowing slow match. A gamboge yellow armband on the upper arm. Sun-worn and mismatched, no uniform."},
+
+    {"id": "tower_musket_t2", "cat": "unit", "fac": "voc", "name": "銃樓二級：排槍齊射",
+     "subject": "three Dutch East India Company matchlock musketeers of 1661 Formosa standing shoulder to shoulder in a firing line, their three muskets raised at staggered heights forming a clear stepped silhouette. Off-white linen shirts, wide-brimmed felt hats, chest bandoliers with wooden powder containers, gamboge yellow armbands."},
+
+    {"id": "tower_musket_t3", "cat": "building", "fac": "voc", "name": "銃樓三級：稜堡砲位",
+     "subject": "a small 17th-century Dutch bastion gun emplacement, angled brick and oyster-lime mortar walls, a bronze 24-pounder muzzle-loading cannon on a wooden naval carriage, stacked cannonballs and powder barrels, a gamboge yellow pennant on a short pole."},
+
+    {"id": "tower_hunter_t1", "cat": "unit", "fac": "siraya", "name": "獵寮一級：新港社鏢手",
+     "subject": "a Siraya hunter of 17th-century Formosa. Lean athletic build, bare torso, a deerskin wrap at the waist, barefoot, no hat. Hair tied up, simple shell ear ornaments, a gamboge yellow woven wrist band. Holding a long bamboo-shafted javelin with an iron head, clearly longer than half his body height, carried over the shoulder. Calm alert upright posture."},
+
+    {"id": "tower_hunter_t2", "cat": "prop", "fac": "siraya", "name": "獵寮二級：鹿陷阱",
+     "subject": "a camouflaged Formosan deer trap on sandy ground, a pit covered by lashed bamboo slats and dry grass, sharpened bamboo stakes, deer antlers and bones set as a marker beside it, a gamboge yellow cord tied to a stake."},
+
+    {"id": "tower_hunter_t3", "cat": "prop", "fac": "siraya", "name": "獵寮三級：火燒獵場",
+     "subject": "a burning Formosan hunting ground, a patch of tall dry grass alight with low terracotta and gamboge flames and dark smoke, scorched earth, bamboo stakes and deer bones among the fire."},
+
+    {"id": "tower_fence_t1", "cat": "prop", "fac": "han", "name": "柵欄一級：竹柵",
+     "subject": "a defensive barricade of lashed green bamboo poles driven into sandy ground, rope bindings, sharpened tips angled outward, a small gamboge yellow cloth strip tied to one pole."},
+
+    {"id": "tower_fence_t2", "cat": "unit", "fac": "han", "name": "柵欄二級：刀盾壯丁",
+     "subject": "a 17th-century Han Chinese militiaman of Tayouan town in Formosa, a short stocky sturdy build, an indigo blue short jacket and trousers, a gamboge yellow sash at the waist, straw sandals, a topknot with a cloth headband, NOT braided. Holding a short sabre and a round rattan shield."},
+
+    {"id": "tower_fence_t3", "cat": "unit", "fac": "han", "name": "柵欄三級：藤牌隊",
+     "subject": "two 17th-century Han Chinese militiamen of Tayouan town in Formosa crouching behind large round rattan shields held forward, indigo blue short jackets, gamboge yellow sashes, straw sandals, short sabres, topknots with cloth headbands, NOT braided."},
+
+    {"id": "enemy_musketeer", "cat": "unit", "fac": "zheng", "name": "鄭軍銃卒",
+     "subject": "a 17th-century Ming loyalist musketeer of Koxinga's army. East Asian face, clean shaven, hair in a topknot under a conical lacquered iron helmet forming a clear triangular silhouette. A deep terracotta red Ming military tunic, cloth leg wraps, BARE FEET. Holding a matchlock arquebus."},
+
+    {"id": "enemy_rattan", "cat": "unit", "fac": "zheng", "name": "鄭軍藤牌兵",
+     "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a gamboge yellow woven face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET."},
+
+    {"id": "enemy_archer", "cat": "unit", "fac": "zheng", "name": "鄭軍弓箭手",
+     "subject": "a 17th-century Ming loyalist archer of Koxinga's army. East Asian face, hair in a topknot, a deep indigo blue Ming military tunic, cloth leg wraps, BARE FEET. Drawing a Ming composite recurve bow at full draw forming a taut triangular shape, a quiver of arrows at the hip."},
+
+    {"id": "enemy_ironman", "cat": "unit", "fac": "zheng", "name": "鐵人軍",
+     "subject": "a 17th-century Ming loyalist heavy infantryman of Koxinga's iron-men corps. Fully enclosed iron lamellar armor covering torso arms and legs, an iron face mask, a bulky rectangular heavy silhouette, iron grey with no bright colors. An enormous two-handed horse-cutting sabre over the shoulder, a rattan shield on the back. BARE FEET despite the heavy armor."},
+
+    {"id": "enemy_sapper", "cat": "unit", "fac": "zheng", "name": "鄭軍掘壕隊",
+     "subject": "a 17th-century Ming loyalist trench digger of Koxinga's army, an unarmed labourer. Sand yellow and ochre worn clothing, hair in a topknot, cloth leg wraps, BARE FEET. Carrying a mattock over the shoulder and a woven earth basket, a rolled earth bag at the waist. A stooped working posture."},
+
+    {"id": "enemy_warjunk", "cat": "vessel", "fac": "zheng", "name": "鄭軍大熕船",
+     "subject": "a 17th-century Chinese war junk of Koxinga's fleet. A dark burnt umber timber hull with a high stern, battened fan-shaped sails in ochre and sand, open side gun ports with bronze cannon muzzles, a cinnabar red banner at the masthead."},
+
+    {"id": "boss_chenze", "cat": "unit", "fac": "zheng", "name": "陳澤（1-2 Boss）",
+     "subject": "a 17th-century Ming loyalist general of Koxinga's army, taller and heavier than a common soldier. East Asian face, a lacquered iron helmet with a tall cinnabar red plume, Ming mountain-pattern lamellar armor in cinnabar red and gamboge gold, a flowing cape, a commander's signal banner in one hand and a sabre in the other. Cloth leg wraps, BARE FEET."},
+
+    {"id": "civilian_family", "cat": "unit", "fac": "han", "name": "平民撤離單位（漢人）",
+     "subject": "a 17th-century civilian refugee family of Formosa fleeing, absolutely no weapons of any kind. A stooped man carrying a heavy cloth bundle on his back, a woman with a woven bamboo basket, a small child held by the hand. Drab low-saturation mismatched clothing in sand and faded indigo, straw sandals, a slow burdened walking posture, clearly ordinary people and not soldiers."},
+
+    {"id": "civilian_slave", "cat": "unit", "fac": "none", "name": "平民撤離單位（VOC 奴工）",
+     "subject": "a 17th-century enslaved labourer of a Dutch colony in tropical Formosa, of Southeast Asian or South Indian origin, deep brown skin, bare torso, a simple linen waist cloth, barefoot, carrying a heavy sack on the shoulder, a stooped burdened posture, no weapons, a dignified tired expression."},
+
+    {"id": "voc_gunner", "cat": "unit", "fac": "voc", "name": "VOC 砲手",
+     "subject": "a Dutch East India Company artillery gunner in tropical Formosa 1661, no hat, rolled up shirt sleeves, an off-white linen shirt open at the neck, knee breeches, leather shoes, holding a long cannon rammer staff, a powder horn at the hip, sun-burnt and sweating."},
+
+    {"id": "voc_coyett", "cat": "unit", "fac": "voc", "name": "揆一 Frederick Coyett",
+     "subject": "a senior Dutch East India Company governor of 1661, a black formal doublet with a broad white falling band collar giving a squared shoulder silhouette, a wide-brimmed black felt hat, a short pointed beard, holding a rolled document, a stern composed bearing."},
+
+    {"id": "siraya_elder", "cat": "unit", "fac": "siraya", "name": "西拉雅頭目（藤杖）",
+     "subject": "a Siraya village elder of 17th-century Formosa holding upright a rattan staff of office with an engraved silver head bearing a Dutch East India Company monogram, the staff is the clear visual focus. Bare torso, a deerskin wrap at the waist, barefoot, hair tied up, shell ear ornaments, a dignified upright stance."},
+
+    {"id": "siraya_woman", "cat": "unit", "fac": "siraya", "name": "西拉雅女性",
+     "subject": "a Siraya woman of 17th-century Formosa, a short jacket and a wrapped skirt in undyed cloth and deerskin brown, barefoot, hair tied up, shell ornaments, carrying a woven bamboo basket on the hip, a calm upright stance."},
+
+    {"id": "map_1_1", "cat": "scene", "fac": "none", "name": "關卡 1-1 鹿耳門地圖",
+     "subject": "two long sandbars enclosing a shallow lagoon in 17th-century Formosa, seen from a high bird's eye view. A Dutch bastioned brick fort with oyster-lime mortar walls stands on the southern sandbar beside a dense grid of terracotta tiled-roof shophouses. Deep green banyan and bamboo clumps. A wide indigo main channel to the south and a narrow shallow sand-choked channel to the north. Winding pale sand paths cross the sandbars. Painted with dense decorative gouache cityscape detail crossed with thick warm-cool post-impressionist brushwork, a high horizon, every area keeps detail, NO depth of field blur."},
+
+    {"id": "map_tile_sandbar", "cat": "scene", "fac": "none", "name": "地形貼片：沙洲",
+     "subject": "a top-down 3/4 isometric terrain patch of a subtropical sandbar, sun-bleached pale sand and damp darker sand, scattered oyster shells, sparse tufts of coarse dune grass, a shallow indigo tidal edge along one side."},
+
+    {"id": "map_tile_town", "cat": "scene", "fac": "none", "name": "地形貼片：大員市鎮街區",
+     "subject": "a top-down 3/4 isometric block of a 17th-century Formosan port town, a dense grid of small shophouses with terracotta tiled roofs and oyster-lime white walls, narrow sand lanes between them, hanging shop banners, a few banyan trees, dense decorative detail everywhere."},
+
+    {"id": "prop_buildsite", "cat": "prop", "fac": "none", "name": "建造點標記",
+     "subject": "an empty tower building plot marker on sandy ground, a circular ring of set stones and lashed bamboo stakes with a gamboge yellow cloth pennant on a short pole in the middle, clearly an empty foundation waiting to be built on."},
+
+    {"id": "prop_settlement", "cat": "building", "fac": "none", "name": "聚落建物（三星條件）",
+     "subject": "a small 17th-century Formosan settlement hut cluster, thatched and terracotta tiled roofs, oyster-lime white walls, a bamboo fence, a drying rack with fishing nets, a water jar, a banyan tree at the edge."},
+
+    {"id": "icon_silver", "cat": "icon", "fac": "none", "name": "資源圖示：銀",
+     "subject": "a small pile of 17th-century silver ingots and coins with gamboge yellow highlights, resting on a dark burnt umber rounded badge."},
+
+    {"id": "icon_civilian", "cat": "icon", "fac": "none", "name": "HUD 圖示：平民撤離數",
+     "subject": "a simple bold symbol of a stooped civilian carrying a bundle on the back, shown as a solid terracotta red pictogram on an oyster-lime white rounded badge with a burnt umber border."},
+
+    {"id": "icon_tide", "cat": "icon", "fac": "none", "name": "HUD 圖示：潮位",
+     "subject": "a simple bold symbol of a rising tide, a stepped wave in tidal teal and indigo over a strip of pale sand, on an oyster-lime white rounded badge with a burnt umber border."},
+
+    {"id": "icon_tower_musket", "cat": "icon", "fac": "none", "name": "建造圖示：銃樓",
+     "subject": "a simple bold symbol of a matchlock musket crossed over a wooden watchtower, terracotta red and burnt umber on an oyster-lime white rounded badge."},
+
+    {"id": "icon_tower_hunter", "cat": "icon", "fac": "none", "name": "建造圖示：獵寮",
+     "subject": "a simple bold symbol of a long bamboo javelin crossed over deer antlers, banyan green and burnt umber on an oyster-lime white rounded badge."},
+
+    {"id": "icon_tower_fence", "cat": "icon", "fac": "none", "name": "建造圖示：柵欄",
+     "subject": "a simple bold symbol of a bamboo palisade with a round rattan shield in front, sand yellow and indigo on an oyster-lime white rounded badge."}
+  ]
+}
