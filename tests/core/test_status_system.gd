@@ -122,3 +122,55 @@ func test_recompute_with_no_effects_restores_base_values() -> void:
 	_system.recompute(enemy)
 	assert_float(enemy.speed).is_equal_approx(100.0, 0.001)
 	assert_bool(enemy.stunned).is_false()
+
+func test_effect_expires_after_its_duration() -> void:
+	var enemy := _make_enemy()
+	_system.apply(enemy, CHILL, &"frost_tower")     # duration 2.5
+	_system.tick([enemy], 3.0)
+	assert_array(enemy.active_effects).has_size(0)
+	assert_float(enemy.speed).override_failure_message(
+		"效果到期後速度必須回到基礎值"
+	).is_equal_approx(100.0, 0.001)
+
+func test_effect_survives_until_its_duration_elapses() -> void:
+	var enemy := _make_enemy()
+	_system.apply(enemy, CHILL, &"frost_tower")
+	_system.tick([enemy], 1.0)
+	assert_array(enemy.active_effects).has_size(1)
+	assert_float(enemy.speed).is_equal_approx(65.0, 0.001)
+
+func test_expired_effect_is_returned_to_the_pool() -> void:
+	var pool := ObjectPool.new(func() -> StatusEffect: return StatusEffect.new(), 4)
+	var system := StatusSystem.new(pool)
+	var enemy := _make_enemy()
+	system.apply(enemy, CHILL, &"frost_tower")
+	assert_int(pool.free_count()).is_equal(3)
+	system.tick([enemy], 3.0)
+	assert_int(pool.free_count()).override_failure_message(
+		"到期的效果實例必須歸還池中，否則池會逐漸耗盡"
+	).is_equal(4)
+
+func test_dot_deals_damage_scaled_by_delta() -> void:
+	var enemy := _make_enemy()
+	var poison := {"id": "poison", "kind": "dot", "magnitude": 10.0, "duration": 5.0, "damage_type": "true"}
+	_system.apply(enemy, poison, &"poison_tower")
+	_system.tick([enemy], 1.0)                      # 每秒 10 傷害 × 1 秒
+	assert_float(enemy.hp).is_equal_approx(90.0, 0.001)
+
+func test_dot_respects_damage_type() -> void:
+	# 護甲 0.2 的敵人吃物理 DoT 應只受 80% 傷害，證明 DoT 走了 DamageSystem
+	var enemy := _make_enemy()
+	var bleed := {"id": "bleed", "kind": "dot", "magnitude": 10.0, "duration": 5.0, "damage_type": "physical"}
+	_system.apply(enemy, bleed, &"blade_tower")
+	_system.tick([enemy], 1.0)
+	assert_float(enemy.hp).override_failure_message(
+		"DoT 必須經過 DamageSystem，因此要吃護甲減免"
+	).is_equal_approx(92.0, 0.001)                  # 100 − 10 × (1 − 0.2)
+
+func test_dead_enemy_effects_are_not_ticked() -> void:
+	var enemy := _make_enemy()
+	var poison := {"id": "poison", "kind": "dot", "magnitude": 10.0, "duration": 5.0, "damage_type": "true"}
+	_system.apply(enemy, poison, &"poison_tower")
+	enemy.alive = false
+	_system.tick([enemy], 1.0)
+	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)

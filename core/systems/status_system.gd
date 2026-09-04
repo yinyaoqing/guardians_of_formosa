@@ -74,3 +74,33 @@ func _find(enemy: Enemy, kind: StringName, source: StringName) -> StatusEffect:
 		if effect.kind == kind and effect.source == source:
 			return effect
 	return null
+
+## 每個邏輯 tick 呼叫一次，且必須排在 tick 迴圈的最前面——
+## 否則後續所有系統讀到的都是上一 tick 的衍生值。
+func tick(enemies: Array, delta: float) -> void:
+	for enemy: Enemy in enemies:
+		if not enemy.alive:
+			continue
+		_expire(enemy, delta)
+		recompute(enemy)
+		_apply_damage_over_time(enemy, delta)
+
+## 推進剩餘時間，把到期的效果移出並歸還池中。
+## 由後往前走訪，這樣原地移除不會跳過元素。
+func _expire(enemy: Enemy, delta: float) -> void:
+	for i in range(enemy.active_effects.size() - 1, -1, -1):
+		var effect: StatusEffect = enemy.active_effects[i]
+		effect.remaining -= delta
+		if effect.remaining <= 0.0:
+			enemy.active_effects.remove_at(i)
+			_pool.release(effect)
+
+## magnitude 是每秒傷害，因此乘上 delta。
+## 一律經過 DamageSystem——這是硬規則第 2 條，DoT 不例外。
+func _apply_damage_over_time(enemy: Enemy, delta: float) -> void:
+	for effect: StatusEffect in enemy.active_effects:
+		if effect.kind != StatusEffect.KIND_DOT:
+			continue
+		DamageSystem.apply(enemy, effect.magnitude * delta, effect.damage_type)
+		if not enemy.alive:
+			return
