@@ -15,6 +15,8 @@ static func apply(world: WorldState, intent: GameIntent) -> void:
 			_build(world, intent)
 		GameIntent.KIND_UPGRADE:
 			_upgrade(world, intent)
+		GameIntent.KIND_SELL:
+			_sell(world, intent)
 		_:
 			push_error("BuildSystem 收到未知的 intent kind: %s" % intent.kind)
 
@@ -63,6 +65,28 @@ static func _upgrade(world: WorldState, intent: GameIntent) -> void:
 
 	world.gold -= cost
 	_apply_level_stats(tower, def, tower.level + 1)
+
+static func _sell(world: WorldState, intent: GameIntent) -> void:
+	var tower := _find_tower(world, intent.entity_id)
+	if tower == null:
+		return
+
+	var def: Dictionary = world.tower_defs[tower.tower_id]
+	world.gold += _refund_for(def, tower.level, world.sell_refund_ratio)
+
+	for slot: BuildSlot in world.build_slots:
+		if slot.occupied_by == tower.id:
+			slot.occupied_by = 0
+			break
+	world.towers.erase(tower)
+
+## 退款 = 比例 × 已投入的所有等級造價總和，向下取整。
+## 不在塔身上記帳，而是自等級反推——少一個會與資料不同步的欄位。
+static func _refund_for(def: Dictionary, level: int, ratio: float) -> int:
+	var invested := 0
+	for i in level:
+		invested += int(def["levels"][i]["cost"])
+	return floori(float(invested) * ratio)
 
 static func _find_tower(world: WorldState, entity_id: int) -> Tower:
 	for tower: Tower in world.towers:

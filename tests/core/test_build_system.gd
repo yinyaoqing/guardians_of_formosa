@@ -211,3 +211,46 @@ func test_upgrading_a_tower_that_no_longer_exists_is_rejected() -> void:
 	var world := _make_world(300)
 	BuildSystem.apply(world, GameIntent.upgrade(9999))
 	assert_int(world.gold).is_equal(300)
+
+func test_selling_a_level_one_tower_refunds_a_fraction_of_its_cost() -> void:
+	var world := _make_world(200)
+	var tower := _build_one(world)             # 花 70，剩 130
+	BuildSystem.apply(world, GameIntent.sell(tower.id))
+	assert_int(world.gold).is_equal(182)       # 130 + floor(70 × 0.75) = 130 + 52
+
+func test_selling_refunds_every_level_invested_not_just_the_first() -> void:
+	# 這個測試必須用等級大於 1 的塔。用一級塔的話，
+	# 「退款 = 比例 × 全部投入」與「退款 = 比例 × 一級造價」結果相同，
+	# 錯誤的實作會照樣通過。
+	var world := _make_world(500)
+	var tower := _build_one(world)                            # 花 70
+	BuildSystem.apply(world, GameIntent.upgrade(tower.id))    # 花 130
+	var gold_before := world.gold                             # 500 − 200 = 300
+	BuildSystem.apply(world, GameIntent.sell(tower.id))
+	# 已投入 70 + 130 = 200，退款 floor(200 × 0.75) = 150
+	assert_int(world.gold).override_failure_message(
+		"退款必須涵蓋所有已投入的等級造價，不能只算建造費"
+	).is_equal(gold_before + 150)
+
+func test_selling_removes_the_tower_and_frees_its_slot() -> void:
+	var world := _make_world(200)
+	var tower := _build_one(world)
+	BuildSystem.apply(world, GameIntent.sell(tower.id))
+	assert_array(world.towers).has_size(0)
+	assert_int(_first_slot(world).occupied_by).override_failure_message(
+		"賣出後建塔點必須回到空著的狀態，否則該位置永遠不能再蓋"
+	).is_equal(0)
+
+func test_a_freed_slot_can_be_built_on_again() -> void:
+	var world := _make_world(300)
+	var tower := _build_one(world)
+	BuildSystem.apply(world, GameIntent.sell(tower.id))
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"archer_tower"))
+	assert_array(world.towers).has_size(1)
+
+func test_selling_a_tower_that_no_longer_exists_is_rejected() -> void:
+	var world := _make_world(200)
+	BuildSystem.apply(world, GameIntent.sell(9999))
+	assert_int(world.gold).override_failure_message(
+		"賣一座不存在的塔不得憑空產生金幣"
+	).is_equal(200)
