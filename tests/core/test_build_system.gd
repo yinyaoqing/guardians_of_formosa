@@ -66,3 +66,105 @@ func test_queued_intents_accumulate() -> void:
 	world.queue_intent(GameIntent.build(1, &"archer_tower"))
 	world.queue_intent(GameIntent.sell(2))
 	assert_array(world.pending_intents).has_size(2)
+
+const TOWER_DEF := {
+	"id": "archer_tower",
+	"damage_type": "physical",
+	"levels": [
+		{"cost": 70,  "damage": 9.0,  "attack_range": 180.0, "fire_interval": 0.8,  "projectile_speed": 600.0, "splash_radius": 0.0, "on_hit_effects": []},
+		{"cost": 130, "damage": 14.0, "attack_range": 190.0, "fire_interval": 0.75, "projectile_speed": 610.0, "splash_radius": 0.0, "on_hit_effects": []},
+		{"cost": 220, "damage": 22.0, "attack_range": 200.0, "fire_interval": 0.7,  "projectile_speed": 620.0, "splash_radius": 0.0, "on_hit_effects": []},
+	],
+}
+
+## 一個已配置好、有一個空建塔點的世界
+func _make_world(gold: int) -> WorldState:
+	var world := WorldState.new()
+	world.tower_defs = {&"archer_tower": TOWER_DEF}
+	world.available_towers = [&"archer_tower"] as Array[StringName]
+	world.sell_refund_ratio = 0.75
+	world.gold = gold
+	var slot := BuildSlot.new()
+	slot.position = Vector2(400, 200)
+	world.add_build_slot(slot)
+	return world
+
+func _first_slot(world: WorldState) -> BuildSlot:
+	return world.build_slots[0]
+
+func test_building_places_a_tower_at_the_slot_and_spends_gold() -> void:
+	var world := _make_world(200)
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"archer_tower"))
+	assert_array(world.towers).has_size(1)
+	assert_float(world.towers[0].position.x).is_equal_approx(400.0, 0.001)
+	assert_int(world.gold).is_equal(130)          # 200 − 70
+
+func test_built_tower_gets_level_one_stats_from_data() -> void:
+	var world := _make_world(200)
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"archer_tower"))
+	var tower: Tower = world.towers[0]
+	assert_int(tower.level).is_equal(1)
+	assert_float(tower.damage).is_equal_approx(9.0, 0.001)
+	assert_float(tower.attack_range).is_equal_approx(180.0, 0.001)
+	assert_float(tower.projectile_speed).override_failure_message(
+		"投射物速度必須自資料取得；Tower 的預設值是 0，漏搬運會讓投射物不會動"
+	).is_equal_approx(600.0, 0.001)
+
+func test_building_marks_the_slot_occupied() -> void:
+	var world := _make_world(200)
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"archer_tower"))
+	assert_int(_first_slot(world).occupied_by).is_equal(world.towers[0].id)
+
+func test_building_on_an_occupied_slot_is_rejected() -> void:
+	var world := _make_world(200)
+	var slot_id := _first_slot(world).id
+	BuildSystem.apply(world, GameIntent.build(slot_id, &"archer_tower"))
+	BuildSystem.apply(world, GameIntent.build(slot_id, &"archer_tower"))
+	assert_array(world.towers).override_failure_message(
+		"同一個建塔點不得蓋出第二座塔"
+	).has_size(1)
+	assert_int(world.gold).override_failure_message(
+		"被拒絕的建造不得扣款"
+	).is_equal(130)
+
+func test_building_without_enough_gold_is_rejected() -> void:
+	var world := _make_world(50)          # 造價 70
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"archer_tower"))
+	assert_array(world.towers).has_size(0)
+	assert_int(world.gold).is_equal(50)
+
+func test_building_with_exactly_enough_gold_succeeds() -> void:
+	# 邊界：剛好等於造價必須成立，否則玩家會覺得錢明明夠卻蓋不了
+	var world := _make_world(70)
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"archer_tower"))
+	assert_array(world.towers).has_size(1)
+	assert_int(world.gold).is_equal(0)
+
+# 以下三個是「資料錯誤」類的拒絕。實作會呼叫 push_error，而 GdUnit4 無法攔截它，
+# 所以這裡斷言的是「世界沒有被改動」——錯誤路徑同樣不得建出塔或扣款。
+# 少了這幾個測試，一個把 push_error 寫成 push_error 後忘了 return 的實作會通過。
+
+func test_building_on_a_nonexistent_slot_changes_nothing() -> void:
+	var world := _make_world(200)
+	BuildSystem.apply(world, GameIntent.build(9999, &"archer_tower"))
+	assert_array(world.towers).has_size(0)
+	assert_int(world.gold).override_failure_message(
+		"引用不存在的建塔點是資料錯誤，除了報錯之外不得改動世界"
+	).is_equal(200)
+
+func test_building_an_unknown_tower_type_changes_nothing() -> void:
+	var world := _make_world(200)
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"no_such_tower"))
+	assert_array(world.towers).has_size(0)
+	assert_int(world.gold).is_equal(200)
+
+func test_building_a_tower_not_available_in_this_level_changes_nothing() -> void:
+	# 塔種存在於資料中，但本關的 available_towers 沒有它
+	var world := _make_world(200)
+	world.tower_defs[&"cannon_tower"] = TOWER_DEF
+	BuildSystem.apply(world, GameIntent.build(_first_slot(world).id, &"cannon_tower"))
+	assert_array(world.towers).override_failure_message(
+		"本關不可用的塔種不得蓋出來，即使它存在於資料中"
+	).has_size(0)
+	assert_int(world.gold).is_equal(200)
+	assert_int(_first_slot(world).occupied_by).is_equal(0)
