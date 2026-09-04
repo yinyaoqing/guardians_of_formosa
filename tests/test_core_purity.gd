@@ -35,7 +35,8 @@ func test_core_scripts_do_not_depend_on_nodes() -> void:
 
 ## 源代碼文本檢查，故意不執行 battle_scene 而檢查它的源碼。
 ## 因為 headless 測試套件根本不執行場景腳本，所以必須用靜態檢查守住這個架構規則。
-## 若不呼叫 apply_definitions，狀態效果就在遊戲中無聲失效，同時每項測試仍照常通過。
+## 若不呼叫 configure_for_level，整個世界都不會被配置——資料定義、可用塔種、
+## 起始金幣與生命全部缺失，而每項測試仍照常通過。
 func test_battle_scene_configures_the_world_for_its_level() -> void:
 	var battle_scene_path := "res://game/level/battle_scene.gd"
 	var source := FileAccess.get_file_as_string(battle_scene_path)
