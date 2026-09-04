@@ -70,3 +70,28 @@ func test_leaked_enemy_awards_no_bounty() -> void:
 		"走到終點的敵人不該給玩家賞金"
 	).is_equal(0)
 	assert_int(world.lives).is_equal(19)
+
+func test_effects_on_a_killed_enemy_are_returned_to_the_pool() -> void:
+	var world := _make_world()
+	var enemy := _add_enemy(world, 0.0)
+	var sim := BattleSim.new(world)
+
+	# Apply a status effect that won't expire during test
+	world.status_system.apply(enemy, {"id": "chill", "kind": "slow", "magnitude": 0.5, "duration": 100.0}, &"frost_tower")
+
+	# Record pool state after applying (i.e., the "borrowed" state)
+	var free_count_borrowed := world.effect_pool.free_count()
+
+	# Kill the enemy
+	DamageSystem.apply(enemy, 1001.0, DamageSystem.PHYSICAL)
+
+	# Advance one tick to trigger _remove_dead
+	sim.advance(FRAME)
+
+	# Verify the effect was released to the pool
+	assert_array(enemy.active_effects).override_failure_message(
+		"死亡敵人的效果清單必須被清空"
+	).has_size(0)
+	assert_int(world.effect_pool.free_count()).override_failure_message(
+		"死亡敵人身上的效果必須歸還池中，否則長戰役中池會逐漸耗盡"
+	).is_equal(free_count_borrowed + 1)
