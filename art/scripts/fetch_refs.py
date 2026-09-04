@@ -45,6 +45,9 @@ UA = "guardians-of-formosa-art-pipeline/1.0 (research reference collection)"
 # 伺服器即時算圖，連抓十幾張就被限流回 429（錯誤訊息本身也是這樣建議的）。
 THUMB_WIDTH = 1024
 
+# Commons 只快取這幾種寬度，要求別的值會強迫伺服器即時算圖並招來 429。
+STD_WIDTHS = [120, 180, 240, 320, 400, 500, 640, 800, 1024, 1280, 2560]
+
 
 def api(params: dict) -> dict:
     url = API + "?" + urllib.parse.urlencode({**params, "format": "json"})
@@ -53,33 +56,63 @@ def api(params: dict) -> dict:
         return json.loads(resp.read())
 
 
+def thumb_width_for(original_width: int) -> int:
+    """挑一個小於原圖寬度的標準縮圖尺寸。
+
+    要求的寬度若 >= 原圖寬度，Commons 不會給 /thumb/ 路徑，只會回傳原檔 URL——
+    而下載原檔正是被限流最嚴的一種（429 的錯誤訊息本身就叫人改用縮圖）。實測 8 張
+    小圖就是這樣卡住，重試四輪都失敗。故一律往下取一階標準尺寸。
+    """
+    smaller = [w for w in STD_WIDTHS if w < original_width]
+    return min(max(smaller), THUMB_WIDTH) if smaller else STD_WIDTHS[0]
+
+
 def resolve(titles: list[str]) -> dict[str, dict]:
-    """一次查多個檔名，回傳 title -> {url, thumb, license, artist, width, height}。"""
-    out: dict[str, dict] = {}
+    """一次查多個檔名，回傳 title -> {url, thumb, license, artist, width, height}。
+
+    分兩趟：先問原圖尺寸，再依尺寸各自要合適的縮圖寬度。
+    """
+    sizes: dict[str, int] = {}
     for i in range(0, len(titles), 10):
-        chunk = titles[i : i + 10]
         d = api({
             "action": "query",
-            "titles": "|".join(chunk),
+            "titles": "|".join(titles[i : i + 10]),
             "prop": "imageinfo",
-            "iiprop": "url|size|extmetadata",
-            "iiurlwidth": THUMB_WIDTH,
+            "iiprop": "size",
         })
         for p in (d.get("query", {}).get("pages") or {}).values():
-            if "imageinfo" not in p:
-                continue
-            ii = p["imageinfo"][0]
-            em = ii.get("extmetadata", {})
-            out[p["title"]] = {
-                "url": ii.get("url"),
-                "thumb": ii.get("thumburl") or ii.get("url"),
-                "descriptionurl": ii.get("descriptionurl"),
-                "license": em.get("LicenseShortName", {}).get("value", "?"),
-                "artist": _strip(em.get("Artist", {}).get("value", "")),
-                "credit": _strip(em.get("Credit", {}).get("value", "")),
-                "width": ii.get("width"),
-                "height": ii.get("height"),
-            }
+            if "imageinfo" in p:
+                sizes[p["title"]] = p["imageinfo"][0].get("width") or THUMB_WIDTH
+
+    out: dict[str, dict] = {}
+    by_width: dict[int, list[str]] = {}
+    for t in titles:
+        by_width.setdefault(thumb_width_for(sizes.get(t, THUMB_WIDTH)), []).append(t)
+
+    for want, group_titles in by_width.items():
+        for i in range(0, len(group_titles), 10):
+            d = api({
+                "action": "query",
+                "titles": "|".join(group_titles[i : i + 10]),
+                "prop": "imageinfo",
+                "iiprop": "url|size|extmetadata",
+                "iiurlwidth": want,
+            })
+            for p in (d.get("query", {}).get("pages") or {}).values():
+                if "imageinfo" not in p:
+                    continue
+                ii = p["imageinfo"][0]
+                em = ii.get("extmetadata", {})
+                out[p["title"]] = {
+                    "url": ii.get("url"),
+                    "thumb": ii.get("thumburl") or ii.get("url"),
+                    "descriptionurl": ii.get("descriptionurl"),
+                    "license": em.get("LicenseShortName", {}).get("value", "?"),
+                    "artist": _strip(em.get("Artist", {}).get("value", "")),
+                    "credit": _strip(em.get("Credit", {}).get("value", "")),
+                    "width": ii.get("width"),
+                    "height": ii.get("height"),
+                }
     return out
 
 
