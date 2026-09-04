@@ -86,11 +86,11 @@ func test_tower_out_of_range_does_not_damage() -> void:
 	assert_float(enemy.hp).is_equal_approx(100.0, 0.001)
 
 func test_fire_interval_limits_shots() -> void:
-	# 1 秒內、射速 0.5 秒一發，最多打 2 發 = 20 傷害
+	# 1 秒內、射速 0.5 秒一發，應打 2 發共 20 傷害，留下 980.0 HP
 	var world := _make_world()
 	var enemy := _add_enemy(world, 1000.0, 0.0, 5)
 	enemy.position = Vector2(50, 0)
 	_add_tower(world, Vector2(50, 0), 10.0, 0.5)
 	var sim := BattleSim.new(world)
 	_run(sim, 1.0)
-	assert_float(enemy.hp).is_between(970.0, 990.0)
+	assert_float(enemy.hp).is_equal_approx(980.0, 0.001)
