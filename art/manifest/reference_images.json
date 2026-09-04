@@ -1,0 +1,55 @@
+{
+  "_doc": "史料服飾參考圖清單。A1 實測證實：SDXL 沒有 17 世紀明鄭／西拉雅／亞洲 VOC 的服飾知識，純文字 prompt 補不上（見 docs/art/A1-findings.md §2）。這些圖是 IP-Adapter 的內容參考來源。全部取自 Wikimedia Commons 的公有領域／CC0 素材，用途為生成參考，不直接進遊戲。",
+  "_usage": "python art/scripts/fetch_refs.py  下載到 art_src/refs/<group>/ 並寫出 _provenance.json",
+  "groups": {
+    "zheng_ming_military": {
+      "zh": "鄭軍：明制號衣、笠形盔、山文甲",
+      "note": "《出警入蹕圖》為明代宮廷畫，是明軍服制最可靠的圖像來源。注意鄭成功肖像用於陳澤等將領的甲冑參考，非直接套用。",
+      "titles": [
+        "File:Ming brigandine departure herald (51172176314).jpg",
+        "File:Departure herald ming dynasty cavalry C2A000054N000000000PAC.png",
+        "File:Departure herald ming dynasty cavalry C2A000054N000000000PBB.png",
+        "File:Carriage ming departure herald (51172176424).jpg",
+        "File:Portrait of Zheng Chenggong.jpg"
+      ]
+    },
+    "voc_musketeer": {
+      "zh": "VOC：火繩槍、胸前十二使徒藥管、寬邊帽",
+      "note": "Jacob de Gheyn《Wapenhandelinghe》(1607) 是 17 世紀荷蘭火槍操典，彈藥帶與持槍姿勢畫得極清楚，正是規格 §3.1 描述的裝備。注意這是歐洲本土版本，亞熱帶的 VOC 應更鬆散輕薄。",
+      "titles": [
+        "File:Aanwijzing 9 voor het hanteren van het musket - V lont versoeckt (Jacob de Gheyn, 1607).jpg",
+        "File:Soldaat die zijn lont van de haan van zijn musket losmaakt Ontwerptekeningen voor de Wapenhandelinghe van Jacob de Gheyn (II) (serietitel), RP-T-00-527.jpg",
+        "File:Soldaat met een musket die een kruitmaat opent Ontwerptekeningen voor de Wapenhandelinghe van Jacob de Gheyn (II) (serietitel), RP-T-00-529.jpg",
+        "File:Soldier blowing burned powder from the pan of his musket, workshop of Jacob de Gheyn (II), colored print, 1597-1607.jpg",
+        "File:Soldier filling powder into his musket, workshop of Jacob de Gheyn (II), colored print, 1597-1607.jpg"
+      ]
+    },
+    "siraya_formosan": {
+      "zh": "西拉雅：裸身、鹿皮圍腰、長鏢、束髮",
+      "note": "1652 與 1670 年荷蘭人所繪的福爾摩沙人，是本專案最難取得也最關鍵的一組參考。Dapper《Gedenkwaerdig bedryf》(1670) 是荷蘭時期台灣的專書，含銅版插圖。**須留意這些圖像本身帶有殖民視線**（美術聖經 §0），取其服飾與器物形制，不取其取景與姿態。",
+      "titles": [
+        "File:A Formosan, c. 1652.jpg",
+        "File:\"Im Formosan\"- A Formosan, c. 1652 (cropped).jpg",
+        "File:Ein formosan.jpg",
+        "File:Formosans.jpg",
+        "File:1670 Formosans by Dutch 荷蘭人所繪福爾摩沙人之長老與常民.gif",
+        "File:Landdag.jpg",
+        "File:Chinese School, 1643; The Dutch missionary Robert Junius baptising the new Christians at Formosa, 1643.jpg"
+      ]
+    },
+    "zeelandia_map": {
+      "zh": "熱蘭遮城與大員：稜堡形制、市鎮街廓、台江地形",
+      "note": "地形必須依 17 世紀古地圖，今日安平地貌完全不可參照（章節規格 §1.1）。",
+      "titles": [
+        "File:Atlas Blaeu-Van der Hem - Taioan.jpg",
+        "File:Zeelandia diary.jpg"
+      ]
+    }
+  },
+  "_gaps": {
+    "ironman": "鐵人軍的「全身鐵甲＋鐵面罩＋赤足」組合找不到直接圖像，須由明代甲冑圖像自行組合。這是全章最容易被記住的角色設計（美術聖經 §3.2），但也是參考最薄弱的一個。",
+    "siraya_javelin": "竹柄鐵鏃長鏢（五尺餘）找不到實物圖像。藤杖原列為缺口，但已找到 File:Landdag.jpg——地方會議正是頒發藤杖的場合，可作為間接參考；若要看清銀質杖頭的公司徽記，仍須另從台灣的博物館典藏取得。",
+    "civilian": "17 世紀台灣漢人移民與奴工的服飾圖像稀少，可能須以同期閩南／巴達維亞的圖像替代並標註為推定。",
+    "commons_thumbnail_failures": "5 張取不到（2026-09-04）：Portrait of Zheng Chenggong、Aanwijzing 9、\"Im Formosan\" cropped、Ein formosan、Zeelandia diary。這些檔案的 Commons 縮圖服務算不出來，imageinfo 只回傳原檔 URL，而原檔下載被 429 限流擋住（curl 亦然，是 IP 層級的限流）。腳本的 skip 邏輯讓重跑幾乎零成本，限流解除後再跑一次即可補齊。五張皆為次要：每個群組都已有可用參考，鄭成功肖像可用其他明代甲冑圖替代，de Gheyn 同系列已有 4 張，1652 年福爾摩沙人已有未裁切版。"
+  }
+}

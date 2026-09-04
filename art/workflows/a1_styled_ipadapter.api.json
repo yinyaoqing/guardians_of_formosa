@@ -1,0 +1,75 @@
+{
+  "_doc": "A1 風格條件生成。與 a0_smoke_test 的差別只在 model 這條線上多串了 IPAdapter：CheckpointLoader -> IPAdapterUnifiedLoader -> IPAdapterAdvanced -> KSampler。參考圖須放在 comfyui/input/ 下，由節點 9 的 image 欄指定檔名。依美術聖經 §2 對策 2：一律用參考圖條件生成，不用純文字 prompt。",
+
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "sd_xl_base_1.0.safetensors" }
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "sdxl_vae_fp16_fix.safetensors" }
+  },
+  "9": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "style_ref_01.png", "upload": "image" }
+  },
+  "10": {
+    "class_type": "IPAdapterUnifiedLoader",
+    "inputs": { "model": ["1", 0], "preset": "PLUS (high strength)" }
+  },
+  "11": {
+    "class_type": "IPAdapterAdvanced",
+    "inputs": {
+      "model": ["10", 0],
+      "ipadapter": ["10", 1],
+      "image": ["9", 0],
+      "weight": 0.75,
+      "weight_type": "linear",
+      "combine_embeds": "concat",
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "embeds_scaling": "V only"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "full body game sprite of a single standing character, head to toe fully visible, 3/4 front view, centered, isolated on a plain flat neutral background. SUBJECT: a 17th-century Ming loyalist musketeer of Koxinga's army. East Asian face, clean shaven, hair in a topknot under a conical lacquered iron helmet forming a clear triangular silhouette. A deep terracotta red Ming military tunic, cloth leg wraps, BARE FEET. Holding a matchlock arquebus. PROPORTIONS: 4 heads tall, solid weighty build, clear shoulder mass, readable silhouette at 128 pixels."
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "chibi, 2-head-tall proportions, thick uniform black outline, vector flat cel shading, glossy plastic rendering, rim lighting, anime, manga, western fantasy, Kingdom Rush style, neon colors, purple, magenta, teal, pastel, blurred background, bokeh, depth of field, photorealism, 3D render, watermark, text, signature, caption, turnaround sheet, multiple views, character design sheet, prop callouts, costume plate, museum illustration, aged paper, parchment, paper texture, torn edges, sepia, botanical plate, portrait, bust, half body, waist up, cropped, close-up, headshot, two people, crowd, group, japanese, kimono, ronin, ukiyo-e, geta sandals, samurai, queue hairstyle, braid, shaved forehead, Qing dynasty uniform, samurai armor, ashigaru, boots, shoes, generic oriental warrior"
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "inputs": { "width": 832, "height": 1216, "batch_size": 2 }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["11", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["5", 0],
+      "seed": 16610430,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["6", 0], "vae": ["2", 0] }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["7", 0], "filename_prefix": "a1_styled" }
+  }
+}

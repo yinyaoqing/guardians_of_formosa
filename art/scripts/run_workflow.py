@@ -13,7 +13,14 @@ import time
 import urllib.error
 import urllib.request
 
+import _console
+
 DEFAULT_SERVER = "127.0.0.1:8188"
+
+
+def load_workflow(f) -> dict:
+    """讀節點圖，並丟掉底線開頭的鍵——那是給人看的註解，ComfyUI 會把它當節點。"""
+    return {k: v for k, v in json.load(f).items() if not k.startswith("_")}
 
 
 def _post(server: str, path: str, payload: dict) -> dict:
@@ -56,6 +63,7 @@ def submit(server: str, workflow: dict, timeout: float) -> list[str]:
 
 
 def main() -> int:
+    _console.fix()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workflow", help="API 格式的節點圖 JSON")
     parser.add_argument("--server", default=DEFAULT_SERVER)
@@ -64,7 +72,7 @@ def main() -> int:
     args = parser.parse_args()
 
     with open(args.workflow, encoding="utf-8") as f:
-        workflow = json.load(f)
+        workflow = load_workflow(f)
 
     if args.seed is not None:
         for node in workflow.values():

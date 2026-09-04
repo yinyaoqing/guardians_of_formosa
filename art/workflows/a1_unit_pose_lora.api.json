@@ -1,0 +1,146 @@
+{
+  "_doc": "A1 單位生成：SDXL Base + 風格 LoRA + ControlNet Union（openpose）。骨架圖由 art/scripts/make_poses.py 產出並同步到 comfyui/input/。**LoRA 必須用 LoraLoader（同時掛 model 與 clip）而非 LoraLoaderModelOnly**——只掛 model 時觸發詞寫了等於沒寫，實測三個變體產出幾乎相同。model 線：CheckpointLoader -> LoraLoader -> KSampler；conditioning 線：CLIPTextEncode(用 LoRA 的 clip) -> ControlNetApplyAdvanced（吃節點 12 的骨架圖）。",
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "sdxl_vae_fp16_fix.safetensors"
+    }
+  },
+  "10": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ],
+      "lora_name": "StoryBookRedmond-KidsRedmAF.safetensors",
+      "strength_model": 0.9,
+      "strength_clip": 0.9
+    }
+  },
+  "11": {
+    "class_type": "ControlNetLoader",
+    "inputs": {
+      "control_net_name": "controlnet-union-sdxl-1.0-promax.safetensors"
+    }
+  },
+  "12": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "pose_idle.png",
+      "upload": "image"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "10",
+        1
+      ],
+      "text": "full body game sprite of a single standing character, head to toe fully visible, 3/4 front view, centered, isolated on a plain flat neutral background."
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "10",
+        1
+      ],
+      "text": "chibi, 2-head-tall proportions, thick uniform black outline, glossy plastic rendering, rim lighting, anime, manga, western fantasy, neon colors, purple, magenta, pastel, blurred background, bokeh, depth of field, photorealism, 3D render, watermark, text, signature, caption, turnaround sheet, multiple views, character design sheet, prop callouts, costume plate, museum illustration, aged paper, parchment, paper texture, torn edges, sepia, botanical plate, japanese, kimono, ronin, samurai, geta sandals, ukiyo-e, woodblock print, seamless pattern, tileable texture, texture swatch, portrait, bust, half body, waist up, cropped, close-up, headshot, two people, crowd, group"
+    }
+  },
+  "13": {
+    "class_type": "ControlNetApplyAdvanced",
+    "inputs": {
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "control_net": [
+        "11",
+        0
+      ],
+      "image": [
+        "12",
+        0
+      ],
+      "strength": 0.85,
+      "start_percent": 0.0,
+      "end_percent": 0.75
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 768,
+      "height": 1024,
+      "batch_size": 2
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "10",
+        0
+      ],
+      "positive": [
+        "13",
+        0
+      ],
+      "negative": [
+        "13",
+        1
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "seed": 16610430,
+      "steps": 28,
+      "cfg": 6.5,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ],
+      "filename_prefix": "a1_unit_pose"
+    }
+  }
+}

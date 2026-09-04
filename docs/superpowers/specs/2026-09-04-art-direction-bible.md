@@ -51,11 +51,19 @@
 | 面向 | Kingdom Rush | 本作 |
 |---|---|---|
 | **輪廓線** | 粗黑描邊，粗細均勻 | **彩色描邊**（深赭 `#3A2A22`／墨綠 `#1E4029`），粗細有變化，帶手繪抖動 |
-| **上色** | 向量平塗 + 硬邊漸層 | **膠彩質感**：可見礦物顆粒、色層堆疊、邊緣微暈 |
+| **上色** | 向量平塗 + 硬邊漸層 | **簡化卡通平塗**：大面積平色、每色至多兩階明暗、無漸層 |
 | **色相** | 高彩度全色相，藍紫奇幻 | **限定色域**：赭紅／濃綠／土黃／靛青。無螢光、無紫紅 |
 | **光源** | 強 rim light，戲劇打光 | **亞熱帶正午的高強度平光**，短而硬的投影 |
 | **頭身比** | 2–3 頭身，圓潤可愛 | **3.5–4 頭身**，肩背結實，帶李石樵的量感 |
 | **背景** | 舞台化，景深模糊 | **郭雪湖式滿版密度**，遠景不虛化 |
+
+> **2026-09-04 修訂：「上色」一列原為「膠彩質感：可見礦物顆粒、色層堆疊、邊緣微暈」，改為簡化卡通平塗。**
+>
+> 這一項與 Kingdom Rush 的區隔因此變弱——兩者都是平塗。**其餘五項全部保留**，辨識度改由彩色描邊、限定色域、亞熱帶左上平光、3.5–4 頭身、滿版背景密度承擔。
+>
+> 改動理由有二。其一是產線現實：A1 實測顯示 SDXL 產不出可信的膠彩顆粒，加了 cartoon 相關詞就會收斂到平塗，硬要膠彩只會得到不穩定的假質感。其二是尺度：本作單位貼圖 ≤128×128，礦物顆粒在此尺寸下本來就會被縮掉——這正是 §6 待決策第 1 項要問的事。
+>
+> **必須誠實記錄：這等於繞過該題而非回答它。** 若日後恢復膠彩路線（例如只用在場景與 UI 大圖），該題仍待實測。詳見 `docs/art/A1-findings.md` §6。
 
 ---
 
@@ -166,28 +174,31 @@
 
 圖像模型對英文的反應顯著優於中文，故 prompt 以英文撰寫。
 
-### 4.1 固定風格區塊（每張圖都要前置）
+### 4.1 Prompt 的段落順序（比措辭更重要）
+
+**順序固定為：構圖 → 主體 → 風格 → 色票 → 比例。**
+
+本節原本把風格區塊放在最前面，A1 實測證實這是錯的：200 餘字的風格描述擺在句首會**稀釋掉後面的主體與構圖**，首次出圖得到的是半身、兩個人、灰底的插畫版畫，指定的火繩槍完全沒出現。
+
+**`full body, head to toe fully visible` 必須是整段 prompt 的第一句。**
+
+實際組裝已改為資料驅動，見 `art/manifest/chapter01_assets.json`（風格與色票共用、主體逐資產、構圖與比例依類別）。下方為風格與色票區塊的當前內容，**修改應改清單而非改此處**，否則兩邊會漂開。
 
 ```
-2D hand-painted game sprite, full body, 3/4 front view, centered,
-transparent background.
-
-STYLE: Taiwanese colonial-era painting adapted to cartoon. Gouache /
-nihonga (膠彩) mineral pigment texture with visible granulation.
-Dense fine linework in dark umber and deep green — NOT black outlines,
-line weight varies, slight hand-drawn wobble. Flat decorative color
-fields with subtle layered washes. Short bold brushstrokes.
-Strong warm-cool complementary contrast: terracotta red against deep
-jade green. Harsh subtropical noon light, short hard shadows.
-Earthy restrained palette.
+STYLE: simple flat cartoon game art, clean bold simplified shapes,
+minimal internal detail, large readable areas of flat color, simple
+shading with at most two tones per color, colored linework in dark
+umber and deep green instead of black with slightly varying line
+weight, strong warm-cool contrast of terracotta red against deep jade
+green, light from the upper left with one short hard cast shadow.
 
 PALETTE (strict): #B5442E terracotta, #8C3A22 deep ochre,
 #2F5B3A banyan green, #1E4029 ink green, #C9A96B sand,
 #E8DCC6 oyster-lime white, #2C5470 indigo, #E0A93B gamboge yellow,
 #3A2A22 burnt umber linework.
 
-PROPORTIONS: 4 heads tall, solid weighty build, clear shoulder mass,
-readable silhouette at 128 pixels.
+PROPORTIONS: 4 heads tall, sturdy simplified build, clear shoulder
+mass, bold readable silhouette at 128 pixels.
 ```
 
 ### 4.2 通用負面 prompt
@@ -203,6 +214,12 @@ photorealism, 3D render, watermark, text
 ### 4.3 各陣營的專屬負面 prompt
 
 **這一節是本規格投報率最高的部分。** AI 對 17 世紀東亞的預設輸出錯誤率極高，且錯誤都集中在固定幾處。
+
+> **A1 實測補充：負面詞能趕走錯的答案，叫不出模型沒有的答案。**
+>
+> SDXL Base 沒有 17 世紀明鄭／西拉雅／亞洲 VOC 的服飾知識。缺乏知識時它退回一個泛用的「前現代非歐洲士兵」先驗，而**該先驗的落點會隨措辭漂移**：第一輪全部落在日本（和服、木屐、浮世繪），加了 `japanese, kimono, ronin, samurai, geta sandals, ukiyo-e` 之後日本消失了，**但換成波斯與中亞，不是換成明鄭**。
+>
+> 因此下表的負面詞是必要的，但**不足以產出正確的單位**。單位資產必須改走史料圖像的參考圖條件生成（見 §7.2 與 `docs/art/A1-findings.md` §4.2）。這是純文字 prompt 路線的硬上限。
 
 | 陣營 | 必加負面詞 | 原因 |
 |---|---|---|
@@ -301,7 +318,7 @@ Every area keeps detail — NO depth-of-field blur.
 
 ## 6. 待決策事項
 
-1. **膠彩顆粒質感在 128×128 下是否還看得出來。** 若看不出，質感只能靠場景與 UI 大圖承載，角色改走純線描平塗。**建議 M1 先做一張實測再決定**，不要等三十隻敵人畫完。
+1. ~~**膠彩顆粒質感在 128×128 下是否還看得出來。**~~ **已繞過，非已回答。** 2026-09-04 改為簡化卡通平塗（見 §1.1 修訂註）。此題若要恢復膠彩路線（例如只用於場景與 UI 大圖）仍須實測。
 2. **描邊用彩色是否會在複雜背景上損失可讀性。** 郭雪湖式的滿版背景密度高，彩色描邊可能糊在一起。備案是角色保留一圈極細的外輪廓光（非 rim light，而是淺一階的同色系描邊）。
 3. **陳澄波的粗筆觸與 6–8 幀逐格動畫的相容性。** 筆觸位置若每幀跳動，動起來會有雜訊感。可能需要規定「筆觸紋理固定不動，只有形狀變化」。
 4. **1-1 的潮汐色溫位移要做成即時 shader 還是兩套貼圖。** 前者省記憶體但需寫 shader；後者簡單但貼圖翻倍。與架構規格 §4.7 的記憶體風險直接相關，應併入 M2 實機驗證。
@@ -381,11 +398,14 @@ Blender 粗模（不需精緻，體積與比例對即可）
 | 階段 | 交付物 | 完成判準 |
 |---|---|---|
 | **A0** 環境 | ComfyUI + SDXL + ControlNet + IP-Adapter 裝好並跑通；基礎模型授權確認並記錄 | 能用 §4 的 prompt 規格產出可辨識的圖 |
-| **A1** 定調 | 3–5 張「風格試片」：一個單位、一個塔、一小塊場景 | §6 的四項待決策事項全部有實測答案，特別是「膠彩顆粒在 128px 下是否看得出」 |
+| **A1** 定調 | 3–5 張「風格試片」：一個單位、一個塔、一小塊場景 | §6 的四項待決策事項全部有實測答案 |
+| **A1.5** 史料參考圖 | 各陣營服飾的史料圖像，整理進 `art_src/refs/` | 每個單位類型至少一張可直接餵 IP-Adapter 的服飾參考。**這是人工蒐集工作，無法自動化** |
 | **A2** 黃金母本集 | 20–30 張人工嚴格挑選的定調資產 | 連續三批風格穩定；並排檢視時光源方向一致 |
 | **A3** 風格鎖定 | 以母本集訓練的風格 LoRA | 用 LoRA 產出的新資產，與母本集並排看不出批次差異 |
 | **A4** 後處理管線 | 去背、色票量化、統一描邊、剪影檢查的腳本 + 色票一致性測試 | 測試能抓出刻意混入的色票外資產 |
 | **A5** 量產 | 第一章所需的全部資產 | 全部通過 A4 的自動檢查 |
+
+**A1.5 是 A2 的前置。** A1 實測（`docs/art/A1-findings.md`）證實：沒有史料服飾參考圖，單位資產做不出來——這不是 prompt 調校問題，是模型知識缺口。場景、地形、聚落不受此限，模型畫得出來，可先行。
 
 **A2 是閘門**：母本集確立前不量產。理由與 M2 的效能閘門相同——風格漂移在單張圖上看不出來，要累積到十幾張才顯現，屆時已產出一批廢圖。
 

@@ -1,0 +1,76 @@
+{
+  "_doc": "局部重繪：把 AI 生不出來的關鍵道具補上去。A1 實測中，西拉雅頭目的藤杖（章節規格 §3.3 稱為「全章最重要的單一道具」）在 66 張裡一次都沒出現——模型沒有這個概念，整圖重生成再多次也不會有。做法是先接受它生不出來，改用遮罩局部重繪把道具畫進去。",
+
+  "_usage": [
+    "1. 把要修的圖與遮罩放進 comfyui/input/：遮罩為灰階 PNG，白色 = 要重畫的區域。",
+    "2. 節點 9 指向原圖、節點 14 指向遮罩，節點 3 只描述「要畫進去的東西」，不要重述整個角色。",
+    "3. denoise 建議 0.75–0.9：太低畫不出新東西，太高會連周圍一起改掉。",
+    "互動式修圖用 Krita + krita-ai-diffusion 更順手（美術聖經 §7.2 已列），本檔的用途是把修好的參數固定下來可重跑。"
+  ],
+
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "sd_xl_base_1.0.safetensors" }
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "sdxl_vae_fp16_fix.safetensors" }
+  },
+  "9": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "inpaint_source.png", "upload": "image" }
+  },
+  "14": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "inpaint_mask.png", "upload": "image" }
+  },
+  "15": {
+    "class_type": "ImageToMask",
+    "inputs": { "image": ["14", 0], "channel": "red" }
+  },
+  "16": {
+    "class_type": "VAEEncode",
+    "inputs": { "pixels": ["9", 0], "vae": ["2", 0] }
+  },
+  "17": {
+    "class_type": "SetLatentNoiseMask",
+    "inputs": { "samples": ["16", 0], "mask": ["15", 0] }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "a rattan staff of office held upright, with an engraved silver head bearing a Dutch East India Company VOC monogram, simple flat cartoon game art, colored linework in dark umber, gamboge yellow and burnt umber, one short hard cast shadow"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "blurry, smudged, photorealism, 3D render, glossy plastic, thick uniform black outline, watermark, text, signature, extra hands, extra arms, deformed"
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["1", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["17", 0],
+      "seed": 16610430,
+      "steps": 28,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.85
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["6", 0], "vae": ["2", 0] }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["7", 0], "filename_prefix": "a1_inpaint" }
+  }
+}

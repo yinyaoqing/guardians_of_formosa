@@ -16,3 +16,6 @@ art_src/
 
 # GdUnit4 產生的測試報告
 reports/
+
+# Python 快取
+__pycache__/
