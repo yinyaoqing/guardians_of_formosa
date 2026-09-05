@@ -4,9 +4,13 @@
 
     ① 去背與裁切          ← 本檔已實作
     ② 色票量化            ← 本檔已實作
-    ③ 描邊統一            ← 未實作
+    ③ 描邊統一            ← 本檔已實作（見 outline()）
     ④ 縮放至 128 並檢查剪影 ← 本檔已實作（剪影檢查見 silhouette.py）
     ⑤ 打包 Sprite Atlas    ← 未實作
+
+**③ 與 ④ 的順序與規格相反，這是刻意的。** 規格寫「③ 描邊 → ④ 縮放」，但描邊若在
+縮放前加，1024px 上的 3px 縮到 128px 只剩 0.4px，粗細一致的保證就沒了——而「保證
+粗細一致」正是這一步存在的理由。故本檔先縮放再描邊，讓線寬以**最終像素**為準。
 
 **為什麼這條管線必須是腳本而不是手工**（精緻度規格 §3）：色票量化把不同批次的色偏
 強制拉齊、描邊由程式統一加上——這正是 AI 畫不穩的兩件事，交給程式即可根除。
@@ -119,6 +123,53 @@ def quantize(im: Image.Image) -> Image.Image:
     return im
 
 
+# 描邊色：art-direction-bible §1.1 要求彩色描邊（深赭／墨綠），不是粗黑均勻描邊
+# ——那是明列要與 Kingdom Rush 區隔的第一項。故依局部色相在三色間選，不用單一黑色。
+OUTLINE_COLORS = [
+    (0x3A, 0x2A, 0x22),  # 焦茶：預設主描邊
+    (0x8C, 0x3A, 0x22),  # 深赭：暖色區（紅衣、膚色、沙）
+    (0x1E, 0x40, 0x29),  # 墨綠：冷色區（綠衣、植被、水）
+]
+
+
+def outline(im: Image.Image, width: int = 2) -> Image.Image:
+    """沿外輪廓加一圈描邊，顏色取自相鄰像素的暗化色並吸附到描邊三色。
+
+    只加**外輪廓**。§1.1 要的「粗細有變化、帶手繪抖動」指的是角色內部的線描，
+    那是生成模型畫的，本函式不動；§3 要統一的是外緣——讓所有資產在任何背景上
+    讀起來是同一套。兩者不衝突。
+    """
+    im = im.convert("RGBA")
+    w, h = im.size
+    src = im.load()
+    out = im.copy()
+    dst = out.load()
+
+    opaque = [[src[x, y][3] > 128 for x in range(w)] for y in range(h)]
+    for y in range(h):
+        for x in range(w):
+            if opaque[y][x]:
+                continue
+            # 找出 width 範圍內最近的不透明像素
+            best = None
+            for dy in range(-width, width + 1):
+                for dx in range(-width, width + 1):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h and opaque[ny][nx]:
+                        d = dx * dx + dy * dy
+                        if best is None or d < best[0]:
+                            best = (d, src[nx, ny])
+            if best is None or best[0] > width * width:
+                continue
+            r, g, b = best[1][:3]
+            # 暗化後吸附到描邊三色，讓描邊隨局部色相走而不是一律焦茶
+            dr, dg, db = r * 0.45, g * 0.45, b * 0.45
+            c = min(OUTLINE_COLORS,
+                    key=lambda o: (o[0] - dr) ** 2 + (o[1] - dg) ** 2 + (o[2] - db) ** 2)
+            dst[x, y] = (*c, 255)
+    return out
+
+
 def fit(im: Image.Image, size: int) -> Image.Image:
     """等比縮到 size 見方並置中，保留透明留白，不變形。"""
     im = im.copy()
@@ -126,6 +177,39 @@ def fit(im: Image.Image, size: int) -> Image.Image:
     canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     canvas.paste(im, ((size - im.width) // 2, (size - im.height) // 2))
     return canvas
+
+
+def verify(paths: list[str]) -> int:
+    """掃描產出，回報色票外的色相。精緻度規格 §3「建議的自動檢查」第一項。
+
+    做完量化與描邊還不夠——**沒有東西在驗證它們真的生效**。規格 §3 說得很直白：
+    在 AI 協作下，只有能自動驗證與自動執行的東西才不會腐化。這支檢查就是那個閘門。
+    """
+    allowed = set(PALETTE.values()) | set(SKIN) | set(OUTLINE_COLORS)
+    bad_total = 0
+    for path in paths:
+        im = Image.open(path).convert("RGBA")
+        offenders: dict[tuple[int, int, int], int] = {}
+        px = im.load()
+        for y in range(im.height):
+          for x in range(im.width):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            if (r, g, b) not in allowed:
+                offenders[(r, g, b)] = offenders.get((r, g, b), 0) + 1
+        if offenders:
+            top = sorted(offenders.items(), key=lambda kv: -kv[1])[:3]
+            shown = ", ".join(f"#{r:02X}{g:02X}{b:02X}×{n}" for (r, g, b), n in top)
+            print(f"  色票外 {sum(offenders.values()):>7} px  {os.path.basename(path):<28} {shown}")
+            bad_total += 1
+    if bad_total:
+        print()
+        print(f"=== 色票檢查失敗：{bad_total} 個檔案含色票外的色相")
+    else:
+        print()
+        print(f"=== 色票檢查通過：{len(paths)} 個檔案全部落在色票內")
+    return bad_total
 
 
 def main() -> int:
@@ -137,6 +221,9 @@ def main() -> int:
     ap.add_argument("--tol", type=int, default=46, help="去背的顏色容差")
     ap.add_argument("--no-quantize", action="store_true", help="跳過色票量化")
     ap.add_argument("--keep-full", action="store_true", help="同時輸出未縮放的去背原圖")
+    ap.add_argument("--no-outline", action="store_true", help="跳過統一描邊")
+    ap.add_argument("--outline-width", type=int, default=2, help="描邊寬度（最終像素）")
+    ap.add_argument("--verify-only", action="store_true", help="不重跑，只檢查現有產出的色票")
     args = ap.parse_args()
 
     with open(MANIFEST, encoding="utf-8") as f:
@@ -146,7 +233,13 @@ def main() -> int:
     if args.cat:
         assets = [a for a in assets if a["cat"] in args.cat]
 
+    if args.verify_only:
+        paths = [os.path.join(OUT, f"{a['id']}.png") for a in assets
+                 if os.path.exists(os.path.join(OUT, f"{a['id']}.png"))]
+        return 1 if verify(paths) else 0
+
     os.makedirs(OUT, exist_ok=True)
+    written: list[str] = []
     done = skipped = 0
     for a in assets:
         d = os.path.join(RAW, a["id"], f"stage_{args.stage}") if args.stage else os.path.join(RAW, a["id"])
@@ -163,12 +256,20 @@ def main() -> int:
             im = src.convert("RGBA")
         else:
             im = trim(remove_background(src, args.tol))
-        if not args.no_quantize:
-            im = quantize(im)
         if args.keep_full:
             im.save(os.path.join(OUT, f"{a['id']}_full.png"))
+        # **必須先縮放再量化。** 反過來的話 LANCZOS 會把量化好的顏色重新插值出
+        # 中間色，每通道差 1–2，量化等於白做——這是加了色票檢查才發現的。
+        # 順帶好處：量化在 128px 上跑，比在 1024px 上快一個數量級。
         out = fit(im, SIZE_BY_CAT.get(a["cat"], 128))
-        out.save(os.path.join(OUT, f"{a['id']}.png"))
+        if not args.no_quantize:
+            out = quantize(out)
+        # 場景是滿版貼片，沒有外輪廓可描。
+        if not args.no_outline and a["cat"] != "scene":
+            out = outline(out, args.outline_width)
+        dest = os.path.join(OUT, f"{a['id']}.png")
+        out.save(dest)
+        written.append(dest)
         opaque = sum(1 for p in out.getdata() if p[3] > 0)
         print(f"  {a['id']:<22} {out.width}x{out.height}  前景佔比 {opaque / (out.width * out.height):.0%}")
         done += 1
