@@ -12,10 +12,14 @@ const SPAWN_INTERVAL := 1.5
 const EnemyViewScript := preload("res://game/views/enemy_view.gd")
 const TowerViewScript := preload("res://game/views/tower_view.gd")
 const ProjectileViewScript := preload("res://game/views/projectile_view.gd")
+const BuildSlotViewScript := preload("res://game/views/build_slot_view.gd")
 
 ## 置換用的投射物貼圖。之後應改為依 Projectile.projectile_id 從資料查表，
 ## 目前只有一種塔，寫成常數即可。
 const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
+
+## 建塔點的置換標記。B3 會換成真正的美術。
+const SLOT_SPRITE := "res://game/assets/placeholder_slot.png"
 
 @onready var _path_node: Path2D = $MainPath
 @onready var _view_root: Node2D = $Views
@@ -26,6 +30,8 @@ var _sim: BattleSim
 var _enemy_views: Dictionary = {}       ## int -> EnemyView
 var _tower_views: Dictionary = {}       ## int -> TowerView
 var _projectile_views: Dictionary = {}  ## instance_id -> ProjectileView
+var _slot_views: Dictionary = {}        ## slot_id -> BuildSlotView
+var _controller := InteractionController.new()
 var _spawn_timer: float = 0.0
 
 func _ready() -> void:
@@ -37,11 +43,7 @@ func _ready() -> void:
 
 	_sim = BattleSim.new(world)
 	_bake_build_slots(world)
-
-	# 過渡程式碼：真正的建塔 UI 要到 B3 才有，在那之前開場自動蓋一座塔，
-	# 讓畫面維持可玩。刻意走意圖佇列而非直接建造，順便替新路徑做煙霧測試。
-	# B3 接上 UI 時刪除本段。
-	world.queue_intent(GameIntent.build(world.build_slots[0].id, &"archer_tower"))
+	InputBindings.install()
 
 func _process(delta: float) -> void:
 	_spawn_timer -= delta
@@ -53,6 +55,7 @@ func _process(delta: float) -> void:
 	if ticks > 0:
 		_sync_views()
 	_interpolate_views()
+	_update_slot_highlight()
 
 ## 把編輯器畫的 Curve2D 等距取樣成點陣列。
 ## core/ 只認得點陣列，不認得 Curve2D——這個轉換就是分層的邊界。
@@ -72,6 +75,11 @@ func _bake_build_slots(world: WorldState) -> void:
 		var slot := BuildSlot.new()
 		slot.position = marker.position
 		world.add_build_slot(slot)
+
+		var view := BuildSlotViewScript.new() as BuildSlotView
+		view.setup(slot.id, SLOT_SPRITE, slot.position)
+		_view_root.add_child(view)
+		_slot_views[slot.id] = view
 
 func _spawn_enemy(enemy_id: StringName) -> void:
 	var enemy := _registry.make_enemy(enemy_id, MAIN_PATH_ID)
@@ -156,3 +164,20 @@ func _interpolate_views() -> void:
 		view.interpolate(alpha)
 	for view: ProjectileView in _projectile_views.values():
 		view.interpolate(alpha)
+
+## 每幀更新選取提示。建塔點是個位數，直接全部設定即可。
+func _update_slot_highlight() -> void:
+	for view: BuildSlotView in _slot_views.values():
+		view.set_selected(view.slot_id == _controller.selected_slot_id)
+
+## 把原始事件翻成裝置無關的動作，交給控制器。
+## 螢幕座標換算成世界座標需要 viewport，所以這一步留在場景。
+## 關卡整幅入鏡、無鏡頭平移，因此只差一個畫布變換。
+func _unhandled_input(event: InputEvent) -> void:
+	var world_position: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * event.position \
+		if event is InputEventMouse else Vector2.ZERO
+	var action := MouseKeyboardInput.translate(event, world_position)
+	if action == null:
+		return
+	_controller.handle(action, _sim.world)
+	get_viewport().set_input_as_handled()
