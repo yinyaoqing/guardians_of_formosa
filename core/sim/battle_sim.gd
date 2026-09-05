@@ -12,6 +12,9 @@ const TICK_DELTA := 1.0 / float(TICK_RATE)
 ## 會讓下一幀更慢、積欠更多，形成死亡螺旋。真正積欠過多時丟棄積欠。
 const MAX_TICKS_PER_FRAME := 8
 
+## 倍速循環的順序。CYCLE_SPEED intent 不帶數值，由這裡決定下一段。
+const SPEED_STEPS: Array[float] = [1.0, 2.0, 4.0]
+
 var world: WorldState
 var tick_count: int = 0
 var speed_multiplier: float = 1.0
@@ -68,14 +71,27 @@ func _tick() -> void:
 ## 唯一的例外是暫停中：advance() 在 paused 時仍會呼叫本函式再提前返回，
 ## 那些變更因此落在任何 tick 之外、不帶 tick 編號。取捨的理由見設計規格 §2.1。
 ##
-## kind 的分派全交給 BuildSystem 自己做，這裡不重複一份同樣的清單——
-## 兩處各維護一份，日後加一種 kind 就得記得同步改兩處。
-## 等之後的里程碑引入不屬於 BuildSystem 的 intent（法術、英雄……），
-## 這裡才需要變成真正依 kind 分派到不同系統的路由器。
+## kind 分派的路由器。建造類轉給 BuildSystem，控制類自己處理——
+## 後者改的是模擬參數而非世界狀態，不屬於 BuildSystem 的職責。
+##
+## 未知的 kind 會落到 BuildSystem，由它既有的 push_error 攔下，
+## 所以任何 kind 都不會被靜默丟掉。
 func _apply_pending_intents() -> void:
 	for intent: GameIntent in world.pending_intents:
-		BuildSystem.apply(world, intent)
+		match intent.kind:
+			GameIntent.KIND_TOGGLE_PAUSE:
+				paused = not paused
+			GameIntent.KIND_CYCLE_SPEED:
+				_cycle_speed()
+			_:
+				BuildSystem.apply(world, intent)
 	world.pending_intents.clear()
+
+## 切到下一段倍速。find 找不到時回傳 -1，(-1 + 1) % n == 0，
+## 因此速度被改成清單外的值時會安全地回到第一段而非當掉。
+func _cycle_speed() -> void:
+	var current := SPEED_STEPS.find(speed_multiplier)
+	speed_multiplier = SPEED_STEPS[(current + 1) % SPEED_STEPS.size()]
 
 ## 走到終點的敵人扣玩家一條命，並立刻移出戰場（避免重複扣血）
 func _collect_leaked() -> void:

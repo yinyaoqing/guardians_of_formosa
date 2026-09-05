@@ -260,3 +260,52 @@ func test_intent_queued_while_paused_is_still_applied_and_the_queue_drains() -> 
 	assert_array(world.pending_intents).override_failure_message(
 		"套用後佇列必須清空，否則會在暫停時無止盡累積，恢復時一次性爆發套用"
 	).has_size(0)
+
+func test_toggle_pause_intent_flips_the_paused_flag() -> void:
+	var world := _make_world()
+	var sim := BattleSim.new(world)
+	assert_bool(sim.paused).is_false()
+
+	world.queue_intent(GameIntent.toggle_pause())
+	sim.advance(FRAME)
+	assert_bool(sim.paused).is_true()
+
+	world.queue_intent(GameIntent.toggle_pause())
+	sim.advance(FRAME)
+	assert_bool(sim.paused).is_false()
+
+func test_cycle_speed_intent_wraps_back_to_one() -> void:
+	# 必須驗到循環回頭。只測 1x → 2x 的話，「每次乘二」的實作也會通過。
+	var world := _make_world()
+	var sim := BattleSim.new(world)
+	assert_float(sim.speed_multiplier).is_equal_approx(1.0, 0.001)
+
+	world.queue_intent(GameIntent.cycle_speed())
+	sim.advance(FRAME)
+	assert_float(sim.speed_multiplier).is_equal_approx(2.0, 0.001)
+
+	world.queue_intent(GameIntent.cycle_speed())
+	sim.advance(FRAME)
+	assert_float(sim.speed_multiplier).is_equal_approx(4.0, 0.001)
+
+	world.queue_intent(GameIntent.cycle_speed())
+	sim.advance(FRAME)
+	assert_float(sim.speed_multiplier).override_failure_message(
+		"倍速必須循環回 1x，不是無限倍增"
+	).is_equal_approx(1.0, 0.001)
+
+func test_build_intents_still_reach_the_build_system_after_routing() -> void:
+	# 路由重構最可能的失敗是靜默漏掉某個 kind。這條守著建造那一路。
+	#
+	# 與 test_intent_queued_before_a_tick_is_applied_in_that_tick 涵蓋範圍重疊，
+	# 這是刻意的：那一條的名字講的是「時機」，讀到它的人不會想到路由；
+	# 這一條的名字說明了 kind 分派本身是不變式，重構的人才會知道自己動到了什麼。
+	var world := _make_buildable_world()
+	var sim := BattleSim.new(world)
+	world.queue_intent(GameIntent.build(world.build_slots[0].id, &"archer_tower"))
+
+	sim.advance(FRAME)
+
+	assert_array(world.towers).override_failure_message(
+		"改成路由器之後，建造類 intent 仍必須到得了 BuildSystem"
+	).has_size(1)
