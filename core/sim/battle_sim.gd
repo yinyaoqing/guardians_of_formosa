@@ -12,6 +12,9 @@ const TICK_DELTA := 1.0 / float(TICK_RATE)
 ## 會讓下一幀更慢、積欠更多，形成死亡螺旋。真正積欠過多時丟棄積欠。
 const MAX_TICKS_PER_FRAME := 8
 
+## 倍速循環的順序。CYCLE_SPEED intent 不帶數值，由這裡決定下一段。
+const SPEED_STEPS: Array[float] = [1.0, 2.0, 4.0]
+
 var world: WorldState
 var tick_count: int = 0
 var speed_multiplier: float = 1.0
@@ -34,13 +37,30 @@ func advance(frame_delta: float) -> int:
 		return 0
 	_accumulator += frame_delta * speed_multiplier
 	var ticks := 0
-	while _accumulator >= TICK_DELTA and ticks < MAX_TICKS_PER_FRAME:
+	# not paused：迴圈內任何一個 tick 都可能透過 _apply_pending_intents()
+	# 把 paused 設成 true（玩家排的 toggle_pause intent 剛好在這一 tick 被排空）。
+	# 一旦發生就立刻停止，不把本幀還積欠的其餘 tick 跑完，暫停才會真的
+	# 在按下的那個瞬間生效，而不是拖到下一次 advance() 呼叫。
+	# 因暫停而提前跳出時 _accumulator 保留剩下欠的整數個 tick 份量——
+	# 這些時間不是被丟棄，而是留到解除暫停後補跑，戰鬥時間軸不會憑空消失。
+	while _accumulator >= TICK_DELTA and not paused and ticks < MAX_TICKS_PER_FRAME:
 		_accumulator -= TICK_DELTA
 		_tick()
 		ticks += 1
 	# 只在真的還積欠超過一個 tick 時才丟棄。「跑滿上限」不等於「積欠很多」——
 	# 高速度倍率配低幀率會正好跑滿上限卻只剩極小零頭，那個零頭必須留給下一幀，
 	# 否則模擬會悄悄跑得比設定的倍率慢。
+	#
+	# 暫停不會誤觸這個丟棄分支，原因是結構性的而非迴圈條件的求值順序：
+	# world.queue_intent() 只會從 tick 之外被呼叫（目前唯一的呼叫點是
+	# InteractionController，經由場景的 _unhandled_input 觸發），從來
+	# 不會有系統在 _tick() 內部排新的 intent。因此 pending_intents 一定
+	# 在補跑迴圈的第一個 _tick() 就被 _apply_pending_intents() 完全排空、
+	# 清空，玩家排的 toggle_pause 只可能讓 paused 在第 1 個 iteration 翻成
+	# true，不可能拖到第 8 個 iteration 才生效。paused 提前跳出時 ticks
+	# 因此必然是 1，遠小於 MAX_TICKS_PER_FRAME，兩個跳出原因不會同時成立。
+	# 這個不變式一旦被打破（例如未來波次腳本、boss 自動暫停等「tick 內
+	# 產生 intent」的功能）就必須重新檢查這裡的假設。
 	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks
@@ -68,14 +88,27 @@ func _tick() -> void:
 ## 唯一的例外是暫停中：advance() 在 paused 時仍會呼叫本函式再提前返回，
 ## 那些變更因此落在任何 tick 之外、不帶 tick 編號。取捨的理由見設計規格 §2.1。
 ##
-## kind 的分派全交給 BuildSystem 自己做，這裡不重複一份同樣的清單——
-## 兩處各維護一份，日後加一種 kind 就得記得同步改兩處。
-## 等之後的里程碑引入不屬於 BuildSystem 的 intent（法術、英雄……），
-## 這裡才需要變成真正依 kind 分派到不同系統的路由器。
+## kind 分派的路由器。建造類轉給 BuildSystem，控制類自己處理——
+## 後者改的是模擬參數而非世界狀態，不屬於 BuildSystem 的職責。
+##
+## 未知的 kind 會落到 BuildSystem，由它既有的 push_error 攔下，
+## 所以任何 kind 都不會被靜默丟掉。
 func _apply_pending_intents() -> void:
 	for intent: GameIntent in world.pending_intents:
-		BuildSystem.apply(world, intent)
+		match intent.kind:
+			GameIntent.KIND_TOGGLE_PAUSE:
+				paused = not paused
+			GameIntent.KIND_CYCLE_SPEED:
+				_cycle_speed()
+			_:
+				BuildSystem.apply(world, intent)
 	world.pending_intents.clear()
+
+## 切到下一段倍速。find 找不到時回傳 -1，(-1 + 1) % n == 0，
+## 因此速度被改成清單外的值時會安全地回到第一段而非當掉。
+func _cycle_speed() -> void:
+	var current := SPEED_STEPS.find(speed_multiplier)
+	speed_multiplier = SPEED_STEPS[(current + 1) % SPEED_STEPS.size()]
 
 ## 走到終點的敵人扣玩家一條命，並立刻移出戰場（避免重複扣血）
 func _collect_leaked() -> void:

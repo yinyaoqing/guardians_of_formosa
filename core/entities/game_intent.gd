@@ -13,6 +13,12 @@ const KIND_BUILD := &"build"
 const KIND_SELL := &"sell"
 const KIND_UPGRADE := &"upgrade"
 
+## 控制類：改的是模擬本身的參數，不是世界狀態，由 BattleSim 直接處理。
+## 刻意不帶數值——intent 表達玩家動作而非結果值，回放時重現的才是
+## 「玩家按了切換」而不是「速度變成 2」。
+const KIND_TOGGLE_PAUSE := &"toggle_pause"
+const KIND_CYCLE_SPEED := &"cycle_speed"
+
 var kind: StringName = &""
 var slot_id: int = 0            ## KIND_BUILD 用
 var tower_id: StringName = &""  ## KIND_BUILD 用，要蓋哪一種
@@ -35,4 +41,14 @@ static func upgrade(p_entity_id: int) -> GameIntent:
 	var intent := GameIntent.new()
 	intent.kind = KIND_UPGRADE
 	intent.entity_id = p_entity_id
+	return intent
+
+static func toggle_pause() -> GameIntent:
+	var intent := GameIntent.new()
+	intent.kind = KIND_TOGGLE_PAUSE
+	return intent
+
+static func cycle_speed() -> GameIntent:
+	var intent := GameIntent.new()
+	intent.kind = KIND_CYCLE_SPEED
 	return intent

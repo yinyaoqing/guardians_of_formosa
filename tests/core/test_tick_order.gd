@@ -260,3 +260,93 @@ func test_intent_queued_while_paused_is_still_applied_and_the_queue_drains() -> 
 	assert_array(world.pending_intents).override_failure_message(
 		"套用後佇列必須清空，否則會在暫停時無止盡累積，恢復時一次性爆發套用"
 	).has_size(0)
+
+func test_toggle_pause_intent_flips_the_paused_flag() -> void:
+	var world := _make_world()
+	var sim := BattleSim.new(world)
+	assert_bool(sim.paused).is_false()
+
+	world.queue_intent(GameIntent.toggle_pause())
+	sim.advance(FRAME)
+	assert_bool(sim.paused).is_true()
+
+	world.queue_intent(GameIntent.toggle_pause())
+	sim.advance(FRAME)
+	assert_bool(sim.paused).is_false()
+
+func test_cycle_speed_intent_wraps_back_to_one() -> void:
+	# 必須驗到循環回頭。只測 1x → 2x 的話，「每次乘二」的實作也會通過。
+	var world := _make_world()
+	var sim := BattleSim.new(world)
+	assert_float(sim.speed_multiplier).is_equal_approx(1.0, 0.001)
+
+	world.queue_intent(GameIntent.cycle_speed())
+	sim.advance(FRAME)
+	assert_float(sim.speed_multiplier).is_equal_approx(2.0, 0.001)
+
+	world.queue_intent(GameIntent.cycle_speed())
+	sim.advance(FRAME)
+	assert_float(sim.speed_multiplier).is_equal_approx(4.0, 0.001)
+
+	world.queue_intent(GameIntent.cycle_speed())
+	sim.advance(FRAME)
+	assert_float(sim.speed_multiplier).override_failure_message(
+		"倍速必須循環回 1x，不是無限倍增"
+	).is_equal_approx(1.0, 0.001)
+
+func test_build_intents_still_reach_the_build_system_after_routing() -> void:
+	# 路由重構最可能的失敗是靜默漏掉某個 kind。這條守著建造那一路。
+	#
+	# 與 test_intent_queued_before_a_tick_is_applied_in_that_tick 涵蓋範圍重疊，
+	# 這是刻意的：那一條的名字講的是「時機」，讀到它的人不會想到路由；
+	# 這一條的名字說明了 kind 分派本身是不變式，重構的人才會知道自己動到了什麼。
+	var world := _make_buildable_world()
+	var sim := BattleSim.new(world)
+	world.queue_intent(GameIntent.build(world.build_slots[0].id, &"archer_tower"))
+
+	sim.advance(FRAME)
+
+	assert_array(world.towers).override_failure_message(
+		"改成路由器之後，建造類 intent 仍必須到得了 BuildSystem"
+	).has_size(1)
+
+## 補跑迴圈（catch-up loop）不會重讀 paused 的話，卡頓後一次補跑多個 tick 時，
+## 排在第一個 tick 的 toggle_pause 意圖只會讓「下一次」advance() 暫停，
+## 這一次呼叫仍會把積欠的 tick 全部跑完——移動、開火、扣血都照跑，
+## 暫停因此晚了最多 MAX_TICKS_PER_FRAME - 1 個 tick 才真正生效。
+## 這裡讓一次 advance() 欠下 5 個 tick，證明實際只跑了 1 個（drain 出 toggle_pause 的那個）。
+func test_pause_drained_mid_catchup_stops_the_loop_immediately() -> void:
+	var world := _make_world()
+	var enemy := _add_enemy(world, 300.0)
+	var sim := BattleSim.new(world)
+	world.queue_intent(GameIntent.toggle_pause())
+
+	var ticks := sim.advance(FRAME * 5.0)   # 一次欠 5 個 tick
+
+	assert_int(ticks).override_failure_message(
+		"迴圈條件必須重讀 paused：欠 5 個 tick 時，第一個 tick 排空的 toggle_pause 必須讓其餘 4 個 tick 完全不跑"
+	).is_equal(1)
+	assert_bool(sim.paused).override_failure_message(
+		"toggle_pause 意圖必須在它被排空的那個 tick 就生效"
+	).is_true()
+	var expected_distance := 300.0 * BattleSim.TICK_DELTA
+	assert_float(enemy.distance_along).override_failure_message(
+		"敵人只能走完整 1 個 tick 的距離；若還跑出剩下 4 個 tick 的位移，代表暫停沒有立刻打斷補跑迴圈"
+	).is_equal_approx(expected_distance, 0.001)
+
+	# 上面只釘住了「暫停當下沒多跑」，沒釘住「欠的那 4 個 tick 有沒有留著」。
+	# _accumulator 若在暫停跳出時被清成 0（而不是保留剩下欠的量），這裡的
+	# 斷言全部會通過、上面五個斷言也全部通過，卻悄悄丟掉了最多
+	# MAX_TICKS_PER_FRAME - 1 個 tick（本例是 4 個、133ms）的戰鬥時間。
+	# 解除暫停後只推進極小的 delta（1 毫秒），若欠的 4 個 tick 還在，
+	# 這一次 advance() 應該補跑出那 4 個 tick；若欠款已經被清空，
+	# 這裡只會再跑出 0 個 tick。
+	sim.paused = false
+	var resumed_ticks := sim.advance(0.001)
+
+	assert_int(resumed_ticks).override_failure_message(
+		"解除暫停後必須補跑暫停時欠下的 4 個 tick（_accumulator 保留了 4/30 秒，" +
+		"加上這次極小的 0.001 秒 delta 仍不足以湊出第 5 個 tick）。" +
+		"若這裡跑出的 tick 數不是 4，代表 _accumulator 在暫停跳出的那一刻被清空或改動了，" +
+		"暫停期間積欠的模擬時間就這樣憑空消失，戰鬥時間軸會對不上。"
+	).is_equal(4)
