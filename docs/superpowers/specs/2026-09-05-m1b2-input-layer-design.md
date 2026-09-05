@@ -248,3 +248,6 @@ tests/core/test_tick_order.gd      修改：控制類 intent 與路由回歸守�
 - 暫停中的 view 同步（B3）
 - 手把翻譯器與建塔點跳選（M4）
 - 選取狀態是否需要暴露給 B3 的 HUD，以何種形式（B3 時決定）
+- **B3 設計 HUD 之前必須先決定按鍵衝突的處理**：`gof_toggle_pause` 綁 Space、Godot 內建的 `ui_accept` 也是 Space；`gof_cancel` 綁 Esc、`ui_cancel` 也是 Esc。目前場景中沒有任何 `Control`，所以看不出問題；B3 加了 HUD 之後，玩家第一次點到 HUD 按鈕就會讓它取得焦點，此後 Space 會去觸發那顆按鈕而到不了 `_unhandled_input`，暫停從此失效且毫無線索。兩條路：HUD 按鈕設 `focus_mode = FOCUS_NONE`，或把這兩個動作改到 `_input` 處理。
+- **B3 的長按手勢需要改 `translate()` 的簽名**：目前只看 `is_action_pressed`，完全丟棄放開事件，靜態純函式表達不了「按住多久」。
+- **兩處原始碼文字檢查可被註解掉的呼叫騙過**：`tests/test_core_purity.gd` 用 `source.contains(...)` 檢查 `battle_scene.gd` 有呼叫 `configure_for_level` 與 `InputBindings.install`，但把那行註解掉仍然通過。修法是比對前先濾掉以 `#` 開頭的行，兩處共用一個 helper。
