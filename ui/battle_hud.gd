@@ -11,6 +11,20 @@ extends CanvasLayer
 ## sim.paused，那條路一條測試都沒有，而兩條路遲早會漂移。
 ##
 ## 此規則由 tests/test_ui_layer.gd 的原始碼掃描守住。
+##
+## battle_hud.tscn 裡 Root、Top 兩個容器與 SpacerLeft、SpacerRight 兩個空白
+## Control 都明確設定 mouse_filter = 2（MOUSE_FILTER_IGNORE）。純 Control 預設
+## 是 MOUSE_FILTER_STOP，不管看不看得見都會吃掉矩形範圍內的滑鼠事件；
+## battle_scene.gd 的建塔點擊走 _unhandled_input，只有滑鼠事件沒被 GUI
+## 系統吃掉才會傳到那裡。這兩個 Spacer 撐開整條頂欄的寬度，一旦沿用預設值，
+## 頂欄下方（包含 48px 拾取半徑內）的建塔格全部點不到。
+## Container 系列（MarginContainer、HBoxContainer）與 Label 的預設值本來就不
+## 攔截（分別是 PASS、IGNORE），這裡照樣明寫，避免下一個人加新元件時，
+## 誤以為「容器都要手動設」或忘記空白 Control 的預設值跟容器不一樣。
+## 兩個 Button 刻意不設，維持預設的 STOP——按鈕自己要吃掉點擊，否則按暫停
+## 會連帶把按鈕正下方的建塔格也點掉。
+##
+## 事實依據見 .superpowers/sdd/hud-mouse-filter-report.md 的量測輸出。
 
 signal pause_pressed
 signal speed_pressed
