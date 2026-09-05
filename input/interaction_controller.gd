@@ -33,6 +33,9 @@ func _select_at(position: Vector2, world: WorldState) -> void:
 	var best_distance_squared := PICK_RADIUS * PICK_RADIUS
 	for slot: BuildSlot in world.build_slots:
 		var distance_squared := position.distance_squared_to(slot.position)
+		# 用 <= 而非 < 是刻意的：這讓半徑邊界本身也算命中，觸控目標因此
+		# 涵蓋整個 PICK_RADIUS，而不是差一點點打不到邊緣。副作用是兩個
+		# 建塔點若剛好等距，會選到 build_slots 中較後面的那個。
 		if distance_squared <= best_distance_squared:
 			best_distance_squared = distance_squared
 			best_id = slot.id

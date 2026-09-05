@@ -64,3 +64,32 @@ func test_cancel_clears_the_selection() -> void:
 	controller.handle(InputAction.select_at(SLOT_A_POS), world)
 	controller.handle(InputAction.simple(InputAction.CANCEL), world)
 	assert_int(controller.selected_slot_id).is_equal(0)
+
+func test_nearest_slot_wins_when_two_are_in_range() -> void:
+	# 兩個建塔點都落在同一次點擊的命中半徑內，且刻意把「比較遠的」
+	# 排在 build_slots 前面：只掃到第一個落在半徑內的點就回傳、
+	# 沒有持續比較最小距離的實作，會選到錯的那一個。
+	var world := WorldState.new()
+	var click_pos := Vector2(400, 200)
+	var far_slot := BuildSlot.new()
+	far_slot.position = click_pos + Vector2(40.0, 0.0)
+	world.add_build_slot(far_slot)
+	var near_slot := BuildSlot.new()
+	near_slot.position = click_pos + Vector2(10.0, 0.0)
+	world.add_build_slot(near_slot)
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(click_pos), world)
+	assert_int(controller.selected_slot_id).override_failure_message(
+		"半徑內有兩個建塔點時應選較近的那個，不是清單中先掃到的那個"
+	).is_equal(near_slot.id)
+
+func test_clicking_exactly_at_the_pick_radius_selects() -> void:
+	# 邊界值：實作用 <= 比較平方距離，剛好等於 PICK_RADIUS 的點必須命中。
+	# 用 PICK_RADIUS 本身建構偏移量，確保平方距離沒有浮點誤差。
+	var world := _make_world()
+	var controller := InteractionController.new()
+	var offset := Vector2(InteractionController.PICK_RADIUS, 0.0)
+	controller.handle(InputAction.select_at(SLOT_A_POS + offset), world)
+	assert_int(controller.selected_slot_id).override_failure_message(
+		"命中半徑的邊界本身也該算命中，不是只到邊界前一點"
+	).is_equal(_slot_a(world).id)
