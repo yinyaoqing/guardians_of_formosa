@@ -8,6 +8,7 @@ extends Node2D
 const PATH_SAMPLE_SPACING := 8.0
 const MAIN_PATH_ID := &"main"
 const SPAWN_INTERVAL := 1.5
+const LEVEL_ID := &"level_01"
 
 const EnemyViewScript := preload("res://game/views/enemy_view.gd")
 const TowerViewScript := preload("res://game/views/tower_view.gd")
@@ -41,7 +42,7 @@ func _ready() -> void:
 	_registry.load_from_disk()
 
 	var world := WorldState.new()
-	world.configure_for_level(_registry, &"level_01")
+	world.configure_for_level(_registry, LEVEL_ID)
 	world.paths[MAIN_PATH_ID] = _bake_path(_path_node)
 
 	_sim = BattleSim.new(world)
@@ -50,7 +51,7 @@ func _ready() -> void:
 
 	_hud = BattleHudScene.instantiate() as BattleHud
 	add_child(_hud)
-	_hud.setup(world, _sim, StringName(_registry.levels[&"level_01"]["name_key"]))
+	_hud.setup(world, _sim, StringName(_registry.levels[LEVEL_ID]["name_key"]))
 	_hud.pause_pressed.connect(_on_hud_pause_pressed)
 	_hud.speed_pressed.connect(_on_hud_speed_pressed)
 
