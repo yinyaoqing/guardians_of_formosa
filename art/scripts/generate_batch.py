@@ -26,7 +26,12 @@ WORKFLOWS = {
     "text": os.path.join(REPO, "art", "workflows", "a0_smoke_test.api.json"),
     "a": os.path.join(REPO, "art", "workflows", "a1_unit_ref_pose.api.json"),
     "b": os.path.join(REPO, "art", "workflows", "a1_stage_b_restyle.api.json"),
+    "flux2": os.path.join(REPO, "art", "workflows", "a1_flux2_unit.api.json"),
 }
+
+# 各工作流的節點編號不同（FLUX.2 的正向在 4、latent 在 7、KSampler 在 8），
+# 故由工作流自己用 _roles 宣告角色，腳本不寫死編號。
+DEFAULT_ROLES = {"positive": "3", "negative": "4", "latent": "5", "sampler": "6", "save": "8"}
 COMFY_INPUT = r"C:\Users\yinya\git\comfyui\input"
 OUT_ROOT = os.path.join(REPO, "art_src", "01_raw")
 COMFY_OUT = r"C:\Users\yinya\git\comfyui\output"
@@ -87,24 +92,34 @@ def get(path: str) -> dict:
 
 
 def run_one(base_wf: dict, m: dict, asset: dict, batch: int, seed: int, timeout: float,
-            stage: str = "text", source_image: str | None = None) -> list[str]:
+            stage: str = "text", source_image: str | None = None,
+            roles: dict | None = None) -> list[str]:
     wf = json.loads(json.dumps(base_wf))
+    # 工作流一旦自行宣告 _roles 就完全以它為準，**不可與預設值合併**。
+    # 合併過一次，後果是：FLUX.2 沒有負向節點、_roles 未宣告 negative，
+    # 預設的 negative="4" 漏進來，而節點 4 正是 FLUX.2 的正向編碼——
+    # 負面 prompt 覆蓋掉正向 prompt，33 個資產全部照著負面詞畫成角色設定表。
+    r = dict(roles) if roles else dict(DEFAULT_ROLES)
     positive, negative = build_prompts(m, asset)
     w, h = m["size"][asset["cat"]]
 
-    wf["3"]["inputs"]["text"] = positive
-    wf["4"]["inputs"]["text"] = negative
-    wf["6"]["inputs"]["seed"] = seed
-    wf["8"]["inputs"]["filename_prefix"] = f"{asset['id']}_{stage}" if stage != "text" else asset["id"]
+    wf[r["positive"]]["inputs"]["text"] = positive
+    # FLUX 是 guidance-distilled，沒有負向條件（走 ConditioningZeroOut），故 negative 可缺。
+    if "negative" in r and r["negative"] in wf:
+        wf[r["negative"]]["inputs"]["text"] = negative
+    wf[r["sampler"]]["inputs"]["seed"] = seed
+    wf[r["save"]]["inputs"]["filename_prefix"] = (
+        asset["id"] if stage == "text" else f"{asset['id']}_{stage}"
+    )
 
     if stage == "b":
-        # 階段 B 是 img2img，尺寸由來源圖決定，沒有 EmptyLatentImage 可設。
-        wf["9"]["inputs"]["image"] = source_image
+        # 階段 B 是 img2img，尺寸由來源圖決定，沒有 latent 節點可設。
+        wf[r["source"]]["inputs"]["image"] = source_image
     else:
-        wf["5"]["inputs"].update({"width": w, "height": h, "batch_size": batch})
+        wf[r["latent"]]["inputs"].update({"width": w, "height": h, "batch_size": batch})
     if stage == "a":
-        wf["9"]["inputs"]["image"] = asset["ref"]
-        wf["12"]["inputs"]["image"] = f"pose_{asset['pose']}.png"
+        wf[r["ref"]]["inputs"]["image"] = asset["ref"]
+        wf[r["pose"]]["inputs"]["image"] = f"pose_{asset['pose']}.png"
 
     prompt_id = post("/prompt", {"prompt": wf})["prompt_id"]
     deadline = time.monotonic() + timeout
@@ -133,16 +148,18 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=16610430, help="1661/04/30 大潮")
     ap.add_argument("--timeout", type=float, default=1200.0)
     ap.add_argument("--force", action="store_true", help="重做已有足量產出的資產")
-    ap.add_argument("--stage", choices=["text", "a", "b"], default="text",
-                    help="text=純文字（僅適用場景）；a=史料參考+骨架；b=重新上風格")
+    ap.add_argument("--stage", choices=["text", "a", "b", "flux2"], default="text",
+                    help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字")
     ap.add_argument("--dry-run", action="store_true", help="只印 prompt 不出圖")
     args = ap.parse_args()
 
     with open(MANIFEST, encoding="utf-8") as f:
         m = json.load(f)
     with open(WORKFLOWS[args.stage], encoding="utf-8") as f:
-        # 丟掉底線開頭的鍵——那是給人看的註解，ComfyUI 會把它當節點。
-        base_wf = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
+        raw_wf = json.load(f)
+    roles = raw_wf.get("_roles", {})
+    # 丟掉底線開頭的鍵——那是給人看的註解與角色宣告，ComfyUI 會把它當節點。
+    base_wf = {k: v for k, v in raw_wf.items() if not k.startswith("_")}
 
     assets = m["assets"]
     if args.stage in ("a", "b"):
@@ -195,7 +212,7 @@ def main() -> int:
                     shutil.copyfile(os.path.join(stage_dir(a["id"], "a"), src_name),
                                     os.path.join(COMFY_INPUT, src_name))
                 names += run_one(base_wf, m, a, args.batch, args.seed, args.timeout,
-                                 args.stage, src_name)
+                                 args.stage, src_name, roles)
         except (RuntimeError, TimeoutError, urllib.error.URLError) as exc:
             print(f"    失敗：{exc}", file=sys.stderr, flush=True)
             failed.append(a["id"])

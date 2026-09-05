@@ -128,5 +128,12 @@
       "strength_model": 1.0,
       "strength_clip": 1.0
     }
+  },
+  "_roles": {
+    "positive": "3",
+    "negative": "4",
+    "sampler": "6",
+    "save": "8",
+    "source": "9"
   }
 }

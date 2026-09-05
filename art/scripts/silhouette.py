@@ -62,6 +62,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--cat", action="append")
     ap.add_argument("--threshold", type=float, default=0.93)
+    ap.add_argument("--stage", help="讀 art_src/01_raw/<id>/stage_<stage>/ 而非資產目錄本身")
     args = ap.parse_args()
 
     with open(MANIFEST, encoding="utf-8") as f:
@@ -70,7 +71,7 @@ def main() -> int:
     os.makedirs(OUT, exist_ok=True)
     sils: list[tuple[str, Image.Image]] = []
     for a in assets:
-        d = os.path.join(RAW, a["id"])
+        d = os.path.join(RAW, a["id"], f"stage_{args.stage}") if args.stage else os.path.join(RAW, a["id"])
         if not os.path.isdir(d):
             continue
         for n in sorted(f for f in os.listdir(d) if f.endswith(".png")):

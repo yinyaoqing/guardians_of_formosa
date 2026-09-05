@@ -88,5 +88,12 @@
       ],
       "filename_prefix": "a0_v3_zheng"
     }
+  },
+  "_roles": {
+    "positive": "3",
+    "negative": "4",
+    "latent": "5",
+    "sampler": "6",
+    "save": "8"
   }
 }
