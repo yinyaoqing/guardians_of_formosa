@@ -326,3 +326,12 @@ tests/input/test_mouse_keyboard_input.gd 修改：Space 已移除的四條
 - 手把翻譯器與建塔點跳選（M4）
 - `translate()` 目前只看 `is_action_pressed`、完全丟棄放開事件，B3b 的長按手勢需要改它的簽名
 - `tests/test_core_purity.gd` 的原始碼文字檢查可被「註解掉的呼叫」騙過；修法是比對前濾掉以 `#` 開頭的行
+
+### 最終全分支審查留下的事項
+
+- **兩條新守衛在合理的 B3b 未來下會誤報。** `test_the_two_locales_actually_differ` 會拒絕一組正當相同的譯文（專有名詞，或 `VS` 這種純符號字串）；`ui/` 守衛的寫入偵測若 `ui/` 重構到沒有任何腳本持有 `WorldState` / `BattleSim` 型別的參照就會失敗。兩者的失敗訊息都自帶說明，但便宜的預防是各自旁邊放一個有註解的例外清單常數——**讓下一個人是加一筆而不是把守衛刪掉**，守衛就是這樣死的。
+- **`tr("key", "context")` 會被 `tr()` 掃描靜默跳過**，正則要求引號後緊接 `)`。今天沒有用到，第一次需要 context 參數時才會咬人。
+- **`ui/` 的寫入偵測穿不過集合成員。** `_world.build_slots[0].occupied_by = 5` 在 `[` 處就不匹配。`pending_intents` 已加入字串清單擋住現實中最可能的那一半，索引穿透仍未涵蓋。
+- **`test_core_purity.gd` 的三條原始碼守衛都是整檔 `contains()`**，所以被註解掉的呼叫同樣算通過。它們證明的是「那段文字存在」，不是「那段程式會執行」。這是該檔既有的性質，不單獨修改。
+- **Bold 字重已提交但無人引用**（21MB，`project.godot` 只設了 Regular）。刻意作為 B3b 的準備，但若檔案有問題不會有任何東西說話，要到 B3b 真的用它才會發現。
+- **`_apply_safe_area()` 只在 `_ready()` 跑一次**，沒有處理 `NOTIFICATION_WM_SIZE_CHANGED`。手機開啟後旋轉、或視窗拖到不同縮放的螢幕，都會維持啟動當下的邊距。列入 M2 實機清單。

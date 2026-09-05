@@ -23,6 +23,7 @@ const FORBIDDEN_PATTERNS := [
 	"StatusSystem",
 	"TargetingSystem",
 	"queue_intent(",
+	"pending_intents",
 	"InputAction",
 ]
 
