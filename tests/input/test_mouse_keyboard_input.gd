@@ -122,10 +122,31 @@ func test_enter_survives_on_ui_accept() -> void:
 		"Enter 必須留在 ui_accept，否則按鈕無法用鍵盤或手把觸發"
 	).is_true()
 
-func test_releasing_space_is_idempotent() -> void:
+func test_install_converges_ui_accept_regardless_of_prior_state() -> void:
+	# 舊版本只比對事件「數量」不變，erase-only 的實作不管有沒有真的拔 Space
+	# 數量都不會變，測試永遠綠燈。這裡改成主動把 Space 塞回去（用內建動作
+	# 原本的存法：keycode，不是 physical_keycode，才是 InputMap 真實會出現
+	# 的狀態），驗證 install() 不管呼叫前 ui_accept 長怎樣，都會收斂回「沒有
+	# Space」。
 	InputBindings.install()
-	var count := InputMap.action_get_events(&"ui_accept").size()
+	var space_event := InputEventKey.new()
+	space_event.keycode = KEY_SPACE
+	InputMap.action_add_event(&"ui_accept", space_event)
+	assert_bool(_action_has_space(&"ui_accept")).override_failure_message(
+		"前置條件沒設好：手動塞回去的 Space 事件沒有被 InputMap 接受"
+	).is_true()
+
 	InputBindings.install()
-	assert_int(InputMap.action_get_events(&"ui_accept").size()).override_failure_message(
-		"重複安裝不得改變 ui_accept 的事件數"
-	).is_equal(count)
+
+	assert_bool(_action_has_space(&"ui_accept")).override_failure_message(
+		"重新 install() 之後 Space 必須再度被拔掉，不管呼叫前 ui_accept 處於什麼狀態"
+	).is_false()
+	# 同時檢查 Enter：把整個動作清空再重建的實作能通過上面那條，
+	# 卻會在這裡現形。
+	var has_enter := false
+	for event: InputEvent in InputMap.action_get_events(&"ui_accept"):
+		if event is InputEventKey and (event as InputEventKey).keycode == KEY_ENTER:
+			has_enter = true
+	assert_bool(has_enter).override_failure_message(
+		"Enter 必須留在 ui_accept，清空整個動作的實作不能通過這條"
+	).is_true()
