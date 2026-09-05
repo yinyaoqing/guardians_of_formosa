@@ -37,6 +37,12 @@ const REQUIRED_NODE_PATHS := [
 ##
 ## 代價：寫在程式碼行尾的註解（`foo() # InputAction`）仍然會被掃到，因為
 ## 整行只要不是「以 # 開頭」就照樣比對。這是可接受的不精確，見規格 §9。
+##
+## 這個代價還有另一面：整行都是註解的違規呼叫（例如重構後留下的
+## `# world.queue_intent(...)`）現在會被跳過而抓不到，修正前的全檔案比對抓得到，
+## 規格也記錄過那是「比漏抓好」的取捨。換掉它的理由是：HUD 說明整層方向規則的
+## 文件註解，價值高於抓住一行已經被註解掉、不會執行的呼叫——後者本來就該由
+## code review 擋下，不需要測試代勞。
 func test_ui_scripts_do_not_bypass_the_signal_boundary() -> void:
 	var scripts := _collect_gd_files(UI_ROOT)
 	assert_int(scripts.size()).override_failure_message(

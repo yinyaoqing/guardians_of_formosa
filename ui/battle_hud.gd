@@ -40,7 +40,14 @@ func _ready() -> void:
 	_speed_button.pressed.connect(_on_speed_button_pressed)
 	_apply_safe_area()
 
+## 前提：呼叫前必須先 add_child 把這個節點放進場景樹。_level_name_label 是
+## @onready，要等 _ready() 跑過才會解析；順序顛倒的話這裡若不是直接炸掉，
+## 就是 _world 與 _sim 都已賦值、關卡名卻悄悄沒寫進去，表面上一切正常。
+##
+## assert() 在 release build 會被拿掉，所以這裡只在開發期記錄並攔下這個順序，
+## 不是執行期防線——這個規則本該由呼叫端遵守，不是靠這行 assert 兜底。
 func setup(p_world: WorldState, p_sim: BattleSim, level_name_key: StringName) -> void:
+	assert(is_inside_tree(), "BattleHud.setup() 必須在 add_child() 之後呼叫，否則 @onready 節點尚未解析")
 	_world = p_world
 	_sim = p_sim
 	_level_name_label.text = tr(level_name_key)
