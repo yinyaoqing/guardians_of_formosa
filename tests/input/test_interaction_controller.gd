@@ -93,3 +93,111 @@ func test_clicking_exactly_at_the_pick_radius_selects() -> void:
 	assert_int(controller.selected_slot_id).override_failure_message(
 		"命中半徑的邊界本身也該算命中，不是只到邊界前一點"
 	).is_equal(_slot_a(world).id)
+
+## 兩種可用塔種，才能抓出「永遠用第一種」的實作
+func _make_world_with_towers() -> WorldState:
+	var world := _make_world()
+	world.available_towers = [&"archer_tower", &"cannon_tower"] as Array[StringName]
+	return world
+
+func test_choosing_a_tower_on_an_empty_slot_queues_a_build() -> void:
+	# 刻意用第二個建塔點與第二種塔，寫死索引 0 的實作會失敗
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_B_POS), world)
+	controller.handle(InputAction.choose_tower(2), world)
+
+	assert_array(world.pending_intents).has_size(1)
+	var intent: GameIntent = world.pending_intents[0]
+	assert_str(intent.kind).is_equal("build")
+	assert_int(intent.slot_id).override_failure_message(
+		"必須用被選中的建塔點，不是清單中的第一個"
+	).is_equal(_slot_b(world).id)
+	assert_str(intent.tower_id).override_failure_message(
+		"必須用被選中的塔種，不是清單中的第一種"
+	).is_equal("cannon_tower")
+
+func test_choosing_a_tower_without_a_selection_does_nothing() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.choose_tower(1), world)
+	assert_array(world.pending_intents).has_size(0)
+
+func test_choosing_a_tower_on_an_occupied_slot_does_nothing() -> void:
+	var world := _make_world_with_towers()
+	_slot_b(world).occupied_by = 12345
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_B_POS), world)
+	controller.handle(InputAction.choose_tower(1), world)
+	assert_array(world.pending_intents).override_failure_message(
+		"已經有塔的建塔點不能再蓋"
+	).has_size(0)
+
+func test_choosing_a_tower_index_beyond_the_available_list_does_nothing() -> void:
+	# 本關只有兩種塔，按「3」是正常的使用者行為，靜默忽略
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_A_POS), world)
+	controller.handle(InputAction.choose_tower(3), world)
+	assert_array(world.pending_intents).has_size(0)
+
+func test_selling_an_occupied_slot_queues_a_sell_for_its_tower() -> void:
+	var world := _make_world_with_towers()
+	_slot_b(world).occupied_by = 777
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_B_POS), world)
+	controller.handle(InputAction.simple(InputAction.SELL), world)
+
+	assert_array(world.pending_intents).has_size(1)
+	var intent: GameIntent = world.pending_intents[0]
+	assert_str(intent.kind).is_equal("sell")
+	assert_int(intent.entity_id).override_failure_message(
+		"賣出的對象是建塔點上那座塔的實體 id"
+	).is_equal(777)
+
+func test_upgrading_an_occupied_slot_queues_an_upgrade_for_its_tower() -> void:
+	var world := _make_world_with_towers()
+	_slot_b(world).occupied_by = 777
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_B_POS), world)
+	controller.handle(InputAction.simple(InputAction.UPGRADE), world)
+
+	assert_array(world.pending_intents).has_size(1)
+	assert_str(world.pending_intents[0].kind).is_equal("upgrade")
+	assert_int(world.pending_intents[0].entity_id).is_equal(777)
+
+func test_selling_an_empty_slot_does_nothing() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_A_POS), world)
+	controller.handle(InputAction.simple(InputAction.SELL), world)
+	assert_array(world.pending_intents).has_size(0)
+
+func test_selling_without_a_selection_does_nothing() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.simple(InputAction.SELL), world)
+	assert_array(world.pending_intents).has_size(0)
+
+func test_clicking_another_slot_switches_the_selection() -> void:
+	# 轉移表要求已選取時點另一個建塔點是「改選」，不是忽略也不是取消
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_A_POS), world)
+	controller.handle(InputAction.select_at(SLOT_B_POS), world)
+	assert_int(controller.selected_slot_id).is_equal(_slot_b(world).id)
+
+func test_upgrading_without_a_selection_does_nothing() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.simple(InputAction.UPGRADE), world)
+	assert_array(world.pending_intents).has_size(0)
+
+func test_building_does_not_change_the_selection() -> void:
+	# 建造的 intent 下一 tick 才套用；建塔點自然從空變成有塔，
+	# 可用操作也就從建造變成賣出與升級，不需要額外邏輯
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_A_POS), world)
+	controller.handle(InputAction.choose_tower(1), world)
+	assert_int(controller.selected_slot_id).is_equal(_slot_a(world).id)

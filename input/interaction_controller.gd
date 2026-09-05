@@ -23,6 +23,12 @@ func handle(action: InputAction, world: WorldState) -> void:
 			_select_at(action.world_position, world)
 		InputAction.CANCEL:
 			selected_slot_id = 0
+		InputAction.CHOOSE_TOWER:
+			_choose_tower(action.index, world)
+		InputAction.SELL:
+			_sell(world)
+		InputAction.UPGRADE:
+			_upgrade(world)
 		_:
 			pass
 
@@ -40,3 +46,31 @@ func _select_at(position: Vector2, world: WorldState) -> void:
 			best_distance_squared = distance_squared
 			best_id = slot.id
 	selected_slot_id = best_id
+
+## 目前選中的建塔點，未選取或找不到時回傳 null
+func _selected_slot(world: WorldState) -> BuildSlot:
+	if selected_slot_id == 0:
+		return null
+	return world.build_slots_by_id.get(selected_slot_id)
+
+## index 自 1 起算，對應本關 available_towers 的第 n 種。
+## 超出範圍是正常的使用者行為（按了「3」但本關只有兩種），靜默忽略。
+func _choose_tower(index: int, world: WorldState) -> void:
+	var slot := _selected_slot(world)
+	if slot == null or slot.occupied_by != 0:
+		return
+	if index < 1 or index > world.available_towers.size():
+		return
+	world.queue_intent(GameIntent.build(slot.id, world.available_towers[index - 1]))
+
+func _sell(world: WorldState) -> void:
+	var slot := _selected_slot(world)
+	if slot == null or slot.occupied_by == 0:
+		return
+	world.queue_intent(GameIntent.sell(slot.occupied_by))
+
+func _upgrade(world: WorldState) -> void:
+	var slot := _selected_slot(world)
+	if slot == null or slot.occupied_by == 0:
+		return
+	world.queue_intent(GameIntent.upgrade(slot.occupied_by))
