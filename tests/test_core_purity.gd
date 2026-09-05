@@ -74,6 +74,32 @@ func test_battle_scene_installs_input_bindings() -> void:
 		"install()，所以抓不到場景忘記呼叫的情況，只有這種原始碼文本檢查抓得到。"
 	).is_true()
 
+## 同一種問題的第三個實例：battle_scene.gd 呼叫 _hud.setup(...) 並接上
+## pause_pressed 與 speed_pressed 兩個 signal，才能讓 HUD 的按鈕真的做事。
+## 少了 setup() 呼叫，_world/_sim 未賦值，HUD 的 _process() 提早 return，
+## 金幣與生命的數字永遠不動；少了任一 connect()，對應的按鈕看起來完好、
+## 點下去卻毫無反應——鍵盤仍然管用，所以會被誤判成「按鈕本來就是裝飾」，
+## 而不是「接線掉了」。headless 測試套件不執行場景腳本，抓不到這種漏接，
+## 只有原始碼文本檢查抓得到。
+func test_battle_scene_wires_up_the_hud() -> void:
+	var battle_scene_path := "res://game/level/battle_scene.gd"
+	var source := FileAccess.get_file_as_string(battle_scene_path)
+	assert_bool(source.contains("_hud.setup(")).override_failure_message(
+		"battle_scene.gd 沒有呼叫 _hud.setup()。\n" +
+		"少了這一步，HUD 的 _world/_sim 都是 null，_process() 會提早 return，\n" +
+		"金幣、生命、關卡名稱全部不會更新，但遊戲仍會正常啟動、渲染、生怪。"
+	).is_true()
+	assert_bool(source.contains("pause_pressed.connect")).override_failure_message(
+		"battle_scene.gd 沒有接上 _hud.pause_pressed。\n" +
+		"暫停鈕會正常顯示、正常可點，點下去卻毫無反應——鍵盤的暫停鍵仍然管用，\n" +
+		"所以這個漏洞會被誤判成「按鈕是裝飾」而不是「接線掉了」，人工驗收很容易漏掉。"
+	).is_true()
+	assert_bool(source.contains("speed_pressed.connect")).override_failure_message(
+		"battle_scene.gd 沒有接上 _hud.speed_pressed。\n" +
+		"倍速鈕會正常顯示、正常可點，點下去卻毫無反應，同上一條，鍵盤仍然管用，\n" +
+		"讀不出這是接線漏掉而不是設計如此。"
+	).is_true()
+
 func _collect_gd_files(root: String) -> Array[String]:
 	var found: Array[String] = []
 	var dir := DirAccess.open(root)
