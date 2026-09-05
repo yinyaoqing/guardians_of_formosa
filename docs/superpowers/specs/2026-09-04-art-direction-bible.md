@@ -219,7 +219,9 @@ photorealism, 3D render, watermark, text
 >
 > SDXL Base 沒有 17 世紀明鄭／西拉雅／亞洲 VOC 的服飾知識。缺乏知識時它退回一個泛用的「前現代非歐洲士兵」先驗，而**該先驗的落點會隨措辭漂移**：第一輪全部落在日本（和服、木屐、浮世繪），加了 `japanese, kimono, ronin, samurai, geta sandals, ukiyo-e` 之後日本消失了，**但換成波斯與中亞，不是換成明鄭**。
 >
-> 因此下表的負面詞是必要的，但**不足以產出正確的單位**。單位資產必須改走史料圖像的參考圖條件生成（見 §7.2 與 `docs/art/A1-findings.md` §4.2）。這是純文字 prompt 路線的硬上限。
+> 因此下表的負面詞是必要的，但在 SDXL 上**不足以產出正確的單位**。這是純文字 prompt 在 SDXL 上的硬上限。
+>
+> **2026-09-05 補充：換用 FLUX.2 Klein 4B 後此上限消失。** 同樣的 prompt、無參考圖、無 ControlNet，六張中五張服飾正確且全部赤足。**知識缺口是模型問題，不是提示詞問題**——換掉模型比補救提示詞有效得多。下表負面詞仍保留（成本為零、仍有防呆價值），但不再是關鍵。見 `docs/art/A1-findings.md` §8。
 
 | 陣營 | 必加負面詞 | 原因 |
 |---|---|---|
@@ -358,7 +360,9 @@ Every area keeps detail — NO depth-of-field blur.
 
 - **SDXL 生成可行**，速度足以支撐「大量生成、10 選 1」的策略
 - **LoRA 訓練吃緊但可行**：768px + gradient checkpointing + 8-bit Adam + batch size 1，25–30 張的風格 LoRA 約需數小時
-- **不使用 Flux**。`[dev]` 為非商用授權，本作要上架 Steam，直接出局；`[schnell]` 雖為 Apache 2.0，但在 8GB 上需量化且品質不及 SDXL 生態的風格模型
+- ~~**不使用 Flux**。~~ **2026-09-05 修訂：改用 FLUX.2 Klein 4B 為主力。** 原判斷（`[dev]` 非商用、`[schnell]` 品質不足）在 FLUX.2 世代兩項都不成立——Klein 4B 為 **Apache 2.0**、7.22 GB 可在 8GB VRAM 上跑、768×1024 20 步 batch 2 約 54 秒。
+  **關鍵是它解決了 SDXL 解決不了的事**：SDXL 沒有 17 世紀明鄭與西拉雅的服飾知識，兩輪加兩階段共 70 餘張單位可用數為 0；FLUX.2 純文字 prompt、無參考圖、無 ControlNet，六張中五張可用，且全部赤足（§3.2 的關鍵設計點）。剪影相似度也從 38 對超標降到 0 對。完整實測見 `docs/art/A1-findings.md` §8。
+  SDXL 生態（ControlNet Union、IP-Adapter、風格 LoRA）仍保留，用於姿勢控制與日後的動作序列
 
 一個尺度上的觀察：本作單位貼圖僅 ≤128×128、塔 ≤192×192，用 1024 生成再縮到 128 會丟掉約 98% 的像素，**SDXL 相對於較小模型的細節優勢在單位貼圖上幾乎不存在**。優勢主要體現在場景與 UI 大圖。因此不需為了單位貼圖追求更高解析度的模型。
 

@@ -1,58 +1,139 @@
 {
-  "_doc": "A1 階段 B：把階段 A 的正確服飾重新上成卡通風格。兩階段分離的理由見 docs/art/A1-findings.md §7——史料參考圖本身就是油畫或服飾圖鑑，IP-Adapter 會忠實地把「那個媒介」一起搬過來，餵圖鑑又要卡通本身就是矛盾的要求。實測即使把 IP-Adapter 權重壓到 0.30 仍壓不掉。故改為：階段 A 只負責服飾正確，階段 B 只負責風格。",
-
-  "_usage": [
-    "1. 先跑 a1_unit_ref_pose.api.json 得到服飾正確但畫風是圖鑑的圖。",
-    "2. 把該圖複製到 comfyui/input/stage_a.png（或改節點 9 的檔名）。",
-    "3. 跑本檔。denoise 0.50 實測最佳——0.65 會在背景長出雜點，更低則風格轉不過來。",
-    "4. prompt 只放風格與色票，不要再餵參考圖，否則圖鑑風會被重新帶回來。"
+  "_doc": "A1 階段 B：把階段 A 的正確服飾重新上成卡通風格。兩階段分離的理由見 docs/art/A1-findings.md §7——史料參考圖本身就是繪畫或圖鑑，IP-Adapter 會忠實地把「那個媒介」一起搬過來，餵圖鑑又要卡通本身就是矛盾的要求。",
+  "_two_failed_attempts": [
+    "第一版：純 img2img denoise 0.50。失敗——像素平均只差 7–22（滿分 255），媒介完全沒換掉。低 denoise 保住服飾的同時也保住了畫風，這兩件事在 img2img 裡綁在一起。",
+    "第二版：加 Canny + denoise 0.80。也失敗——Canny 邊緣是從手抄本風的圖抽的，把該畫風自己的裝飾線條一起複製過來，ControlNet 變成在強化畫風而不只是扛結構。",
+    "第三版：IP-Adapter 餵風格參考圖。**失敗且更糟**——IP-Adapter 在 0.85 權重下搬的是內容不只是風格：餵第二輪的人物圖，產出全部長出該人物的白鬍子與靴子；改餵聚落地形圖，人物直接變成干欄式茅屋。",
+    "第四版（本檔）：改用風格 LoRA 當風格訊號。LoRA 是純風格、無內容，不會有上述汙染。它在階段 A 沒效果是因為被 ControlNet 與長 prompt 淹沒，階段 B 沒有那兩者。"
   ],
-
+  "_usage": [
+    "節點 9 = 階段 A 的產出（由 generate_batch.py --stage b 自動填）。",
+    "風格由 LoRA 承擔，不再需要風格參考圖。",
+    "denoise 0.62：低於此換不掉媒介，高於此開始丟失服飾結構。"
+  ],
   "1": {
     "class_type": "CheckpointLoaderSimple",
-    "inputs": { "ckpt_name": "sd_xl_base_1.0.safetensors" }
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
+    }
   },
   "2": {
     "class_type": "VAELoader",
-    "inputs": { "vae_name": "sdxl_vae_fp16_fix.safetensors" }
+    "inputs": {
+      "vae_name": "sdxl_vae_fp16_fix.safetensors"
+    }
   },
   "9": {
     "class_type": "LoadImage",
-    "inputs": { "image": "stage_a.png", "upload": "image" }
+    "inputs": {
+      "image": "stage_a.png",
+      "upload": "image"
+    }
   },
   "16": {
     "class_type": "VAEEncode",
-    "inputs": { "pixels": ["9", 0], "vae": ["2", 0] }
+    "inputs": {
+      "pixels": [
+        "9",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ]
+    }
   },
   "3": {
     "class_type": "CLIPTextEncode",
-    "inputs": { "clip": ["1", 1], "text": "placeholder positive — 由 generate_batch.py 依清單填入" }
+    "inputs": {
+      "clip": [
+        "10",
+        1
+      ],
+      "text": "placeholder positive — 由 generate_batch.py 依清單填入"
+    }
   },
   "4": {
     "class_type": "CLIPTextEncode",
-    "inputs": { "clip": ["1", 1], "text": "placeholder negative" }
+    "inputs": {
+      "clip": [
+        "10",
+        1
+      ],
+      "text": "placeholder negative"
+    }
   },
   "6": {
     "class_type": "KSampler",
     "inputs": {
-      "model": ["1", 0],
-      "positive": ["3", 0],
-      "negative": ["4", 0],
-      "latent_image": ["16", 0],
+      "model": [
+        "10",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "16",
+        0
+      ],
       "seed": 16610430,
       "steps": 28,
       "cfg": 7.0,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
-      "denoise": 0.5
+      "denoise": 0.62
     }
   },
   "7": {
     "class_type": "VAEDecode",
-    "inputs": { "samples": ["6", 0], "vae": ["2", 0] }
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ]
+    }
   },
   "8": {
     "class_type": "SaveImage",
-    "inputs": { "images": ["7", 0], "filename_prefix": "a1_stage_b" }
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ],
+      "filename_prefix": "a1_stage_b"
+    }
+  },
+  "10": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ],
+      "lora_name": "StoryBookRedmond-KidsRedmAF.safetensors",
+      "strength_model": 1.0,
+      "strength_clip": 1.0
+    }
+  },
+  "_roles": {
+    "positive": "3",
+    "negative": "4",
+    "sampler": "6",
+    "save": "8",
+    "source": "9"
   }
 }

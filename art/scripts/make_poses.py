@@ -49,20 +49,34 @@ JOINT_COLORS = [
 ]
 
 
-def skeleton(cx: float, top: float, body: float, pose: str) -> list[tuple[float, float] | None]:
-    """回傳 18 個關節座標。body 為頭頂到腳底的總高，head = body/4。"""
+def skeleton(
+    cx: float,
+    top: float,
+    body: float,
+    pose: str,
+    shoulder: float = 1.0,
+    stance: float = 1.0,
+    crouch: float = 0.0,
+) -> list[tuple[float, float] | None]:
+    """回傳 18 個關節座標。body 為頭頂到腳底的總高，head = body/4。
+
+    shoulder / stance / crouch 是**剪影差異化**的三個旋鈕。實測顯示，128px 下
+    服飾細節全被縮掉，單位彼此的可辨識度只剩剪影——而第一版 8 組姿勢清一色是
+    「站著的人」，只差手臂角度，壓成剪影後 38 對相似度超過 0.93。
+    要拉開差距只能靠量體：鐵人要寬、鏢手要瘦長、藤牌兵要蹲低。
+    """
     head = body / 4.0
     # 4 頭身的縱向錨點
     y_crown = top
     y_nose = top + head * 0.55
     y_neck = top + head * 1.0
     y_shoulder = y_neck + head * 0.10
-    y_hip = top + head * 2.05
-    y_knee = top + head * 3.0
+    y_hip = top + head * (2.05 + crouch * 0.35)
+    y_knee = top + head * (3.0 + crouch * 0.20)
     y_ankle = top + body
 
-    sw = head * 0.78          # 肩半寬——4 頭身要有量感，肩要寬
-    hw = head * 0.46          # 髖半寬
+    sw = head * 0.78 * shoulder   # 肩半寬——4 頭身要有量感，肩要寬
+    hw = head * 0.46 * stance     # 髖半寬
     upper = (y_hip - y_shoulder) * 0.60
     fore = upper * 0.92
 
@@ -108,6 +122,11 @@ def skeleton(cx: float, top: float, body: float, pose: str) -> list[tuple[float,
         # 藤牌前舉的低姿——髖與膝下沉由 caller 以較短 body 表現
         arm(2, 3, 4, 40, -10)
         arm(5, 6, 7, 70, 30)
+    elif pose == "ironman_stance":
+        # 厚重方形剪影：雙臂外張離開軀幹，讓身體與手臂之間有空隙，
+        # 剪影才會讀成寬而方，而不是一根柱子。刀扛在右肩。
+        arm(2, 3, 4, -20, -50)
+        arm(5, 6, 7, 30, 55)
     elif pose == "two_hand_high":
         # 斬馬刀扛肩：雙手同側高舉
         arm(2, 3, 4, -35, -60)
@@ -125,28 +144,33 @@ def skeleton(cx: float, top: float, body: float, pose: str) -> list[tuple[float,
     return p
 
 
-def draw(points: list[tuple[float, float] | None], path: str) -> None:
+def draw(points: list[tuple[float, float] | None], path: str, line: int = 10) -> None:
+    """line 是肢體線寬。ControlNet 會把粗線讀成粗壯的肢體，是量體的第四個旋鈕。"""
     img = Image.new("RGB", (W, H), (0, 0, 0))
     d = ImageDraw.Draw(img)
     for i, (a, b) in enumerate(LIMBS):
         if points[a] and points[b]:
-            d.line([points[a], points[b]], fill=LIMB_COLORS[i], width=10)
+            d.line([points[a], points[b]], fill=LIMB_COLORS[i], width=line)
     for i, pt in enumerate(points):
         if pt:
-            r = 6
+            r = max(4, line * 3 // 5)
             d.ellipse([pt[0] - r, pt[1] - r, pt[0] + r, pt[1] + r], fill=JOINT_COLORS[i])
     img.save(path)
 
 
+# frac = 身高佔畫面比例；shoulder/stance/crouch/line 見 skeleton() 與 draw()。
+# 這四個值就是剪影差異化的全部手段——服飾在 128px 下看不見。
 POSES = {
-    "idle": ("待機", 0.78),
-    "musket_ready": ("火繩槍持槍", 0.78),
-    "javelin_shoulder": ("長鏢扛肩", 0.78),
-    "bow_draw": ("拉弓", 0.78),
-    "shield_crouch": ("藤牌低姿", 0.66),
-    "two_hand_high": ("雙手長刀扛肩", 0.80),
-    "staff_upright": ("持杖直立", 0.78),
-    "carry_burden": ("負重行走", 0.72),
+    "idle":             {"zh": "待機",         "frac": 0.78},
+    "musket_ready":     {"zh": "火繩槍持槍",   "frac": 0.78},
+    "javelin_shoulder": {"zh": "長鏢扛肩",     "frac": 0.82, "shoulder": 0.82, "stance": 0.85, "line": 8},
+    "bow_draw":         {"zh": "拉弓",         "frac": 0.78, "stance": 1.25},
+    "shield_crouch":    {"zh": "藤牌低姿",     "frac": 0.64, "stance": 1.45, "crouch": 1.0, "line": 13},
+    "two_hand_high":    {"zh": "雙手長刀扛肩", "frac": 0.80},
+    "ironman_stance":   {"zh": "鐵人厚重站姿", "frac": 0.76, "shoulder": 1.40, "stance": 1.60,
+                         "crouch": 0.45, "line": 20},
+    "staff_upright":    {"zh": "持杖直立",     "frac": 0.78},
+    "carry_burden":     {"zh": "負重行走",     "frac": 0.70, "crouch": 0.6, "shoulder": 1.1, "line": 12},
 }
 
 
@@ -157,21 +181,26 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.list:
-        for k, (zh, frac) in POSES.items():
-            print(f"{k:20} {zh}  (身高佔畫面 {frac:.0%})")
+        for k, v in POSES.items():
+            print(f"{k:20} {v['zh']}  身高 {v['frac']:.0%}  肩x{v.get('shoulder',1.0)}  "
+                  f"站距x{v.get('stance',1.0)}  蹲{v.get('crouch',0.0)}  線寬{v.get('line',10)}")
         return 0
 
     os.makedirs(OUT, exist_ok=True)
-    for name, (zh, frac) in POSES.items():
-        body = H * frac
+    for name, v in POSES.items():
+        body = H * v["frac"]
         top = (H - body) / 2.0
-        pts = skeleton(W / 2.0, top, body, name)
+        pts = skeleton(W / 2.0, top, body, name,
+                       shoulder=v.get("shoulder", 1.0),
+                       stance=v.get("stance", 1.0),
+                       crouch=v.get("crouch", 0.0))
+        line = v.get("line", 10)
         p = os.path.join(OUT, f"pose_{name}.png")
-        draw(pts, p)
+        draw(pts, p, line)
         # ComfyUI 的 LoadImage 只讀 input/，同步一份過去
         if os.path.isdir(COMFY_INPUT):
-            draw(pts, os.path.join(COMFY_INPUT, f"pose_{name}.png"))
-        print(f"{p}  {zh}")
+            draw(pts, os.path.join(COMFY_INPUT, f"pose_{name}.png"), line)
+        print(f"{p}  {v['zh']}")
     return 0
 
 
