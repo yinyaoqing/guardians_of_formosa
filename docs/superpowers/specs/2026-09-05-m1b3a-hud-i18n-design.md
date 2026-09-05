@@ -105,7 +105,20 @@ tr("hud.gold") + " " + str(gold)    # 錯
 | `hud.resume` | `繼續` | `Resume` |
 | `level.level_01.name` | `熱蘭遮` | `Zeelandia` |
 
-最後一個已經存在於 `data/levels/level_01/meta.json` 的 `name_key`。它是 B3a 裡**唯一**把 i18n key 從 JSON 資料一路帶到畫面上的東西——其餘五個都是寫在 UI 裡的 key。沒有它，資料層那條路徑要到 B3b 才第一次被走到。
+最後一個已經存在於 `data/levels/level_01/meta.json` 的 `name_key`。它是 B3a 裡唯一**顯示在畫面上**的資料層 key——其餘五個都是寫在 UI 裡的 key。沒有它，資料層那條路徑要到 B3b 才第一次被走到。
+
+**更正**（實作時發現）：`data/` 底下實際有 **7 個** `name_key`，不是 1 個——一個關卡、一個敵人、一個塔、四個狀態效果。既有的 `tests/test_data_integrity.gd` 早就要求這些實體都必須有 `name_key`，所以 CSV 必須全部涵蓋，否則完整性測試會失敗。B3a 因此實際有 12 個 key：
+
+| 額外的 key | zh-TW | en |
+|---|---|---|
+| `enemy.orc_grunt.name` | `獸人步兵` | `Orc Grunt` |
+| `tower.archer_tower.name` | `弓箭塔` | `Archer Tower` |
+| `status.chill.name` | `寒冰` | `Chill` |
+| `status.poison.name` | `中毒` | `Poison` |
+| `status.stun_shock.name` | `暈眩` | `Stun` |
+| `status.sunder.name` | `破甲` | `Sunder` |
+
+這六個目前都不顯示在畫面上（要到 B3b 的塔資訊與環形選單才會），但完整性測試要求它們存在。`獸人步兵` 是灰盒佔位——那隻敵人本身就是 M0 骨架留下的佔位，不是 1661 年的內容。
 
 ### 3.5 字型：這是會讓驗收整片豆腐的前提
 
