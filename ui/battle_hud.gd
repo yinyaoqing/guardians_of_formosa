@@ -24,7 +24,10 @@ extends CanvasLayer
 ## 兩個 Button 刻意不設，維持預設的 STOP——按鈕自己要吃掉點擊，否則按暫停
 ## 會連帶把按鈕正下方的建塔格也點掉。
 ##
-## 事實依據見 .superpowers/sdd/hud-mouse-filter-report.md 的量測輸出。
+## 實測預設值（headless 逐節點類型量測）：MarginContainer/HBoxContainer/Label
+## 皆已預設不攔截（分別是 PASS=1、PASS=1、IGNORE=2），Control 預設 STOP=0，
+## Button 預設 STOP=0。容器與 Label 本來就安全，這裡照樣明寫是保險，不是修正；
+## 真正要修的只有兩個 Spacer（Control）與 Root、Top 這兩處。
 
 signal pause_pressed
 signal speed_pressed
