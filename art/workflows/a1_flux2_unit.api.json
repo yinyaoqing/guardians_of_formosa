@@ -1,0 +1,70 @@
+{
+  "_doc": "FLUX.2 Klein 4B 單位生成。改用此模型的理由見 docs/art/A1-findings.md §8——SDXL 的瓶頸是它不知道 17 世紀明鄭與西拉雅長什麼樣，而 A1 證實負面詞叫不出模型沒有的知識。FLUX.2 的世界知識與提示遵循度遠高於 SDXL，若它自己畫得出明代銃卒，整個史料參考圖的蒐集困境就消失。",
+
+  "_notes": [
+    "**klein 的文字編碼器是 Qwen3-VL，不是 Mistral**——Mistral 那顆是 FLUX.2 dev 用的。見 comfy/sd.py:1915。",
+    "CLIPLoader 的 type 要選 flux2（該選項在清單第 17 位，容易漏看）。",
+    "FLUX 系列是 guidance-distilled：KSampler 的 cfg 固定 1.0，強度改由 FluxGuidance 節點控制。",
+    "latent 用 EmptyFlux2LatentImage，不是 EmptyLatentImage——通道數不同。",
+    "先不接 ControlNet 與 IP-Adapter。這一輪要回答的問題只有一個：**純文字 prompt 下，它知不知道明代服飾**。"
+  ],
+
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": { "unet_name": "flux-2-klein-4b.safetensors", "weight_dtype": "default" }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp4_flux2.safetensors",
+      "type": "flux2",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "flux2-vae.safetensors" }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["2", 0],
+      "text": "placeholder — 由 generate_batch.py 依清單填入"
+    }
+  },
+  "5": {
+    "class_type": "FluxGuidance",
+    "inputs": { "conditioning": ["4", 0], "guidance": 3.5 }
+  },
+  "6": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": { "conditioning": ["4", 0] }
+  },
+  "7": {
+    "class_type": "EmptyFlux2LatentImage",
+    "inputs": { "width": 768, "height": 1024, "batch_size": 2 }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["1", 0],
+      "positive": ["5", 0],
+      "negative": ["6", 0],
+      "latent_image": ["7", 0],
+      "seed": 16610430,
+      "steps": 20,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["8", 0], "vae": ["3", 0] }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["9", 0], "filename_prefix": "flux2_unit" }
+  }
+}
