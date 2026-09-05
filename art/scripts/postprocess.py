@@ -38,26 +38,24 @@ MANIFEST = os.path.join(REPO, "art", "manifest", "chapter01_assets.json")
 RAW = os.path.join(REPO, "art_src", "01_raw")
 OUT = os.path.join(REPO, "art_src", "03_processed")
 
-# art-direction-bible §2.1 的限定色域。量化即映射到這組色。
-PALETTE = {
-    "紅瓦赭": (0xB5, 0x44, 0x2E), "深赭": (0x8C, 0x3A, 0x22),
-    "榕蔭綠": (0x2F, 0x5B, 0x3A), "墨綠": (0x1E, 0x40, 0x29),
-    "翠綠": (0x5C, 0x8A, 0x4A), "沙洲黃": (0xC9, 0xA9, 0x6B),
-    "曝曬沙": (0xD9, 0xC0, 0x8E), "蚵殼灰": (0xE8, 0xDC, 0xC6),
-    "台江靛": (0x2C, 0x54, 0x70), "潮水青": (0x3E, 0x7A, 0x94),
-    "藤黃": (0xE0, 0xA9, 0x3B), "硃砂": (0xA8, 0x33, 0x2B),
-    "焦茶": (0x3A, 0x2A, 0x22), "鐵灰": (0x5A, 0x5A, 0x5E),
-    "鹿皮褐": (0xA8, 0x75, 0x45),
-}
-# 膚色四階，art-direction-bible §2.1「唯一的例外：膚色」。四階的分野同時承擔
-# 章節規格 §2.5 與 §3.3 的敘事要求——城內 547 名奴隸不是背景，把 VOC 畫成
-# 純歐洲人前哨是美化殖民地。
-SKIN = [
-    (0xF2, 0xD6, 0xB8),  # 淺膚：VOC 歐洲人
-    (0xD9, 0xA9, 0x7E),  # 中膚：漢人、鄭軍
-    (0xA8, 0x75, 0x45),  # 深膚：西拉雅（與鹿皮褐同值）
-    (0x6B, 0x47, 0x2E),  # 極深膚：VOC 奴工
-]
+# 色票的唯一來源是 data/art_palette.json，與 tests/test_art_palette.gd 共用。
+# **不要在這裡另外寫死一份**——量化器與測試各自持有色票的話兩邊會漂開：
+# 量化器放行的顏色測試擋掉，或反之。
+PALETTE_JSON = os.path.join(REPO, "data", "art_palette.json")
+
+
+def _hex(v: str) -> tuple[int, int, int]:
+    v = v.lstrip("#")
+    return int(v[0:2], 16), int(v[2:4], 16), int(v[4:6], 16)
+
+
+with open(PALETTE_JSON, encoding="utf-8") as _f:
+    _P = json.load(_f)
+PALETTE = {k: _hex(v) for k, v in _P["palette"].items()}
+SKIN = [_hex(v) for v in _P["skin"].values()]
+# 描邊色：art-direction-bible §1.1 要彩色描邊（焦茶／深赭／墨綠），不是粗黑均勻描邊
+# ——那是明列要與 Kingdom Rush 區隔的第一項。故依局部色相在三色間選。
+OUTLINE_COLORS = [_hex(v) for v in _P["outline"].values()]
 
 SIZE_BY_CAT = {"unit": 128, "building": 192, "prop": 128, "vessel": 192, "scene": 512, "icon": 64}
 
@@ -122,14 +120,6 @@ def quantize(im: Image.Image) -> Image.Image:
             px[x, y] = (*hit, a)
     return im
 
-
-# 描邊色：art-direction-bible §1.1 要求彩色描邊（深赭／墨綠），不是粗黑均勻描邊
-# ——那是明列要與 Kingdom Rush 區隔的第一項。故依局部色相在三色間選，不用單一黑色。
-OUTLINE_COLORS = [
-    (0x3A, 0x2A, 0x22),  # 焦茶：預設主描邊
-    (0x8C, 0x3A, 0x22),  # 深赭：暖色區（紅衣、膚色、沙）
-    (0x1E, 0x40, 0x29),  # 墨綠：冷色區（綠衣、植被、水）
-]
 
 
 def outline(im: Image.Image, width: int = 2) -> Image.Image:
