@@ -309,3 +309,27 @@ func test_build_intents_still_reach_the_build_system_after_routing() -> void:
 	assert_array(world.towers).override_failure_message(
 		"改成路由器之後，建造類 intent 仍必須到得了 BuildSystem"
 	).has_size(1)
+
+## 補跑迴圈（catch-up loop）不會重讀 paused 的話，卡頓後一次補跑多個 tick 時，
+## 排在第一個 tick 的 toggle_pause 意圖只會讓「下一次」advance() 暫停，
+## 這一次呼叫仍會把積欠的 tick 全部跑完——移動、開火、扣血都照跑，
+## 暫停因此晚了最多 MAX_TICKS_PER_FRAME - 1 個 tick 才真正生效。
+## 這裡讓一次 advance() 欠下 5 個 tick，證明實際只跑了 1 個（drain 出 toggle_pause 的那個）。
+func test_pause_drained_mid_catchup_stops_the_loop_immediately() -> void:
+	var world := _make_world()
+	var enemy := _add_enemy(world, 300.0)
+	var sim := BattleSim.new(world)
+	world.queue_intent(GameIntent.toggle_pause())
+
+	var ticks := sim.advance(FRAME * 5.0)   # 一次欠 5 個 tick
+
+	assert_int(ticks).override_failure_message(
+		"迴圈條件必須重讀 paused：欠 5 個 tick 時，第一個 tick 排空的 toggle_pause 必須讓其餘 4 個 tick 完全不跑"
+	).is_equal(1)
+	assert_bool(sim.paused).override_failure_message(
+		"toggle_pause 意圖必須在它被排空的那個 tick 就生效"
+	).is_true()
+	var expected_distance := 300.0 * BattleSim.TICK_DELTA
+	assert_float(enemy.distance_along).override_failure_message(
+		"敵人只能走完整 1 個 tick 的距離；若還跑出剩下 4 個 tick 的位移，代表暫停沒有立刻打斷補跑迴圈"
+	).is_equal_approx(expected_distance, 0.001)

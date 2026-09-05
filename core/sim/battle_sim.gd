@@ -37,13 +37,27 @@ func advance(frame_delta: float) -> int:
 		return 0
 	_accumulator += frame_delta * speed_multiplier
 	var ticks := 0
-	while _accumulator >= TICK_DELTA and ticks < MAX_TICKS_PER_FRAME:
+	# not paused：迴圈內任何一個 tick 都可能透過 _apply_pending_intents()
+	# 把 paused 設成 true（玩家排的 toggle_pause intent 剛好在這一 tick 被排空）。
+	# 一旦發生就立刻停止，不把本幀還積欠的其餘 tick 跑完，暫停才會真的
+	# 在按下的那個瞬間生效，而不是拖到下一次 advance() 呼叫。
+	# 因暫停而提前跳出時 _accumulator 保留剩下欠的整數個 tick 份量——
+	# 這些時間不是被丟棄，而是留到解除暫停後補跑，戰鬥時間軸不會憑空消失。
+	while _accumulator >= TICK_DELTA and not paused and ticks < MAX_TICKS_PER_FRAME:
 		_accumulator -= TICK_DELTA
 		_tick()
 		ticks += 1
 	# 只在真的還積欠超過一個 tick 時才丟棄。「跑滿上限」不等於「積欠很多」——
 	# 高速度倍率配低幀率會正好跑滿上限卻只剩極小零頭，那個零頭必須留給下一幀，
 	# 否則模擬會悄悄跑得比設定的倍率慢。
+	#
+	# 暫停不會誤觸這個丟棄分支：因暫停提前跳出迴圈時 ticks 必然小於
+	# MAX_TICKS_PER_FRAME（迴圈條件裡 ticks < MAX_TICKS_PER_FRAME 與
+	# not paused 是並列的 and，兩者中只要有一個先變成 false 就跳出；
+	# 若是 ticks 先到達上限而跳出，跳出當下 paused 是真是假都不影響
+	# 這裡的判斷結果，跟原本沒有暫停的情況完全一樣）。
+	# 所以「因暫停跳出」與「ticks == MAX_TICKS_PER_FRAME」不會同時成立，
+	# 此分支不會因為這次的修改而多丟棄玩家排隊等待的模擬時間。
 	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks
