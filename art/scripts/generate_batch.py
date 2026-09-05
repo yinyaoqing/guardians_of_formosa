@@ -48,6 +48,8 @@ def build_prompts(m: dict, asset: dict) -> tuple[str, str]:
             # 姿勢緊接主體之後：它描述的是「這個人在做什麼」，屬於主體的一部分，
             # 放到風格區塊之後會被稀釋（同 A0 §6.1 的順序結論）。
             asset.get("pose_text", ""),
+            # 陣營識別色同樣要獨立成段。寫在 subject 句尾實測不會被畫出來。
+            asset.get("marker_text", ""),
             m["shared"]["style"],
             m["shared"]["palette"],
             m["proportions"][cat],

@@ -8,10 +8,10 @@
     "_negative_base_note": "japanese / ukiyo-e / kimono 等詞是實測回填：SDXL 對「17 世紀東亞 + 手繪」的預設先驗是日本，西拉雅與漢人單位會穩定跑成日本浪人。seamless pattern 一組則是 prop 類跑成無縫貼片圖案的對策。見 docs/art/A1-findings.md。"
   },
   "framing": {
-    "unit": "full body game sprite of a single standing character, head to toe fully visible, 3/4 front view, centered, isolated on a plain flat neutral background.",
-    "building": "a single hand-painted 2D game building asset drawn from a slightly raised three-quarter angle, one complete structure sitting on its own small patch of ground, centered, isolated on a plain flat neutral background.",
-    "prop": "a single hand-painted 2D game prop drawn from a slightly raised three-quarter angle, one small object sitting on its own small patch of ground, centered, isolated on a plain flat neutral background.",
-    "vessel": "single 3/4 side view game asset of a whole ship seen from slightly above, entire hull and rigging visible, centered, isolated on a plain flat neutral background.",
+    "unit": "full body game sprite of a single standing character, head to toe fully visible, 3/4 front view, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty.",
+    "building": "a single hand-painted 2D game building asset drawn from a slightly raised three-quarter angle, one complete structure, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty.",
+    "prop": "a single hand-painted 2D game prop drawn from a slightly raised three-quarter angle, one small object, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty.",
+    "vessel": "single 3/4 side view game asset of a whole ship seen from slightly above, entire hull and rigging visible, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty.",
     "scene": "top-down 3/4 isometric tower defense battle map, wide establishing view.",
     "icon": "single centered game UI icon, one simple bold readable shape, thick contrasting border, isolated on a plain flat neutral background."
   },
@@ -58,10 +58,10 @@
     "none": ""
   },
   "negatives_by_cat": {
-    "unit": "portrait, bust, half body, waist up, cropped, close-up, headshot, two people, crowd, group",
-    "building": "people, characters, crowd, landscape, scenery, wide vista, architectural elevation drawing",
-    "prop": "people, characters, crowd, landscape, scenery, wide vista, still life painting, furniture, table",
-    "vessel": "cropped, close-up, partial hull",
+    "unit": "portrait, bust, half body, waist up, cropped, close-up, headshot, two people, crowd, group, ground shadow, shadow ellipse, cast shadow on the floor, patch of ground, pedestal, base plate",
+    "building": "people, characters, crowd, landscape, scenery, wide vista, architectural elevation drawing, ground shadow, shadow ellipse, cast shadow on the floor",
+    "prop": "people, characters, crowd, landscape, scenery, wide vista, still life painting, furniture, table, ground shadow, shadow ellipse, cast shadow on the floor",
+    "vessel": "cropped, close-up, partial hull, ground shadow, shadow ellipse, cast shadow on the floor",
     "scene": "single character, portrait",
     "icon": "detailed scene, background, landscape, full body character"
   },
@@ -72,7 +72,8 @@
       "fac": "voc",
       "name": "銃樓一級：火繩槍手",
       "subject": "a Dutch East India Company matchlock musketeer defending tropical Formosa in 1661. Loose worn off-white linen shirt, knee breeches, wide-brimmed felt hat, leather shoes. A bandolier across the chest with twelve wooden powder containers forming a clear diagonal line. Holding a long matchlock musket with a visibly lit glowing slow match. A gamboge yellow armband on the upper arm. Sun-worn and mismatched, no uniform.",
-      "pose_text": "POSE: musket held diagonally across the chest, muzzle up to the upper right, one foot advanced, alert standing guard."
+      "pose_text": "POSE: musket held diagonally across the chest, muzzle up to the upper right, one foot advanced, alert standing guard.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_musket_t2",
@@ -80,14 +81,16 @@
       "fac": "voc",
       "name": "銃樓二級：排槍齊射",
       "subject": "three Dutch East India Company matchlock musketeers of 1661 Formosa standing shoulder to shoulder in a firing line, their three muskets raised at staggered heights forming a clear stepped silhouette. Off-white linen shirts, wide-brimmed felt hats, chest bandoliers with wooden powder containers, gamboge yellow armbands.",
-      "pose_text": "POSE: three figures shoulder to shoulder, muskets raised at three clearly different heights making a stepped diagonal."
+      "pose_text": "POSE: three figures shoulder to shoulder, muskets raised at three clearly different heights making a stepped diagonal.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_musket_t3",
       "cat": "building",
       "fac": "voc",
       "name": "銃樓三級：稜堡砲位",
-      "subject": "a small 17th-century Dutch bastion gun emplacement, angled brick and oyster-lime mortar walls, a bronze 24-pounder muzzle-loading cannon on a wooden naval carriage, stacked cannonballs and powder barrels, a gamboge yellow pennant on a short pole."
+      "subject": "a small 17th-century Dutch bastion gun emplacement, angled brick and oyster-lime mortar walls, a bronze 24-pounder muzzle-loading cannon on a wooden naval carriage, stacked cannonballs and powder barrels, a gamboge yellow pennant on a short pole.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_hunter_t1",
@@ -97,28 +100,32 @@
       "subject": "a Siraya hunter of 17th-century Formosa. Lean athletic build, bare torso, a deerskin wrap at the waist, barefoot, no hat. Hair tied up, simple shell ear ornaments, a gamboge yellow woven wrist band. Holding a long bamboo-shafted javelin with an iron head, clearly longer than half his body height, carried over the shoulder. Calm alert upright posture.",
       "ref": "ref_siraya.jpg",
       "pose": "javelin_shoulder",
-      "pose_text": "POSE: mid-throw, javelin arm drawn far back above the head, front arm pointing forward, body turned side-on, one leg forward — a long diagonal line across the frame."
+      "pose_text": "POSE: mid-throw, javelin arm drawn far back above the head, front arm pointing forward, body turned side-on, one leg forward — a long diagonal line across the frame.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_hunter_t2",
       "cat": "prop",
       "fac": "siraya",
       "name": "獵寮二級：鹿陷阱",
-      "subject": "a camouflaged Formosan deer trap on sandy ground, a pit covered by lashed bamboo slats and dry grass, sharpened bamboo stakes, deer antlers and bones set as a marker beside it, a gamboge yellow cord tied to a stake."
+      "subject": "a camouflaged Formosan deer trap on sandy ground, a pit covered by lashed bamboo slats and dry grass, sharpened bamboo stakes, deer antlers and bones set as a marker beside it, a gamboge yellow cord tied to a stake.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_hunter_t3",
       "cat": "prop",
       "fac": "siraya",
       "name": "獵寮三級：火燒獵場",
-      "subject": "a burning Formosan hunting ground, a patch of tall dry grass alight with low terracotta and gamboge flames and dark smoke, scorched earth, bamboo stakes and deer bones among the fire."
+      "subject": "a burning Formosan hunting ground, a patch of tall dry grass alight with low terracotta and gamboge flames and dark smoke, scorched earth, bamboo stakes and deer bones among the fire.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_fence_t1",
       "cat": "prop",
       "fac": "han",
       "name": "柵欄一級：竹柵",
-      "subject": "a defensive barricade of lashed green bamboo poles driven into sandy ground, rope bindings, sharpened tips angled outward, a small gamboge yellow cloth strip tied to one pole."
+      "subject": "a defensive barricade of lashed green bamboo poles driven into sandy ground, rope bindings, sharpened tips angled outward, a small gamboge yellow cloth strip tied to one pole.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_fence_t2",
@@ -126,7 +133,8 @@
       "fac": "han",
       "name": "柵欄二級：刀盾壯丁",
       "subject": "a 17th-century Han Chinese militiaman of Tayouan town in Formosa, a short stocky sturdy build, an indigo blue short jacket and trousers, a gamboge yellow sash at the waist, straw sandals, a topknot with a cloth headband, NOT braided. Holding a short sabre and a round rattan shield.",
-      "pose_text": "POSE: crouched low behind a round shield held forward, sabre arm extended out to the side away from the body."
+      "pose_text": "POSE: crouched low behind a round shield held forward, sabre arm extended out to the side away from the body.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "tower_fence_t3",
@@ -134,7 +142,8 @@
       "fac": "han",
       "name": "柵欄三級：藤牌隊",
       "subject": "two 17th-century Han Chinese militiamen of Tayouan town in Formosa crouching behind large round rattan shields held forward, indigo blue short jackets, gamboge yellow sashes, straw sandals, short sabres, topknots with cloth headbands, NOT braided.",
-      "pose_text": "POSE: two figures crouched very low side by side, round shields locked forward filling the lower half, a wide flat mass."
+      "pose_text": "POSE: two figures crouched very low side by side, round shields locked forward filling the lower half, a wide flat mass.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "enemy_musketeer",
@@ -151,7 +160,7 @@
       "cat": "unit",
       "fac": "zheng",
       "name": "鄭軍藤牌兵",
-      "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a gamboge yellow woven face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET.",
+      "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a natural sand-coloured woven rattan face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET.",
       "pose_text": "POSE: deep crouching charge, the round shield thrust forward and up so it covers a third of the whole silhouette, sabre low behind."
     },
     {
@@ -192,7 +201,7 @@
       "cat": "unit",
       "fac": "zheng",
       "name": "陳澤（1-2 Boss）",
-      "subject": "a 17th-century Ming loyalist general of Koxinga's army, taller and heavier than a common soldier. East Asian face, a lacquered iron helmet with a tall cinnabar red plume, Ming mountain-pattern lamellar armor in cinnabar red and gamboge gold, a flowing cape, a commander's signal banner in one hand and a sabre in the other. Cloth leg wraps, BARE FEET.",
+      "subject": "a 17th-century Ming loyalist general of Koxinga's army, taller and heavier than a common soldier. East Asian face, a lacquered iron helmet with a tall cinnabar red plume, Ming mountain-pattern lamellar armor in cinnabar red and dark bronze gold, a flowing cape, a commander's signal banner in one hand and a sabre in the other. Cloth leg wraps, BARE FEET.",
       "pose_text": "POSE: commanding stance, a tall signal banner raised high in one hand well above the head, cape spread wide behind, sabre lowered in the other hand."
     },
     {
@@ -269,14 +278,16 @@
       "cat": "prop",
       "fac": "none",
       "name": "建造點標記",
-      "subject": "an empty tower building plot marker on sandy ground, a circular ring of set stones and lashed bamboo stakes with a gamboge yellow cloth pennant on a short pole in the middle, clearly an empty foundation waiting to be built on."
+      "subject": "an empty tower building plot marker on sandy ground, a circular ring of set stones and lashed bamboo stakes with a gamboge yellow cloth pennant on a short pole in the middle, clearly an empty foundation waiting to be built on.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "prop_settlement",
       "cat": "building",
       "fac": "none",
       "name": "聚落建物（三星條件）",
-      "subject": "a small 17th-century Formosan settlement hut cluster, thatched and terracotta tiled roofs, oyster-lime white walls, a bamboo fence, a drying rack with fishing nets, a water jar, a banyan tree at the edge."
+      "subject": "a small 17th-century Formosan settlement hut cluster, thatched and terracotta tiled roofs, oyster-lime white walls, a bamboo fence, a drying rack with fishing nets, a water jar, a banyan tree at the edge.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
       "id": "icon_silver",
@@ -326,5 +337,7 @@
     "stage_a": "a1_unit_ref_pose.api.json — IP-Adapter 史料參考 + ControlNet 骨架，只管服飾正確",
     "stage_b": "a1_stage_b_restyle.api.json — img2img denoise 0.50，只管風格"
   },
-  "_pose_note": "FLUX.2 Klein 沒有可用的 ControlNet（只有 dev 版，非商用且架構不同），make_poses.py 的骨架圖轉不過去。改以文字指定姿勢——FLUX.2 的提示遵循度足以承擔。姿勢的目的不是好看，是**讓剪影在 128px 下彼此分得開**（章節規格 §3.4）。見 A1-findings.md §9.4。"
+  "_pose_note": "FLUX.2 Klein 沒有可用的 ControlNet（只有 dev 版，非商用且架構不同），make_poses.py 的骨架圖轉不過去。改以文字指定姿勢——FLUX.2 的提示遵循度足以承擔。姿勢的目的不是好看，是**讓剪影在 128px 下彼此分得開**（章節規格 §3.4）。見 A1-findings.md §9.4。",
+  "_marker_note": "美術聖經 §2.2：玩家方一律帶一塊藤黃 #E0A93B，敵方一律沒有——這是「塔＝島上的人」（章節規格 §0.2 決定一）的視覺接點，當來襲方換陣營時玩家一眼看得出自己的人沒變。藤黃原本寫在 subject 句尾，實測沒被畫出來；改成獨立段落後才生效，與 pose_text 同理。**規格衝突**：章節規格 §3.2 給藤牌兵「藤黃盾面」、陳澤「金」，與 §2.2 的敵方無藤黃相牴觸。此處依 §2.2 處理（該節明言是機制接點），敵方改用沙洲黃與青銅金。待確認。",
+  "_shadow_note": "精緻度規格 L1：接觸陰影是引擎端共用的橢圓貼圖（Sprite2D 掛在單位下方，隨 y 座標微調長寬與濃度），**不可烘進資產**，否則會有兩層陰影且無法動態調整。故 framing 明確要求腳下不畫陰影；L2 要的『短而硬的投影』指的是角色身上的明暗，不是地面橢圓。"
 }
