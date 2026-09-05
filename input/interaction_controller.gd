@@ -29,6 +29,10 @@ func handle(action: InputAction, world: WorldState) -> void:
 			_sell(world)
 		InputAction.UPGRADE:
 			_upgrade(world)
+		InputAction.TOGGLE_PAUSE:
+			world.queue_intent(GameIntent.toggle_pause())
+		InputAction.CYCLE_SPEED:
+			world.queue_intent(GameIntent.cycle_speed())
 		_:
 			pass
 

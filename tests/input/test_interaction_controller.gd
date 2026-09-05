@@ -201,3 +201,27 @@ func test_building_does_not_change_the_selection() -> void:
 	controller.handle(InputAction.select_at(SLOT_A_POS), world)
 	controller.handle(InputAction.choose_tower(1), world)
 	assert_int(controller.selected_slot_id).is_equal(_slot_a(world).id)
+
+func test_toggle_pause_needs_no_selection() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.simple(InputAction.TOGGLE_PAUSE), world)
+	assert_array(world.pending_intents).override_failure_message(
+		"暫停與選中什麼無關，未選取時也該發得出去"
+	).has_size(1)
+	assert_str(world.pending_intents[0].kind).is_equal("toggle_pause")
+
+func test_cycle_speed_needs_no_selection() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), world)
+	assert_array(world.pending_intents).has_size(1)
+	assert_str(world.pending_intents[0].kind).is_equal("cycle_speed")
+
+func test_control_actions_do_not_disturb_the_selection() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_A_POS), world)
+	controller.handle(InputAction.simple(InputAction.TOGGLE_PAUSE), world)
+	controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), world)
+	assert_int(controller.selected_slot_id).is_equal(_slot_a(world).id)
