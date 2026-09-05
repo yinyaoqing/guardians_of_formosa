@@ -45,6 +45,9 @@ def build_prompts(m: dict, asset: dict) -> tuple[str, str]:
         for p in (
             m["framing"][cat],
             "SUBJECT: " + asset["subject"],
+            # 姿勢緊接主體之後：它描述的是「這個人在做什麼」，屬於主體的一部分，
+            # 放到風格區塊之後會被稀釋（同 A0 §6.1 的順序結論）。
+            asset.get("pose_text", ""),
             m["shared"]["style"],
             m["shared"]["palette"],
             m["proportions"][cat],

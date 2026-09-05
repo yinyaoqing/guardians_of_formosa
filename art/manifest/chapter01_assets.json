@@ -16,7 +16,7 @@
     "icon": "single centered game UI icon, one simple bold readable shape, thick contrasting border, isolated on a plain flat neutral background."
   },
   "proportions": {
-    "unit": "PROPORTIONS: 4 heads tall, sturdy simplified build, clear shoulder mass, bold readable silhouette at 128 pixels, simplified hands and face.",
+    "unit": "PROPORTIONS: stylised game character proportions — a noticeably large head, short sturdy body, only 4 head-heights from crown to sole, thick limbs, bold readable silhouette at 128 pixels, simplified hands and face. NOT realistic adult proportions.",
     "building": "PROPORTIONS: compact chunky simplified game asset, bold readable silhouette at 192 pixels.",
     "prop": "PROPORTIONS: compact chunky simplified game asset, bold readable silhouette at 128 pixels.",
     "vessel": "PROPORTIONS: compact chunky simplified game asset, bold readable silhouette at 192 pixels.",
@@ -71,14 +71,16 @@
       "cat": "unit",
       "fac": "voc",
       "name": "銃樓一級：火繩槍手",
-      "subject": "a Dutch East India Company matchlock musketeer defending tropical Formosa in 1661. Loose worn off-white linen shirt, knee breeches, wide-brimmed felt hat, leather shoes. A bandolier across the chest with twelve wooden powder containers forming a clear diagonal line. Holding a long matchlock musket with a visibly lit glowing slow match. A gamboge yellow armband on the upper arm. Sun-worn and mismatched, no uniform."
+      "subject": "a Dutch East India Company matchlock musketeer defending tropical Formosa in 1661. Loose worn off-white linen shirt, knee breeches, wide-brimmed felt hat, leather shoes. A bandolier across the chest with twelve wooden powder containers forming a clear diagonal line. Holding a long matchlock musket with a visibly lit glowing slow match. A gamboge yellow armband on the upper arm. Sun-worn and mismatched, no uniform.",
+      "pose_text": "POSE: musket held diagonally across the chest, muzzle up to the upper right, one foot advanced, alert standing guard."
     },
     {
       "id": "tower_musket_t2",
       "cat": "unit",
       "fac": "voc",
       "name": "銃樓二級：排槍齊射",
-      "subject": "three Dutch East India Company matchlock musketeers of 1661 Formosa standing shoulder to shoulder in a firing line, their three muskets raised at staggered heights forming a clear stepped silhouette. Off-white linen shirts, wide-brimmed felt hats, chest bandoliers with wooden powder containers, gamboge yellow armbands."
+      "subject": "three Dutch East India Company matchlock musketeers of 1661 Formosa standing shoulder to shoulder in a firing line, their three muskets raised at staggered heights forming a clear stepped silhouette. Off-white linen shirts, wide-brimmed felt hats, chest bandoliers with wooden powder containers, gamboge yellow armbands.",
+      "pose_text": "POSE: three figures shoulder to shoulder, muskets raised at three clearly different heights making a stepped diagonal."
     },
     {
       "id": "tower_musket_t3",
@@ -94,7 +96,8 @@
       "name": "獵寮一級：新港社鏢手",
       "subject": "a Siraya hunter of 17th-century Formosa. Lean athletic build, bare torso, a deerskin wrap at the waist, barefoot, no hat. Hair tied up, simple shell ear ornaments, a gamboge yellow woven wrist band. Holding a long bamboo-shafted javelin with an iron head, clearly longer than half his body height, carried over the shoulder. Calm alert upright posture.",
       "ref": "ref_siraya.jpg",
-      "pose": "javelin_shoulder"
+      "pose": "javelin_shoulder",
+      "pose_text": "POSE: mid-throw, javelin arm drawn far back above the head, front arm pointing forward, body turned side-on, one leg forward — a long diagonal line across the frame."
     },
     {
       "id": "tower_hunter_t2",
@@ -122,14 +125,16 @@
       "cat": "unit",
       "fac": "han",
       "name": "柵欄二級：刀盾壯丁",
-      "subject": "a 17th-century Han Chinese militiaman of Tayouan town in Formosa, a short stocky sturdy build, an indigo blue short jacket and trousers, a gamboge yellow sash at the waist, straw sandals, a topknot with a cloth headband, NOT braided. Holding a short sabre and a round rattan shield."
+      "subject": "a 17th-century Han Chinese militiaman of Tayouan town in Formosa, a short stocky sturdy build, an indigo blue short jacket and trousers, a gamboge yellow sash at the waist, straw sandals, a topknot with a cloth headband, NOT braided. Holding a short sabre and a round rattan shield.",
+      "pose_text": "POSE: crouched low behind a round shield held forward, sabre arm extended out to the side away from the body."
     },
     {
       "id": "tower_fence_t3",
       "cat": "unit",
       "fac": "han",
       "name": "柵欄三級：藤牌隊",
-      "subject": "two 17th-century Han Chinese militiamen of Tayouan town in Formosa crouching behind large round rattan shields held forward, indigo blue short jackets, gamboge yellow sashes, straw sandals, short sabres, topknots with cloth headbands, NOT braided."
+      "subject": "two 17th-century Han Chinese militiamen of Tayouan town in Formosa crouching behind large round rattan shields held forward, indigo blue short jackets, gamboge yellow sashes, straw sandals, short sabres, topknots with cloth headbands, NOT braided.",
+      "pose_text": "POSE: two figures crouched very low side by side, round shields locked forward filling the lower half, a wide flat mass."
     },
     {
       "id": "enemy_musketeer",
@@ -138,21 +143,24 @@
       "name": "鄭軍銃卒",
       "subject": "a 17th-century Ming loyalist musketeer of Koxinga's army. East Asian face, clean shaven, hair in a topknot under a conical lacquered iron helmet forming a clear triangular silhouette. A deep terracotta red Ming military tunic, cloth leg wraps, BARE FEET. Holding a matchlock arquebus.",
       "ref": "ref_ming.jpg",
-      "pose": "musket_ready"
+      "pose": "musket_ready",
+      "pose_text": "POSE: walking forward, musket carried low and level at the hip, both arms close to the body, compact upright silhouette."
     },
     {
       "id": "enemy_rattan",
       "cat": "unit",
       "fac": "zheng",
       "name": "鄭軍藤牌兵",
-      "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a gamboge yellow woven face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET."
+      "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a gamboge yellow woven face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET.",
+      "pose_text": "POSE: deep crouching charge, the round shield thrust forward and up so it covers a third of the whole silhouette, sabre low behind."
     },
     {
       "id": "enemy_archer",
       "cat": "unit",
       "fac": "zheng",
       "name": "鄭軍弓箭手",
-      "subject": "a 17th-century Ming loyalist archer of Koxinga's army. East Asian face, hair in a topknot, a deep indigo blue Ming military tunic, cloth leg wraps, BARE FEET. Drawing a Ming composite recurve bow at full draw forming a taut triangular shape, a quiver of arrows at the hip."
+      "subject": "a 17th-century Ming loyalist archer of Koxinga's army. East Asian face, hair in a topknot, a deep indigo blue Ming military tunic, cloth leg wraps, BARE FEET. Drawing a Ming composite recurve bow at full draw forming a taut triangular shape, a quiver of arrows at the hip.",
+      "pose_text": "POSE: bow at full draw, both arms wide apart horizontally, the bow forming a large open arc — a wide symmetrical silhouette."
     },
     {
       "id": "enemy_ironman",
@@ -161,14 +169,16 @@
       "name": "鐵人軍",
       "subject": "a 17th-century Ming loyalist heavy infantryman of Koxinga's iron-men corps. Fully enclosed iron lamellar armor covering torso arms and legs, an iron face mask, a bulky rectangular heavy silhouette, iron grey with no bright colors. An enormous two-handed horse-cutting sabre over the shoulder, a rattan shield on the back. BARE FEET despite the heavy armor.",
       "ref": "ref_ming.jpg",
-      "pose": "ironman_stance"
+      "pose": "ironman_stance",
+      "pose_text": "POSE: very wide braced stance, feet far apart, an enormous two-handed sabre resting across the shoulders behind the neck with both arms raised and out — a broad rectangular mass."
     },
     {
       "id": "enemy_sapper",
       "cat": "unit",
       "fac": "zheng",
       "name": "鄭軍掘壕隊",
-      "subject": "a 17th-century Ming loyalist trench digger of Koxinga's army, an unarmed labourer. Sand yellow and ochre worn clothing, hair in a topknot, cloth leg wraps, BARE FEET. Carrying a mattock over the shoulder and a woven earth basket, a rolled earth bag at the waist. A stooped working posture."
+      "subject": "a 17th-century Ming loyalist trench digger of Koxinga's army, an unarmed labourer. Sand yellow and ochre worn clothing, hair in a topknot, cloth leg wraps, BARE FEET. Carrying a mattock over the shoulder and a woven earth basket, a rolled earth bag at the waist. A stooped working posture.",
+      "pose_text": "POSE: stooped forward under a mattock carried across one shoulder, a heavy basket hanging from the other hand, weight clearly to one side."
     },
     {
       "id": "enemy_warjunk",
@@ -182,49 +192,56 @@
       "cat": "unit",
       "fac": "zheng",
       "name": "陳澤（1-2 Boss）",
-      "subject": "a 17th-century Ming loyalist general of Koxinga's army, taller and heavier than a common soldier. East Asian face, a lacquered iron helmet with a tall cinnabar red plume, Ming mountain-pattern lamellar armor in cinnabar red and gamboge gold, a flowing cape, a commander's signal banner in one hand and a sabre in the other. Cloth leg wraps, BARE FEET."
+      "subject": "a 17th-century Ming loyalist general of Koxinga's army, taller and heavier than a common soldier. East Asian face, a lacquered iron helmet with a tall cinnabar red plume, Ming mountain-pattern lamellar armor in cinnabar red and gamboge gold, a flowing cape, a commander's signal banner in one hand and a sabre in the other. Cloth leg wraps, BARE FEET.",
+      "pose_text": "POSE: commanding stance, a tall signal banner raised high in one hand well above the head, cape spread wide behind, sabre lowered in the other hand."
     },
     {
       "id": "civilian_family",
       "cat": "unit",
       "fac": "han",
       "name": "平民撤離單位（漢人）",
-      "subject": "a 17th-century civilian refugee family of Formosa fleeing, absolutely no weapons of any kind. A stooped man carrying a heavy cloth bundle on his back, a woman with a woven bamboo basket, a small child held by the hand. Drab low-saturation mismatched clothing in sand and faded indigo, straw sandals, a slow burdened walking posture, clearly ordinary people and not soldiers."
+      "subject": "a 17th-century civilian refugee family of Formosa fleeing, absolutely no weapons of any kind. A stooped man carrying a heavy cloth bundle on his back, a woman with a woven bamboo basket, a small child held by the hand. Drab low-saturation mismatched clothing in sand and faded indigo, straw sandals, a slow burdened walking posture, clearly ordinary people and not soldiers.",
+      "pose_text": "POSE: walking away in a slow huddle, the man bent under a bundle, the woman turned toward the child, three linked stooped shapes."
     },
     {
       "id": "civilian_slave",
       "cat": "unit",
       "fac": "none",
       "name": "平民撤離單位（VOC 奴工）",
-      "subject": "a 17th-century enslaved labourer of a Dutch colony in tropical Formosa, of Southeast Asian or South Indian origin, deep brown skin, bare torso, a simple linen waist cloth, barefoot, carrying a heavy sack on the shoulder, a stooped burdened posture, no weapons, a dignified tired expression."
+      "subject": "a 17th-century enslaved labourer of a Dutch colony in tropical Formosa, of Southeast Asian or South Indian origin, deep brown skin, bare torso, a simple linen waist cloth, barefoot, carrying a heavy sack on the shoulder, a stooped burdened posture, no weapons, a dignified tired expression.",
+      "pose_text": "POSE: bent forward under a large sack carried on one shoulder, one arm braced across the chest, a hunched asymmetric silhouette."
     },
     {
       "id": "voc_gunner",
       "cat": "unit",
       "fac": "voc",
       "name": "VOC 砲手",
-      "subject": "a Dutch East India Company artillery gunner in tropical Formosa 1661, no hat, rolled up shirt sleeves, an off-white linen shirt open at the neck, knee breeches, leather shoes, holding a long cannon rammer staff, a powder horn at the hip, sun-burnt and sweating."
+      "subject": "a Dutch East India Company artillery gunner in tropical Formosa 1661, no hat, rolled up shirt sleeves, an off-white linen shirt open at the neck, knee breeches, leather shoes, holding a long cannon rammer staff, a powder horn at the hip, sun-burnt and sweating.",
+      "pose_text": "POSE: both hands gripping a long rammer staff held horizontally at waist height, leaning into a push — a strong horizontal line."
     },
     {
       "id": "voc_coyett",
       "cat": "unit",
       "fac": "voc",
       "name": "揆一 Frederick Coyett",
-      "subject": "a senior Dutch East India Company governor of 1661, a black formal doublet with a broad white falling band collar giving a squared shoulder silhouette, a wide-brimmed black felt hat, a short pointed beard, holding a rolled document, a stern composed bearing."
+      "subject": "a senior Dutch East India Company governor of 1661, a black formal doublet with a broad white falling band collar giving a squared shoulder silhouette, a wide-brimmed black felt hat, a short pointed beard, holding a rolled document, a stern composed bearing.",
+      "pose_text": "POSE: standing formally upright, one hand on the hip pushing the elbow out, the other holding a rolled document down at the side."
     },
     {
       "id": "siraya_elder",
       "cat": "unit",
       "fac": "siraya",
       "name": "西拉雅頭目（藤杖）",
-      "subject": "a Siraya village elder of 17th-century Formosa holding upright a rattan staff of office with an engraved silver head bearing a Dutch East India Company monogram, the staff is the clear visual focus. Bare torso, a deerskin wrap at the waist, barefoot, hair tied up, shell ear ornaments, a dignified upright stance."
+      "subject": "a Siraya village elder of 17th-century Formosa holding upright a rattan staff of office with an engraved silver head bearing a Dutch East India Company monogram, the staff is the clear visual focus. Bare torso, a deerskin wrap at the waist, barefoot, hair tied up, shell ear ornaments, a dignified upright stance.",
+      "pose_text": "POSE: standing tall and still, the rattan staff of office held vertically at arm's length, the other arm folded across the chest."
     },
     {
       "id": "siraya_woman",
       "cat": "unit",
       "fac": "siraya",
       "name": "西拉雅女性",
-      "subject": "a Siraya woman of 17th-century Formosa, a short jacket and a wrapped skirt in undyed cloth and deerskin brown, barefoot, hair tied up, shell ornaments, carrying a woven bamboo basket on the hip, a calm upright stance."
+      "subject": "a Siraya woman of 17th-century Formosa, a short jacket and a wrapped skirt in undyed cloth and deerskin brown, barefoot, hair tied up, shell ornaments, carrying a woven bamboo basket on the hip, a calm upright stance.",
+      "pose_text": "POSE: a woven basket balanced on one hip with that arm curved around it, the other arm raised to steady a load on the head."
     },
     {
       "id": "map_1_1",
@@ -308,5 +325,6 @@
     "doc": "單位走兩階段（見 docs/art/A1-findings.md §7.5）。ref = 史料參考圖（放 comfyui/input/），pose = 骨架圖名稱（art/scripts/make_poses.py 產出）。缺 ref 或 pose 的資產仍走純文字，僅適用於場景與地形——實測顯示模型畫得出海岸與屋頂，畫不出 17 世紀的服飾。",
     "stage_a": "a1_unit_ref_pose.api.json — IP-Adapter 史料參考 + ControlNet 骨架，只管服飾正確",
     "stage_b": "a1_stage_b_restyle.api.json — img2img denoise 0.50，只管風格"
-  }
+  },
+  "_pose_note": "FLUX.2 Klein 沒有可用的 ControlNet（只有 dev 版，非商用且架構不同），make_poses.py 的骨架圖轉不過去。改以文字指定姿勢——FLUX.2 的提示遵循度足以承擔。姿勢的目的不是好看，是**讓剪影在 128px 下彼此分得開**（章節規格 §3.4）。見 A1-findings.md §9.4。"
 }
