@@ -83,3 +83,49 @@ func test_an_unbound_key_produces_nothing() -> void:
 	assert_bool(MouseKeyboardInput.translate(_key_event(KEY_Q), WORLD_POS) == null).override_failure_message(
 		"沒有綁定的按鍵必須回傳 null，否則場景會處理到不存在的動作"
 	).is_true()
+
+## 判斷一個事件是不是 Space。內建動作存 keycode、gof_* 存 physical_keycode，
+## 只看一個欄位會漏。
+func _is_space_event(event: InputEvent) -> bool:
+	if not (event is InputEventKey):
+		return false
+	var key := event as InputEventKey
+	return key.keycode == KEY_SPACE or key.physical_keycode == KEY_SPACE
+
+func _action_has_space(action_name: StringName) -> bool:
+	for event: InputEvent in InputMap.action_get_events(action_name):
+		if _is_space_event(event):
+			return true
+	return false
+
+func test_space_is_released_from_ui_accept() -> void:
+	InputBindings.install()
+	assert_bool(_action_has_space(&"ui_accept")).override_failure_message(
+		"ui_accept 仍綁著 Space。HUD 按鈕一取得焦點就會吃掉空白鍵，暫停靜默失效。"
+	).is_false()
+
+func test_space_is_released_from_ui_select() -> void:
+	InputBindings.install()
+	assert_bool(_action_has_space(&"ui_select")).override_failure_message(
+		"ui_select 也綁著 Space，漏掉它等於沒修"
+	).is_false()
+
+func test_enter_survives_on_ui_accept() -> void:
+	# 刻意設計成有鑑別力：把 ui_accept 整個清空的實作會通過上面那條「沒有 Space」，
+	# 卻會靜默打壞 HUD 的鍵盤觸發與 M4 的手把導航。
+	InputBindings.install()
+	var has_enter := false
+	for event: InputEvent in InputMap.action_get_events(&"ui_accept"):
+		if event is InputEventKey and (event as InputEventKey).keycode == KEY_ENTER:
+			has_enter = true
+	assert_bool(has_enter).override_failure_message(
+		"Enter 必須留在 ui_accept，否則按鈕無法用鍵盤或手把觸發"
+	).is_true()
+
+func test_releasing_space_is_idempotent() -> void:
+	InputBindings.install()
+	var count := InputMap.action_get_events(&"ui_accept").size()
+	InputBindings.install()
+	assert_int(InputMap.action_get_events(&"ui_accept").size()).override_failure_message(
+		"重複安裝不得改變 ui_accept 的事件數"
+	).is_equal(count)

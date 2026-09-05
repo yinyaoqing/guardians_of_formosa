@@ -14,6 +14,9 @@ extends RefCounted
 ## 所以換關卡不需要改綁定。
 const TOWER_CHOICE_COUNT := 3
 
+## 內建的 ui_accept 與 ui_select 都把 Space 綁在上面。
+const BUILTIN_ACTIONS_TO_FREE_SPACE: Array[StringName] = [&"ui_accept", &"ui_select"]
+
 ## 冪等：已存在的動作會先清掉再重建，重複呼叫不會累積重複事件。
 static func install() -> void:
 	_bind_mouse(&"gof_select", MOUSE_BUTTON_LEFT)
@@ -25,6 +28,7 @@ static func install() -> void:
 	_bind_key(&"gof_cycle_speed", KEY_F)
 	for i in range(1, TOWER_CHOICE_COUNT + 1):
 		_bind_key(StringName("gof_choose_tower_%d" % i), (KEY_0 + i) as Key)
+	_release_space_from_builtin_ui()
 
 static func _reset_action(action_name: StringName) -> void:
 	if InputMap.has_action(action_name):
@@ -46,3 +50,26 @@ static func _bind_mouse(action_name: StringName, button: MouseButton) -> void:
 	var event := InputEventMouseButton.new()
 	event.button_index = button
 	InputMap.action_add_event(action_name, event)
+
+## 把 Space 從內建的 UI 動作上拆下來。
+##
+## HUD 一存在，玩家點過任何按鈕之後那顆按鈕就取得焦點，Space 會被 _gui_input
+## 吃掉去觸發它，永遠到不了 _unhandled_input——暫停從此失效，而且沒有任何線索。
+##
+## 拔 Space 而保留 Enter 與 KP Enter：按鈕照樣可聚焦、可用方向鍵導航、可用 Enter
+## 觸發，M4 的手把導航不受影響。改用 focus_mode = FOCUS_NONE 反而會毀掉那件事，
+## 而且那是一條「每加一顆按鈕都要記得」的紀律規則，沒有測試抓得到漏掉的那一顆。
+##
+## 內建動作存的是 keycode（physical_keycode 為 0），而 gof_* 存的是
+## physical_keycode，所以兩個欄位都要看。
+static func _release_space_from_builtin_ui() -> void:
+	for action_name: StringName in BUILTIN_ACTIONS_TO_FREE_SPACE:
+		if not InputMap.has_action(action_name):
+			continue
+		# 對副本迭代：迴圈中會從 InputMap 移除事件
+		for event: InputEvent in InputMap.action_get_events(action_name).duplicate():
+			if event is InputEventKey and _is_space(event as InputEventKey):
+				InputMap.action_erase_event(action_name, event)
+
+static func _is_space(event: InputEventKey) -> bool:
+	return event.keycode == KEY_SPACE or event.physical_keycode == KEY_SPACE
