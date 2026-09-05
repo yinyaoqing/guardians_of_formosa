@@ -22,3 +22,7 @@ __pycache__/
 
 # 並行開發用的 git worktree（美術軌與程式軌各占一個工作目錄）
 .worktrees/
+
+# 決議不進版控：20MB，Regular/Bold 兩個字重已夠用，避免無謂占用 LFS 額度
+game/assets/fonts/TaipeiSansTCBeta-Light.ttf
+game/assets/fonts/TaipeiSansTCBeta-Light.ttf.import

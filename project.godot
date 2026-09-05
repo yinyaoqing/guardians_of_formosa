@@ -25,6 +25,14 @@ window/stretch/aspect="expand"
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
 
+[gui]
+
+theme/custom_font="res://game/assets/fonts/TaipeiSansTCBeta-Regular.ttf"
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://i18n/strings.en.translation", "res://i18n/strings.zh_TW.translation")
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

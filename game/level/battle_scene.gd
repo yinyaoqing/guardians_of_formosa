@@ -8,6 +8,7 @@ extends Node2D
 const PATH_SAMPLE_SPACING := 8.0
 const MAIN_PATH_ID := &"main"
 const SPAWN_INTERVAL := 1.5
+const LEVEL_ID := &"level_01"
 
 const EnemyViewScript := preload("res://game/views/enemy_view.gd")
 const TowerViewScript := preload("res://game/views/tower_view.gd")
@@ -21,6 +22,8 @@ const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 ## 建塔點的置換標記。B3 會換成真正的美術。
 const SLOT_SPRITE := "res://game/assets/placeholder_slot.png"
 
+const BattleHudScene := preload("res://ui/battle_hud.tscn")
+
 @onready var _path_node: Path2D = $MainPath
 @onready var _view_root: Node2D = $Views
 @onready var _build_slots_root: Node2D = $BuildSlots
@@ -32,20 +35,30 @@ var _tower_views: Dictionary = {}       ## int -> TowerView
 var _projectile_views: Dictionary = {}  ## instance_id -> ProjectileView
 var _slot_views: Dictionary = {}        ## slot_id -> BuildSlotView
 var _controller := InteractionController.new()
+var _hud: BattleHud = null
 var _spawn_timer: float = 0.0
 
 func _ready() -> void:
 	_registry.load_from_disk()
 
 	var world := WorldState.new()
-	world.configure_for_level(_registry, &"level_01")
+	world.configure_for_level(_registry, LEVEL_ID)
 	world.paths[MAIN_PATH_ID] = _bake_path(_path_node)
 
 	_sim = BattleSim.new(world)
 	_bake_build_slots(world)
 	InputBindings.install()
 
+	_hud = BattleHudScene.instantiate() as BattleHud
+	add_child(_hud)
+	_hud.setup(world, _sim, StringName(_registry.levels[LEVEL_ID]["name_key"]))
+	_hud.pause_pressed.connect(_on_hud_pause_pressed)
+	_hud.speed_pressed.connect(_on_hud_speed_pressed)
+
 func _process(delta: float) -> void:
+	# 暫停時 advance 回傳 0，但佇列仍會被排空（建造與賣出正是玩家暫停下來規劃時
+	# 要做的事）。只看 ticks 的話，暫停中蓋的塔要到恢復才出現在畫面上。
+	var had_intents := not _sim.world.pending_intents.is_empty()
 	var ticks := _sim.advance(delta)
 
 	# 生怪計時器走模擬時間而非渲染時間：暫停時 advance() 回傳 0 個 tick，
@@ -57,7 +70,7 @@ func _process(delta: float) -> void:
 		_spawn_timer = SPAWN_INTERVAL
 		_spawn_enemy(&"orc_grunt")
 
-	if ticks > 0:
+	if ticks > 0 or had_intents:
 		_sync_views()
 	_interpolate_views()
 	_update_slot_highlight()
@@ -186,3 +199,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	_controller.handle(action, _sim.world)
 	get_viewport().set_input_as_handled()
+
+## HUD 的按鈕與鍵盤走同一條路：翻成 InputAction 餵給控制器，而不是直接改 sim。
+## B2 已經有測試守著「動作 → 意圖 → 路由器」那條路；另開一條的話那條路上
+## 一條測試都沒有，而兩條路遲早會漂移。
+func _on_hud_pause_pressed() -> void:
+	_controller.handle(InputAction.simple(InputAction.TOGGLE_PAUSE), _sim.world)
+
+func _on_hud_speed_pressed() -> void:
+	_controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), _sim.world)

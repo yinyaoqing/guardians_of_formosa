@@ -1,0 +1,52 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/battle_hud.gd" id="1_hud"]
+
+[node name="BattleHud" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Root" type="MarginContainer" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Top" type="HBoxContainer" parent="Root"]
+layout_mode = 2
+theme_override_constants/separation = 32
+mouse_filter = 2
+
+[node name="GoldLabel" type="Label" parent="Root/Top"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+vertical_alignment = 1
+
+[node name="LivesLabel" type="Label" parent="Root/Top"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+vertical_alignment = 1
+
+[node name="SpacerLeft" type="Control" parent="Root/Top"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="LevelNameLabel" type="Label" parent="Root/Top"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+vertical_alignment = 1
+
+[node name="SpacerRight" type="Control" parent="Root/Top"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="PauseButton" type="Button" parent="Root/Top"]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+
+[node name="SpeedButton" type="Button" parent="Root/Top"]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
