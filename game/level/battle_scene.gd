@@ -46,12 +46,17 @@ func _ready() -> void:
 	InputBindings.install()
 
 func _process(delta: float) -> void:
-	_spawn_timer -= delta
+	var ticks := _sim.advance(delta)
+
+	# 生怪計時器走模擬時間而非渲染時間：暫停時 advance() 回傳 0 個 tick，
+	# 計時器因此完全不動；4 倍速下 ticks 對應的模擬時間也是 4 倍，生怪
+	# 頻率才會跟著倍率一起變快，而不是被渲染幀率牽著走。
+	# 生怪邏輯目前留在場景層是暫時的，等到波次系統子里程碑會搬進 tick 裡。
+	_spawn_timer -= float(ticks) * BattleSim.TICK_DELTA
 	if _spawn_timer <= 0.0:
 		_spawn_timer = SPAWN_INTERVAL
 		_spawn_enemy(&"orc_grunt")
 
-	var ticks := _sim.advance(delta)
 	if ticks > 0:
 		_sync_views()
 	_interpolate_views()

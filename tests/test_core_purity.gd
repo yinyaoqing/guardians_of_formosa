@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 ## 整個分層架構的價值就消失了——所以用測試把它釘死。
 
 const CORE_ROOT := "res://core"
+const INPUT_ROOT := "res://input"
 
 ## 出現這些字串即代表 core/ 碰到了 Node 或場景系統
 const FORBIDDEN_PATTERNS := [
@@ -21,16 +22,25 @@ const FORBIDDEN_PATTERNS := [
 ]
 
 func test_core_scripts_do_not_depend_on_nodes() -> void:
-	var scripts := _collect_gd_files(CORE_ROOT)
+	_assert_layer_is_node_free(CORE_ROOT, "core/")
+
+## input/ 宣稱自己跟 core/ 一樣不碰 Node、可完全 headless 測試——
+## 之後要加手把翻譯器，整套論證都建立在這個前提上。原本只掃 core/，
+## 這條規則對 input/ 從來沒被驗證過，純粹是靠人讀程式碼相信而已。
+func test_input_scripts_do_not_depend_on_nodes() -> void:
+	_assert_layer_is_node_free(INPUT_ROOT, "input/")
+
+func _assert_layer_is_node_free(root: String, layer_label: String) -> void:
+	var scripts := _collect_gd_files(root)
 	assert_int(scripts.size()).override_failure_message(
-		"在 %s 底下找不到任何 .gd 檔，守衛測試形同虛設" % CORE_ROOT
+		"在 %s 底下找不到任何 .gd 檔，守衛測試形同虛設" % root
 	).is_greater(0)
 
 	for path: String in scripts:
 		var source := FileAccess.get_file_as_string(path)
 		for pattern: String in FORBIDDEN_PATTERNS:
 			assert_bool(source.contains(pattern)).override_failure_message(
-				"%s 含有被禁止的 Node 依賴 '%s'。core/ 必須是純邏輯，見 CLAUDE.md 規則 #1。" % [path, pattern]
+				"%s 含有被禁止的 Node 依賴 '%s'。%s 必須是純邏輯，見 CLAUDE.md 規則 #1。" % [path, pattern, layer_label]
 			).is_false()
 
 ## 源代碼文本檢查，故意不執行 battle_scene 而檢查它的源碼。
@@ -45,6 +55,23 @@ func test_battle_scene_configures_the_world_for_its_level() -> void:
 		"headless 測試套件不執行場景腳本，所以沒有其他測試能抓到這個漏洞。\n" +
 		"缺少 configure_for_level() 呼叫會導致整個世界都不會被配置——資料定義、可用塔種、起始金幣與生命全部缺失，同時每項測試都通過。\n" +
 		"詳見 CLAUDE.md 分層架構和 tests/test_core_purity.gd 註解。"
+	).is_true()
+
+## 同一種問題的另一個實例：MouseKeyboardInput.translate() 每個分支都靠
+## process-global 的 InputMap 狀態工作。少了 InputBindings.install()，
+## 九個 is_action_pressed() 全部回傳 false，translate() 回傳 null，
+## _unhandled_input() 提早結束——遊戲照樣啟動、渲染、生怪，只是完全聽不到
+## 任何輸入。沒有錯誤、沒有警告，也沒有測試會失敗：翻譯器自己的測試在
+## before_test() 裡就呼叫過 install()，蓋不到「場景忘記呼叫」這個情境。
+func test_battle_scene_installs_input_bindings() -> void:
+	var battle_scene_path := "res://game/level/battle_scene.gd"
+	var source := FileAccess.get_file_as_string(battle_scene_path)
+	assert_bool(source.contains("InputBindings.install")).override_failure_message(
+		"表現層必須呼叫 InputBindings.install() 註冊 InputMap 動作。\n" +
+		"漏掉這一行不會有任何錯誤或警告——遊戲會正常啟動、渲染、生怪，\n" +
+		"只是 MouseKeyboardInput.translate() 問到的 is_action_pressed() 全部是 false，\n" +
+		"變成一個對所有輸入都沒有反應的關卡。翻譯器測試自己在 before_test() 呼叫\n" +
+		"install()，所以抓不到場景忘記呼叫的情況，只有這種原始碼文本檢查抓得到。"
 	).is_true()
 
 func _collect_gd_files(root: String) -> Array[String]:

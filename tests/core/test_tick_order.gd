@@ -333,3 +333,20 @@ func test_pause_drained_mid_catchup_stops_the_loop_immediately() -> void:
 	assert_float(enemy.distance_along).override_failure_message(
 		"敵人只能走完整 1 個 tick 的距離；若還跑出剩下 4 個 tick 的位移，代表暫停沒有立刻打斷補跑迴圈"
 	).is_equal_approx(expected_distance, 0.001)
+
+	# 上面只釘住了「暫停當下沒多跑」，沒釘住「欠的那 4 個 tick 有沒有留著」。
+	# _accumulator 若在暫停跳出時被清成 0（而不是保留剩下欠的量），這裡的
+	# 斷言全部會通過、上面五個斷言也全部通過，卻悄悄丟掉了最多
+	# MAX_TICKS_PER_FRAME - 1 個 tick（本例是 4 個、133ms）的戰鬥時間。
+	# 解除暫停後只推進極小的 delta（1 毫秒），若欠的 4 個 tick 還在，
+	# 這一次 advance() 應該補跑出那 4 個 tick；若欠款已經被清空，
+	# 這裡只會再跑出 0 個 tick。
+	sim.paused = false
+	var resumed_ticks := sim.advance(0.001)
+
+	assert_int(resumed_ticks).override_failure_message(
+		"解除暫停後必須補跑暫停時欠下的 4 個 tick（_accumulator 保留了 4/30 秒，" +
+		"加上這次極小的 0.001 秒 delta 仍不足以湊出第 5 個 tick）。" +
+		"若這裡跑出的 tick 數不是 4，代表 _accumulator 在暫停跳出的那一刻被清空或改動了，" +
+		"暫停期間積欠的模擬時間就這樣憑空消失，戰鬥時間軸會對不上。"
+	).is_equal(4)

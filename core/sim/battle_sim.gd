@@ -51,13 +51,16 @@ func advance(frame_delta: float) -> int:
 	# 高速度倍率配低幀率會正好跑滿上限卻只剩極小零頭，那個零頭必須留給下一幀，
 	# 否則模擬會悄悄跑得比設定的倍率慢。
 	#
-	# 暫停不會誤觸這個丟棄分支：因暫停提前跳出迴圈時 ticks 必然小於
-	# MAX_TICKS_PER_FRAME（迴圈條件裡 ticks < MAX_TICKS_PER_FRAME 與
-	# not paused 是並列的 and，兩者中只要有一個先變成 false 就跳出；
-	# 若是 ticks 先到達上限而跳出，跳出當下 paused 是真是假都不影響
-	# 這裡的判斷結果，跟原本沒有暫停的情況完全一樣）。
-	# 所以「因暫停跳出」與「ticks == MAX_TICKS_PER_FRAME」不會同時成立，
-	# 此分支不會因為這次的修改而多丟棄玩家排隊等待的模擬時間。
+	# 暫停不會誤觸這個丟棄分支，原因是結構性的而非迴圈條件的求值順序：
+	# world.queue_intent() 只會從 tick 之外被呼叫（目前唯一的呼叫點是
+	# InteractionController，經由場景的 _unhandled_input 觸發），從來
+	# 不會有系統在 _tick() 內部排新的 intent。因此 pending_intents 一定
+	# 在補跑迴圈的第一個 _tick() 就被 _apply_pending_intents() 完全排空、
+	# 清空，玩家排的 toggle_pause 只可能讓 paused 在第 1 個 iteration 翻成
+	# true，不可能拖到第 8 個 iteration 才生效。paused 提前跳出時 ticks
+	# 因此必然是 1，遠小於 MAX_TICKS_PER_FRAME，兩個跳出原因不會同時成立。
+	# 這個不變式一旦被打破（例如未來波次腳本、boss 自動暫停等「tick 內
+	# 產生 intent」的功能）就必須重新檢查這裡的假設。
 	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks

@@ -27,6 +27,12 @@ func test_install_registers_every_action() -> void:
 		assert_bool(InputMap.has_action(action_name)).override_failure_message(
 			"綁定安裝後動作 %s 必須存在，否則翻譯器問到的永遠是 false" % action_name
 		).is_true()
+		# 只驗證動作存在還不夠：一個把九個動作都 add_action() 卻忘記
+		# action_add_event() 的 install() 一樣會讓上面的斷言全過，
+		# 但 is_action_pressed() 永遠是 false，跟本測試想排除的失敗一模一樣。
+		assert_int(InputMap.action_get_events(StringName(action_name)).size()).override_failure_message(
+			"動作 %s 必須至少綁定一個事件，否則存在的動作依然問不出 is_action_pressed" % action_name
+		).is_greater(0)
 
 func test_install_is_idempotent() -> void:
 	InputBindings.install()
@@ -43,6 +49,14 @@ func test_left_click_becomes_select_at_with_the_given_position() -> void:
 
 func test_right_click_becomes_cancel() -> void:
 	var action := MouseKeyboardInput.translate(_mouse_event(MOUSE_BUTTON_RIGHT), WORLD_POS)
+	assert_str(action.kind).is_equal("cancel")
+
+func test_escape_becomes_cancel() -> void:
+	# gof_cancel 是唯一綁了兩個事件的動作：install() 裡 _bind_mouse() 先靠
+	# _reset_action() 清空舊事件，_add_key() 才把 Escape 疊加上去。順序一旦
+	# 顛倒，_reset_action() 會把剛加上去的 Escape 也一併清掉——右鍵仍然能
+	# 取消，其他測試照樣全過，只有直接按 Escape 這條路會悄悄失靈。
+	var action := MouseKeyboardInput.translate(_key_event(KEY_ESCAPE), WORLD_POS)
 	assert_str(action.kind).is_equal("cancel")
 
 func test_number_key_two_becomes_choose_tower_with_index_two() -> void:

@@ -173,6 +173,18 @@ func test_selling_an_empty_slot_does_nothing() -> void:
 	controller.handle(InputAction.simple(InputAction.SELL), world)
 	assert_array(world.pending_intents).has_size(0)
 
+func test_upgrading_an_empty_slot_does_nothing() -> void:
+	# _sell 與 _upgrade 是各自獨立的函式、各自寫了自己的守衛。
+	# 一個漏掉 `or slot.occupied_by == 0` 的 _upgrade 會排出
+	# GameIntent.upgrade(0)，且在此之前沒有任何測試會發現。
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.select_at(SLOT_A_POS), world)
+	controller.handle(InputAction.simple(InputAction.UPGRADE), world)
+	assert_array(world.pending_intents).override_failure_message(
+		"空建塔點不能升級，不該有任何塔可以升"
+	).has_size(0)
+
 func test_selling_without_a_selection_does_nothing() -> void:
 	var world := _make_world_with_towers()
 	var controller := InteractionController.new()
