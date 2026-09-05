@@ -36,24 +36,32 @@ func before_test() -> void:
 	_exempt_prefixes = data.get("exempt_prefixes", [])
 
 
-func _png_paths() -> PackedStringArray:
-	var out := PackedStringArray()
-	var dir := DirAccess.open(ASSETS_DIR)
+func _collect(dir_path: String, out: PackedStringArray) -> void:
+	# 遞迴：資產會分章節放在子目錄（game/assets/chapter01/…），只掃頂層會讓閘門空轉。
+	var dir := DirAccess.open(dir_path)
 	if dir == null:
-		return out
+		return
 	dir.list_dir_begin()
 	var name := dir.get_next()
 	while name != "":
-		if not dir.current_is_dir() and name.ends_with(".png"):
+		var full := "%s/%s" % [dir_path, name]
+		if dir.current_is_dir():
+			_collect(full, out)
+		elif name.ends_with(".png"):
 			var exempt := false
 			for prefix: String in _exempt_prefixes:
 				if name.begins_with(prefix):
 					exempt = true
 					break
 			if not exempt:
-				out.append("%s/%s" % [ASSETS_DIR, name])
+				out.append(full)
 		name = dir.get_next()
 	dir.list_dir_end()
+
+
+func _png_paths() -> PackedStringArray:
+	var out := PackedStringArray()
+	_collect(ASSETS_DIR, out)
 	return out
 
 

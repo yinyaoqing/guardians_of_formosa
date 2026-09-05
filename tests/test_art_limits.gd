@@ -40,24 +40,32 @@ func max_size_for(file_name: String) -> int:
 	return best
 
 
-func _png_names() -> PackedStringArray:
-	var out := PackedStringArray()
-	var dir := DirAccess.open(ASSETS_DIR)
+func _collect(dir_path: String, out: PackedStringArray) -> void:
+	# 遞迴：資產會分章節放在子目錄（game/assets/chapter01/…），只掃頂層會讓閘門空轉。
+	var dir := DirAccess.open(dir_path)
 	if dir == null:
-		return out
+		return
 	dir.list_dir_begin()
 	var name := dir.get_next()
 	while name != "":
-		if not dir.current_is_dir() and name.ends_with(".png"):
+		var full := "%s/%s" % [dir_path, name]
+		if dir.current_is_dir():
+			_collect(full, out)
+		elif name.ends_with(".png"):
 			var exempt := false
 			for prefix: String in _exempt_prefixes:
 				if name.begins_with(prefix):
 					exempt = true
 					break
 			if not exempt:
-				out.append(name)
+				out.append(full)
 		name = dir.get_next()
 	dir.list_dir_end()
+
+
+func _png_paths() -> PackedStringArray:
+	var out := PackedStringArray()
+	_collect(ASSETS_DIR, out)
 	return out
 
 
@@ -73,12 +81,17 @@ func test_prefix_matching_prefers_longest() -> void:
 	assert_int(max_size_for("tower_musket_t3.png")).is_equal(192)
 	assert_int(max_size_for("icon_silver.png")).is_equal(64)
 	assert_int(max_size_for("enemy_ironman.png")).is_equal(_default_max)
+	# 更長的例外前綴必須勝過短前綴，否則 enemy_warjunk 會被套上士兵的 128 上限。
+	assert_int(max_size_for("enemy_warjunk.png")).is_equal(192)
+	assert_int(max_size_for("prop_settlement.png")).is_equal(192)
+	assert_int(max_size_for("prop_buildsite.png")).is_equal(128)
 
 
 func test_all_assets_within_size_limit() -> void:
-	for name: String in _png_names():
-		var image := Image.load_from_file("%s/%s" % [ASSETS_DIR, name])
-		assert_object(image).override_failure_message("讀不到 %s" % name).is_not_null()
+	for path: String in _png_paths():
+		var name := path.get_file()
+		var image := Image.load_from_file(path)
+		assert_object(image).override_failure_message("讀不到 %s" % path).is_not_null()
 		var limit := max_size_for(name)
 		var w := image.get_width()
 		var h := image.get_height()
