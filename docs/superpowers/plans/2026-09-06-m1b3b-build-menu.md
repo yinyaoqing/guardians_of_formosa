@@ -891,7 +891,15 @@ func set_occupied(occupied: bool) -> void:
 	visible = not occupied
 ```
 
-- [ ] **Step 3: 刪掉不再被引用的置換圖**
+- [ ] **Step 3: 把場景指向真美術，並刪掉置換圖**
+
+`game/level/battle_scene.gd` 的 `SLOT_SPRITE` 改為：
+
+```gdscript
+const SLOT_SPRITE := "res://game/assets/chapter01/prop_buildsite.png"
+```
+
+**這一行必須跟刪圖在同一個任務裡**，否則中間會留下一個指向已刪除資源、跑不起來的狀態，而 headless 測試套件從不載入場景腳本，不會有任何測試告訴你。
 
 ```bash
 git rm game/assets/placeholder_slot.png game/assets/placeholder_slot.png.import
@@ -904,17 +912,16 @@ godot --headless --path . --import
 godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
 godot --headless --path . --check-only --script game/views/range_circle.gd
 godot --headless --path . --check-only --script game/views/build_slot_view.gd
+godot --headless --path . --quit-after 2000
 ```
 
-Expected: **240** 個測試全部 PASS，測試數不變（本任務只動表現層）。`--check-only` 無輸出。
-
-**此時 `battle_scene.gd` 仍然指向已刪除的 `placeholder_slot.png`**，所以冒煙測試會壞——那是預期的，Task 5 才改場景。本任務不跑 `--quit-after`。
+Expected: **240** 個測試全部 PASS，測試數不變（本任務只動表現層）。`--check-only` 無輸出。冒煙 exit 0，且輸出中沒有 `SCRIPT ERROR`、`Invalid`、`Nil`、`Parse Error`——特別要確認沒有載入不到 `prop_buildsite` 的錯誤。
 
 - [ ] **Step 5: 提交**
 
 ```bash
 git add game/views/range_circle.gd game/views/range_circle.gd.uid \
-        game/views/build_slot_view.gd game/assets/
+        game/views/build_slot_view.gd game/level/battle_scene.gd game/assets/
 git commit -m "feat(game): 新增射程圈，建塔點改用真美術"
 ```
 
@@ -939,11 +946,7 @@ const BuildMenuScene := preload("res://ui/build_menu.tscn")
 const RangeCircleScript := preload("res://game/views/range_circle.gd")
 ```
 
-把 `const SLOT_SPRITE` 的值改為：
-
-```gdscript
-const SLOT_SPRITE := "res://game/assets/chapter01/prop_buildsite.png"
-```
+（`SLOT_SPRITE` 已於 Task 4 指向 `prop_buildsite`，此處不需再動。）
 
 在 `var _shown_tower_levels` 之後加入：
 
