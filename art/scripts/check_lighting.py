@@ -9,7 +9,6 @@ L2 訂「全遊戲光源固定自左上方」，驗收方式是「把當前所�
 """
 
 import argparse
-import sys
 
 from PIL import Image
 
@@ -55,13 +54,26 @@ def lighting_bias(path: str) -> dict:
                 sums["lr"][0] += lum
                 sums["lr"][1] += 1
 
-    def mean(k: str) -> float:
+    def mean(k: str):
+        """回傳該桶平均亮度；桶內沒有像素時回傳 None（未定義，不是全黑）。
+
+        外接框只有 1px 寬或 1px 高時，"left"/"right" 或 "ul"/"lr"
+        其中一桶可能完全沒有像素。若在此把空桶當成亮度 0 的黑，
+        會讓對應的 horizontal/diagonal 指標被拉向錯誤的方向，
+        誤報成「光源偏右/偏右下」。
+        """
         total, n = sums[k]
-        return total / n if n else 0.0
+        return total / n if n else None
+
+    def bias(a: str, b: str) -> float:
+        ma, mb = mean(a), mean(b)
+        if ma is None or mb is None:
+            return 0.0
+        return (ma - mb) / 255.0
 
     return {
-        "horizontal": (mean("left") - mean("right")) / 255.0,
-        "diagonal": (mean("ul") - mean("lr")) / 255.0,
+        "horizontal": bias("left", "right"),
+        "diagonal": bias("ul", "lr"),
         "opaque_px": sums["left"][1] + sums["right"][1],
     }
 
@@ -88,8 +100,17 @@ def self_test() -> int:
             p = os.path.join(tmp, f"probe_{lit_left}.png")
             _synthetic(lit_left).save(p)
             bias = lighting_bias(p)
-            ok = (bias["diagonal"] > 0) == expect_positive
-            print(f"  左上打光={lit_left}  diagonal={bias['diagonal']:+.3f}  {'OK' if ok else '錯'}")
+            # _synthetic() 的梯度是 t = (x + y) / 126，對 x、y 對稱，
+            # 所以只驗 diagonal 的話，horizontal 算反（回傳 right - left）
+            # 也會因為左右對稱而恰好通過測試，偵測不出符號寫反的 bug。
+            # horizontal 是回傳值合約的一部分，必須跟 diagonal 一樣被驗證。
+            ok_h = (bias["horizontal"] > 0) == expect_positive
+            ok_d = (bias["diagonal"] > 0) == expect_positive
+            ok = ok_h and ok_d
+            print(
+                f"  左上打光={lit_left}  horizontal={bias['horizontal']:+.3f}  "
+                f"diagonal={bias['diagonal']:+.3f}  {'OK' if ok else '錯'}"
+            )
             if not ok:
                 failures += 1
     print("=== 自我驗證通過" if failures == 0 else f"=== 自我驗證失敗 {failures} 項")
