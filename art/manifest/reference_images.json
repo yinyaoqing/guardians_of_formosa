@@ -44,6 +44,14 @@
         "File:Atlas Blaeu-Van der Hem - Taioan.jpg",
         "File:Zeelandia diary.jpg"
       ]
+    },
+    "chinese_junk": {
+      "zh": "中式硬帆：扇形帆、橫向竹製帆骨、方形艉",
+      "note": "章節規格 §3.2 要求大熕船的剪影是「中式硬帆的扇形」。FLUX.2 不知道這個形制，Step 2 的四張候選全部畫成歐洲蓋倫帆船（船首斜桅、纜繩爬梯、方形／三角帆）。brief 原列的 Commons 檔名（Chinese junk Keying.jpg、Junk (ship) - Wikipedia.jpg）在 Commons 上不存在，改用 API 搜尋找到的實際檔名：一張水彩畫（單一主體、背景乾淨，已裁成 ref_junk.jpg）與一張博物館模型照（帆骨與方形艉更清楚，留作備用）。",
+      "titles": [
+        "File:-Chinese junk- (48752523181).jpg",
+        "File:Qing War Junk (10097970875).jpg"
+      ]
     }
   },
   "_gaps": {

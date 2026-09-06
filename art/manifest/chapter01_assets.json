@@ -176,7 +176,7 @@
       "cat": "unit",
       "fac": "zheng",
       "name": "鐵人軍",
-      "subject": "a 17th-century Ming loyalist heavy infantryman of Koxinga's iron-men corps. Fully enclosed iron lamellar armor covering torso arms and legs, an iron face mask, a bulky rectangular heavy silhouette, iron grey with no bright colors. An enormous two-handed horse-cutting sabre over the shoulder, a rattan shield on the back. BARE FEET despite the heavy armor.",
+      "subject": "a 17th-century Ming Chinese heavy infantryman. Chinese lamellar armour made of hundreds of small overlapping rectangular iron plates laced with cord, NOT European chainmail and NOT a European great helm. A rounded Chinese iron helmet with a neck guard of the same lamellar plates, and a separate iron face mask covering the whole face. An enormous two-handed Chinese horse-cutting sabre with a long straight single-edged blade, held across the shoulders. A round rattan shield slung on the back. BARE FEET, no boots, no shoes. Bulky rectangular heavy silhouette, iron grey with no bright colors.",
       "ref": "ref_ming.jpg",
       "pose": "ironman_stance",
       "pose_text": "POSE: very wide braced stance, feet far apart, an enormous two-handed sabre resting across the shoulders behind the neck with both arms raised and out — a broad rectangular mass."
@@ -194,7 +194,9 @@
       "cat": "vessel",
       "fac": "zheng",
       "name": "鄭軍大熕船",
-      "subject": "a 17th-century Chinese war junk of Koxinga's fleet. A dark burnt umber timber hull with a high stern, battened fan-shaped sails in ochre and sand, open side gun ports with bronze cannon muzzles, a cinnabar red banner at the masthead."
+      "subject": "a 17th-century Chinese war junk. Chinese battened lug sails made of stiff panels divided by horizontal bamboo battens, forming a broad fan shape — NOT European square sails and NOT triangular lateen sails. A high square transom stern, a blunt bow with no bowsprit, a flat bottom. Dark burnt umber timber hull, sails in ochre and sand. Open side gun ports with bronze cannon muzzles, a cinnabar red banner at the masthead.",
+      "ref": "ref_junk.jpg",
+      "pose": "idle"
     },
     {
       "id": "boss_chenze",
