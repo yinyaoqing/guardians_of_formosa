@@ -2,7 +2,7 @@ class_name TowerView
 extends Sprite2D
 
 ## 塔的視覺表現。塔不移動，所以不需要插值；
-## M0 只做「有目標時轉向目標」，開火特效留到 M1 的投射物系統。
+## 有目標時朝目標水平翻轉，開火特效留到之後的投射物系統擴充。
 
 var tower_id: int = 0
 
