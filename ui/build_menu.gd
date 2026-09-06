@@ -30,13 +30,31 @@ func show_options(options: Array[Dictionary], center: Vector2) -> void:
 		return
 	for i in count:
 		var button := _make_button(options[i], i)
-		# 以正下方為中心左右展開：i 的中位數落在 ARC_CENTER 上
-		var angle := ARC_CENTER + (float(i) - float(count - 1) * 0.5) * ARC_STEP
+		# 以正下方為中心左右展開，index 0 在最左邊——與閱讀順序及數字鍵 1、2、3
+		# 一致（choice_index 就是 i + 1，見 BuildMenuOptions）。i 增加時角度變小，
+		# 即由左（角度較大、cos 較負）往右（角度較小、cos 較正）排列。
+		var angle := ARC_CENTER + (float(count - 1) * 0.5 - float(i)) * ARC_STEP
 		button.position = center + Vector2(cos(angle), sin(angle)) * RADIUS - BUTTON_SIZE * 0.5
 		add_child(button)
 
 func hide_menu() -> void:
 	_clear()
+
+## 只更新既有按鈕的買得起／買不起顯示，不 free、不重建。
+## 呼叫端保證 options 是重算過的最新結果；這裡只信任「順序沒變」這件事——
+## 順序由結構簽章（slot/occupied/level）鎖住，金幣變動不會改變選項順序或數量。
+##
+## 子節點數與 options 數對不上，代表呼叫端漏判了一次結構性變化（該重建卻沒重建）。
+## 那是呼叫端的 bug；這裡的責任只有「不要因此索引越界」，靜默跳過即可。
+func update_affordability(options: Array[Dictionary]) -> void:
+	var children := get_children()
+	if children.size() != options.size():
+		return
+	for i in children.size():
+		var button := children[i] as Button
+		if button == null:
+			return
+		button.modulate = _affordability_modulate(options[i].get("affordable", true))
 
 func _clear() -> void:
 	for child in get_children():
@@ -68,5 +86,9 @@ func _style_button(button: Button, option: Dictionary) -> void:
 
 	# 買不起仍然顯示，只是變暗——玩家要知道有這個選項存在。
 	# 擋不擋是 BuildSystem 的事，不是選單的（沿用 B2 的分工）。
-	var affordable: bool = option.get("affordable", true)
-	button.modulate = Color(1, 1, 1, 1) if affordable else Color(0.55, 0.55, 0.55, 0.85)
+	button.modulate = _affordability_modulate(option.get("affordable", true))
+
+## 買得起／買不起的變暗規則只寫在這一處。_style_button（初建）與
+## update_affordability（原地更新）都呼叫這裡，避免同一條規則抄兩份、日後漂移。
+func _affordability_modulate(affordable: bool) -> Color:
+	return Color(1, 1, 1, 1) if affordable else Color(0.55, 0.55, 0.55, 0.85)

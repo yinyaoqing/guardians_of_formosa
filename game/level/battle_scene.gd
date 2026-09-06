@@ -16,7 +16,7 @@ const ProjectileViewScript := preload("res://game/views/projectile_view.gd")
 const BuildSlotViewScript := preload("res://game/views/build_slot_view.gd")
 
 ## 置換用的投射物貼圖。之後應改為依 Projectile.projectile_id 從資料查表，
-## 目前只有一種塔，寫成常數即可。
+## 目前銃樓與獵寮共用同一張，寫成常數即可。
 const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 
 ## 建塔點的美術。空位時顯示，蓋了塔就隱藏——塔就站在同一個座標上。
@@ -47,9 +47,9 @@ var _spawn_timer: float = 0.0
 var _build_menu: BuildMenu = null
 var _range_circle: RangeCircle = null
 
-## 選單目前畫的是哪一批選項。重算與重建按鈕只在這個簽章變動時做——
-## 每幀重建按鈕是白燒的配置，而 gold 一變（每次擊殺）買得起與否就可能翻轉。
-var _menu_signature: Array = []
+## 選單目前畫的是哪一批選項。拆成結構與金錢兩個簽章，理由見 _update_build_menu()。
+var _menu_structural_signature: Array = []
+var _menu_gold: int = -1
 var _menu_options: Array[Dictionary] = []
 
 func _ready() -> void:
@@ -226,35 +226,57 @@ func _update_slot_views() -> void:
 
 ## 選單是選取狀態的純函數：選取變了就開、關、移動。控制器裡沒有任何選單狀態，
 ## 所以「點空白處關閉選單」是免費的——select_at 命中不到建塔點時本來就會清成 0。
+##
+## 簽章拆成兩半，因為它們的變動頻率與該做的事完全不同：
+##  - 結構簽章 [slot_id, occupied, level]：決定「有哪些選項存在」，只在選取、
+##    建造、升級、賣出時變。變了才值得 show_options() 重建按鈕。
+##  - gold：只決定「已存在的選項買不買得起」，orc_grunt 每 1.5 秒死一隻就變一次。
+##    合在一起會導致戰鬥中每秒重建一次按鈕——玩家按著滑鼠不放時按鈕被
+##    queue_free() 掉，pressed 永遠不會發出；hover 中的射程圈預覽也會被
+##    重建後跟著跑的 _show_range_for_selection 打回目前等級，一秒閃一次。
+## 只有 gold 變、結構沒變時，改成重算選項後原地更新既有按鈕的變暗顯示。
 func _update_build_menu() -> void:
-	var signature := _current_menu_signature()
-	if signature == _menu_signature:
-		return
-	_menu_signature = signature
-
 	var slot_id := _controller.selected_slot_id
+	var slot: BuildSlot = _sim.world.build_slots_by_id.get(slot_id)
+	var structural := _current_menu_structural_signature(slot_id, slot)
+	var gold := _sim.world.gold
+
+	if structural == _menu_structural_signature:
+		if gold != _menu_gold:
+			_menu_gold = gold
+			# 選單沒開（空選項）就沒有按鈕可更新，重算也是白工。
+			if not _menu_options.is_empty():
+				_menu_options = BuildMenuOptions.for_slot(_sim.world, slot_id)
+				_build_menu.update_affordability(_menu_options)
+		return
+
+	_menu_structural_signature = structural
+	_menu_gold = gold
 	_menu_options = BuildMenuOptions.for_slot(_sim.world, slot_id)
 	if _menu_options.is_empty():
 		_build_menu.hide_menu()
 		_range_circle.hide_circle()
 		return
 
-	var slot: BuildSlot = _sim.world.build_slots_by_id.get(slot_id)
+	# show_options 絕對不能一幀內被叫兩次：_clear() 的 queue_free() 是延後生效，
+	# 兩次呼叫之間舊按鈕還掛著、還連著 signal，發出的會是對不上新陣列的舊索引。
+	# 這個函式一幀只會進到這裡一次（結構簽章已經改過了），所以這個前提仍然成立。
+	#
+	# slot.position 是世界座標，這裡直接當成 BuildMenu（CanvasLayer）底下的
+	# Control 座標用。今天成立是因為場景根在原點、沒有 Camera2D、
+	# stretch mode 對兩者的縮放相同；哪天鏡頭一動，這裡要跟著換成螢幕座標。
 	_build_menu.show_options(_menu_options, slot.position)
 	_show_range_for_selection(slot)
 
-## 選單只在這幾個值變動時重算。gold 在裡面，因為買得起與否會隨擊殺翻轉。
-func _current_menu_signature() -> Array:
-	var slot_id := _controller.selected_slot_id
+func _current_menu_structural_signature(slot_id: int, slot: BuildSlot) -> Array:
 	var occupied := 0
 	var level := 0
-	var slot: BuildSlot = _sim.world.build_slots_by_id.get(slot_id)
 	if slot != null:
 		occupied = slot.occupied_by
 		var tower := _find_tower_view_owner(occupied)
 		if tower != null:
 			level = tower.level
-	return [slot_id, _sim.world.gold, occupied, level]
+	return [slot_id, occupied, level]
 
 ## 把原始事件翻成裝置無關的動作，交給控制器。
 ## 螢幕座標換算成世界座標需要 viewport，所以這一步留在場景。
