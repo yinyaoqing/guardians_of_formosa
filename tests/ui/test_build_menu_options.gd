@@ -126,6 +126,20 @@ func test_a_cost_exactly_equal_to_gold_is_affordable() -> void:
 		"升級費 130 剛好等於金幣 130，應標為買得起"
 	).is_true()
 
+func test_a_build_cost_exactly_equal_to_gold_is_affordable() -> void:
+	# 建造與升級各有一份 `world.gold >= cost`，相隔十幾行。上面那條只釘住升級那份，
+	# 建造那份單方面 drift 成 `>` 仍然全綠——而這個狀態也走得到：二階升級花掉 130
+	# 之後剛好剩 70，正好是銃樓的造價。
+	var world := _make_world()
+	world.gold = 70
+	var options := BuildMenuOptions.for_slot(world, _slot(world).id)
+	assert_int(options[0]["cost"]).override_failure_message(
+		"這條測試假定第一種塔的造價是 70，資料改了要跟著改"
+	).is_equal(70)
+	assert_bool(options[0]["affordable"]).override_failure_message(
+		"造價 70 剛好等於金幣 70，應標為買得起"
+	).is_true()
+
 func test_an_occupied_slot_offers_upgrade_and_sell() -> void:
 	var world := _make_world()
 	_place_tower(world, &"musket_tower", 1)
