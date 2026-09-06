@@ -1,5 +1,6 @@
 {
   "_doc": "第一章：熱蘭遮 1661 資產清單。欄位 subject 為 prompt 主體區塊，其餘由 generate_batch.py 依 cat 與 fac 組裝。對應規格：chapter-01-zeelandia-design.md §3、§4；art-direction-bible.md §3、§4。",
+  "_source_stage_note": "選用欄位 source_stage：指定該資產「正確」候選所在的 stage（如 \"a\"），會覆蓋 postprocess.py 與 check_lighting.py 的 --stage 參數，只對該資產生效。原因：這兩支腳本預設吃 stage_flux2，但少數資產（如 enemy_warjunk）改走 IP-Adapter 參考圖路線（stage_a）才修正成功，stage_flux2 底下留的是被拒絕的舊候選。若沒有這個欄位，任何人照文件跑一次不帶 --stage 覆寫的標準指令，就會在不出錯、不觸發任何閘門的情況下，把 03_processed 裡正確的圖換回錯的——色票檢查只驗顏色，驗不出主體或剪影錯誤。這些圖後續會被 A3 拿去訓練風格 LoRA，一張錯的母本混進訓練集，之後所有生成都會被污染。沒有這個欄位的資產維持原行為（吃 --stage 參數指定的目錄）。",
   "shared": {
     "style": "STYLE: simple flat cartoon game art, clean bold simplified shapes, minimal internal detail, large readable areas of flat color, simple shading with at most two tones per color, colored linework in dark umber and deep green instead of black with slightly varying line weight, strong warm-cool contrast of terracotta red against deep jade green, light from the upper left with one short hard cast shadow, cheerful clean and easy to read.",
     "_style_note": "2026-09-04 改為簡單卡通化（使用者指示）。原本的膠彩顆粒／色層堆疊／粗筆觸描述已移除。保留的區隔點：彩色描邊（非粗黑均勻）、限定色域、左上平光、4 頭身。此改動與美術聖經 §1.1「上色」列的『膠彩質感：可見礦物顆粒、色層堆疊』相牴觸，該規格需一併修訂。",
@@ -196,7 +197,9 @@
       "name": "鄭軍大熕船",
       "subject": "a 17th-century Chinese war junk. Chinese battened lug sails made of stiff panels divided by horizontal bamboo battens, forming a broad fan shape — NOT European square sails and NOT triangular lateen sails. A high square transom stern, a blunt bow with no bowsprit, a flat bottom. Dark burnt umber timber hull, sails in ochre and sand. Open side gun ports with bronze cannon muzzles, a cinnabar red banner at the masthead.",
       "ref": "ref_junk.jpg",
-      "pose": "idle"
+      "pose": "idle",
+      "source_stage": "a",
+      "_source_stage_reason": "Step 2（純文字 prompt，stage_flux2）四張候選全部仍是歐洲蓋倫帆船，改走 Step 3（史料參考圖 + IP-Adapter，stage_a）才修正成功。stage_flux2 目錄下留的是被拒絕的舊候選，見 art_src/01_raw/enemy_warjunk/stage_flux2/_rejected/。"
     },
     {
       "id": "boss_chenze",

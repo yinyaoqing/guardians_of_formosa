@@ -138,7 +138,12 @@ def main() -> int:
 
     rows, wrong = [], []
     for a in assets:
-        d = os.path.join(repo, "art_src", "01_raw", a["id"], f"stage_{args.stage}")
+        # source_stage：該資產正確候選釘死的 stage，覆蓋 --stage——與
+        # postprocess.py 同一條規則，見 manifest 的 _source_stage_note。
+        # 沒有這個覆蓋，--stage flux2 的預設呼叫量測到的是已被拒絕、不再
+        # 出貨的舊候選，L2 閘門等於沒驗到真正出貨的那張圖。
+        stage = a.get("source_stage", args.stage)
+        d = os.path.join(repo, "art_src", "01_raw", a["id"], f"stage_{stage}")
         if not os.path.isdir(d):
             continue
         for n in sorted(x for x in os.listdir(d) if x.endswith(".png")):

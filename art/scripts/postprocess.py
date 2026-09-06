@@ -232,7 +232,13 @@ def main() -> int:
     written: list[str] = []
     done = skipped = 0
     for a in assets:
-        d = os.path.join(RAW, a["id"], f"stage_{args.stage}") if args.stage else os.path.join(RAW, a["id"])
+        # manifest 的 source_stage 是「這個資產的正確候選釘死在哪個 stage」，
+        # 對這個資產覆蓋 --stage——見 manifest 的 _source_stage_note。
+        # 不這樣做的話，任何一次不帶 --stage 覆寫的標準指令都會靜靜讀到
+        # stage_flux2 裡被拒絕的舊候選，把 03_processed 換回錯的圖，
+        # 而色票檢查驗不出主體錯誤，不會有任何錯誤訊息。
+        stage = a.get("source_stage", args.stage)
+        d = os.path.join(RAW, a["id"], f"stage_{stage}") if stage else os.path.join(RAW, a["id"])
         if not os.path.isdir(d):
             skipped += 1
             continue
