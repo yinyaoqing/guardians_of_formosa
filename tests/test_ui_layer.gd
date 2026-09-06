@@ -10,6 +10,7 @@ extends GdUnitTestSuite
 
 const UI_ROOT := "res://ui"
 const HUD_SCENE := "res://ui/battle_hud.tscn"
+const BUILD_MENU_SCENE := "res://ui/build_menu.tscn"
 
 ## 出現這些字串即代表 ui/ 繞過了 signal，自己動手做事。
 ## core/systems/ 底下每一個系統類別都要列進來——只列 BuildSystem 漏掉了
@@ -169,6 +170,18 @@ func test_the_hud_exposes_both_signals() -> void:
 			"HUD 少了 signal %s，battle_scene 接不上" % signal_name
 		).is_true()
 	hud.free()
+
+func test_the_build_menu_scene_loads_and_exposes_its_signals() -> void:
+	var packed: PackedScene = load(BUILD_MENU_SCENE)
+	assert_bool(packed != null).override_failure_message(
+		"載入不了 %s；.tscn 是手寫的，格式錯誤只會在這裡或人工驗收現形" % BUILD_MENU_SCENE
+	).is_true()
+	var menu := packed.instantiate()
+	for signal_name: String in ["option_chosen", "option_hovered", "option_unhovered"]:
+		assert_bool(menu.has_signal(signal_name)).override_failure_message(
+			"選單少了 signal %s，battle_scene 接不上" % signal_name
+		).is_true()
+	menu.free()
 
 func _collect_gd_files(root: String) -> Array[String]:
 	var found: Array[String] = []
