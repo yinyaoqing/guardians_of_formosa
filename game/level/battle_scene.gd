@@ -20,7 +20,7 @@ const BuildSlotViewScript := preload("res://game/views/build_slot_view.gd")
 const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 
 ## 建塔點的置換標記。B3 會換成真正的美術。
-const SLOT_SPRITE := "res://game/assets/placeholder_slot.png"
+const SLOT_SPRITE := "res://game/assets/chapter01/prop_buildsite.png"
 
 const BattleHudScene := preload("res://ui/battle_hud.tscn")
 
