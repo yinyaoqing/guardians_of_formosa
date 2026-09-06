@@ -23,6 +23,8 @@ const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 const SLOT_SPRITE := "res://game/assets/chapter01/prop_buildsite.png"
 
 const BattleHudScene := preload("res://ui/battle_hud.tscn")
+const BuildMenuScene := preload("res://ui/build_menu.tscn")
+const RangeCircleScript := preload("res://game/views/range_circle.gd")
 
 @onready var _path_node: Path2D = $MainPath
 @onready var _view_root: Node2D = $Views
@@ -42,6 +44,14 @@ var _hud: BattleHud = null
 var _shown_tower_levels: Dictionary = {}   ## tower id -> int
 var _spawn_timer: float = 0.0
 
+var _build_menu: BuildMenu = null
+var _range_circle: RangeCircle = null
+
+## 選單目前畫的是哪一批選項。重算與重建按鈕只在這個簽章變動時做——
+## 每幀重建按鈕是白燒的配置，而 gold 一變（每次擊殺）買得起與否就可能翻轉。
+var _menu_signature: Array = []
+var _menu_options: Array[Dictionary] = []
+
 func _ready() -> void:
 	_registry.load_from_disk()
 
@@ -58,6 +68,15 @@ func _ready() -> void:
 	_hud.setup(world, _sim, StringName(_registry.levels[LEVEL_ID]["name_key"]))
 	_hud.pause_pressed.connect(_on_hud_pause_pressed)
 	_hud.speed_pressed.connect(_on_hud_speed_pressed)
+
+	_build_menu = BuildMenuScene.instantiate() as BuildMenu
+	add_child(_build_menu)
+	_build_menu.option_chosen.connect(_on_menu_option_chosen)
+	_build_menu.option_hovered.connect(_on_menu_option_hovered)
+	_build_menu.option_unhovered.connect(_on_menu_option_unhovered)
+
+	_range_circle = RangeCircleScript.new() as RangeCircle
+	_view_root.add_child(_range_circle)
 
 func _process(delta: float) -> void:
 	# 暫停時 advance 回傳 0，但佇列仍會被排空（建造與賣出正是玩家暫停下來規劃時
@@ -77,7 +96,7 @@ func _process(delta: float) -> void:
 	if ticks > 0 or had_intents:
 		_sync_views()
 	_interpolate_views()
-	_update_slot_highlight()
+	_update_slot_views()
 
 ## 把編輯器畫的 Curve2D 等距取樣成點陣列。
 ## core/ 只認得點陣列，不認得 Curve2D——這個轉換就是分層的邊界。
@@ -197,10 +216,45 @@ func _interpolate_views() -> void:
 	for view: ProjectileView in _projectile_views.values():
 		view.interpolate(alpha)
 
-## 每幀更新選取提示。建塔點是個位數，直接全部設定即可。
-func _update_slot_highlight() -> void:
+## 每幀更新選取提示、佔用狀態與選單。建塔點是個位數，直接全部設定即可。
+func _update_slot_views() -> void:
 	for view: BuildSlotView in _slot_views.values():
 		view.set_selected(view.slot_id == _controller.selected_slot_id)
+		var slot: BuildSlot = _sim.world.build_slots_by_id.get(view.slot_id)
+		view.set_occupied(slot != null and slot.occupied_by != 0)
+	_update_build_menu()
+
+## 選單是選取狀態的純函數：選取變了就開、關、移動。控制器裡沒有任何選單狀態，
+## 所以「點空白處關閉選單」是免費的——select_at 命中不到建塔點時本來就會清成 0。
+func _update_build_menu() -> void:
+	var signature := _current_menu_signature()
+	if signature == _menu_signature:
+		return
+	_menu_signature = signature
+
+	var slot_id := _controller.selected_slot_id
+	_menu_options = BuildMenuOptions.for_slot(_sim.world, slot_id)
+	if _menu_options.is_empty():
+		_build_menu.hide_menu()
+		_range_circle.hide_circle()
+		return
+
+	var slot: BuildSlot = _sim.world.build_slots_by_id.get(slot_id)
+	_build_menu.show_options(_menu_options, slot.position)
+	_show_range_for_selection(slot)
+
+## 選單只在這幾個值變動時重算。gold 在裡面，因為買得起與否會隨擊殺翻轉。
+func _current_menu_signature() -> Array:
+	var slot_id := _controller.selected_slot_id
+	var occupied := 0
+	var level := 0
+	var slot: BuildSlot = _sim.world.build_slots_by_id.get(slot_id)
+	if slot != null:
+		occupied = slot.occupied_by
+		var tower := _find_tower_view_owner(occupied)
+		if tower != null:
+			level = tower.level
+	return [slot_id, _sim.world.gold, occupied, level]
 
 ## 把原始事件翻成裝置無關的動作，交給控制器。
 ## 螢幕座標換算成世界座標需要 viewport，所以這一步留在場景。
@@ -222,3 +276,57 @@ func _on_hud_pause_pressed() -> void:
 
 func _on_hud_speed_pressed() -> void:
 	_controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), _sim.world)
+
+## 選中有塔的建塔點時顯示現有射程；空位不顯示，要滑過某一瓣才預覽。
+func _show_range_for_selection(slot: BuildSlot) -> void:
+	if slot.occupied_by == 0:
+		_range_circle.hide_circle()
+		return
+	var tower := _find_tower_view_owner(slot.occupied_by)
+	if tower == null:
+		_range_circle.hide_circle()
+		return
+	_range_circle.show_at(tower.position, tower.attack_range)
+
+## 選單的按鈕與鍵盤走同一條路：翻成 InputAction 餵給控制器。
+## B2 已經有測試守著「動作 → 意圖 → 路由器」那條路。
+func _on_menu_option_chosen(option_index: int) -> void:
+	if option_index < 0 or option_index >= _menu_options.size():
+		return
+	var option: Dictionary = _menu_options[option_index]
+	match StringName(option["kind"]):
+		BuildMenuOptions.KIND_BUILD:
+			_controller.handle(InputAction.choose_tower(int(option["choice_index"])), _sim.world)
+		BuildMenuOptions.KIND_UPGRADE:
+			_controller.handle(InputAction.simple(InputAction.UPGRADE), _sim.world)
+		BuildMenuOptions.KIND_SELL:
+			_controller.handle(InputAction.simple(InputAction.SELL), _sim.world)
+
+## 滑過某一瓣時預覽那個選擇會帶來的射程。觸控沒有 hover，依已定案的觸控模型
+## 點下去就建、不預覽——射程圈預覽是滑鼠獨有的額外好處。
+func _on_menu_option_hovered(option_index: int) -> void:
+	if option_index < 0 or option_index >= _menu_options.size():
+		return
+	var slot: BuildSlot = _sim.world.build_slots_by_id.get(_controller.selected_slot_id)
+	if slot == null:
+		return
+	var option: Dictionary = _menu_options[option_index]
+	match StringName(option["kind"]):
+		BuildMenuOptions.KIND_BUILD:
+			var levels: Array = _registry.towers[StringName(option["tower_id"])]["levels"]
+			_range_circle.show_at(slot.position, float(levels[0]["attack_range"]))
+		BuildMenuOptions.KIND_UPGRADE:
+			var tower := _find_tower_view_owner(slot.occupied_by)
+			if tower == null:
+				return
+			var next_levels: Array = _registry.towers[tower.tower_id]["levels"]
+			_range_circle.show_at(tower.position, float(next_levels[tower.level]["attack_range"]))
+		_:
+			pass
+
+func _on_menu_option_unhovered() -> void:
+	var slot: BuildSlot = _sim.world.build_slots_by_id.get(_controller.selected_slot_id)
+	if slot == null:
+		_range_circle.hide_circle()
+		return
+	_show_range_for_selection(slot)
