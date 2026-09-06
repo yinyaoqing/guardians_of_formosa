@@ -35,7 +35,9 @@ func _make_world() -> WorldState:
 		},
 	}
 	world.available_towers = [&"musket_tower", &"hunter_tower"] as Array[StringName]
-	world.sell_refund_ratio = 0.75
+	# 刻意不用 0.75——那是 level_01 出貨用的值，用它的話把任一份 _refund_for
+	# 的 ratio 參數寫死成 0.75 仍然會綠燈。見 test_the_refund_matches_what_selling_actually_pays。
+	world.sell_refund_ratio = 0.65
 	world.gold = 200
 	var slot := BuildSlot.new()
 	slot.position = SLOT_POS
@@ -111,6 +113,19 @@ func test_unaffordable_towers_are_still_listed_but_marked() -> void:
 		"獵寮 50 而金幣 60，應標為買得起"
 	).is_true()
 
+func test_a_cost_exactly_equal_to_gold_is_affordable() -> void:
+	# 60 對 70/50 兩種塔而言，`>=` 與 `>` 給的答案完全一樣，drift 成 `>`
+	# 不會被 test_unaffordable_towers_are_still_listed_but_marked 抓到。
+	# 這裡釘住剛好打平的邊界：第一輪真實會走到的狀態是 200 起始 → 蓋銃樓花 70
+	# → 剩 130 → 二階升級剛好要 130，玩家點得下去，選單卻可能把它畫暗。
+	var world := _make_world()
+	world.gold = 130
+	_place_tower(world, &"musket_tower", 1)
+	var options := BuildMenuOptions.for_slot(world, _slot(world).id)
+	assert_bool(options[0]["affordable"]).override_failure_message(
+		"升級費 130 剛好等於金幣 130，應標為買得起"
+	).is_true()
+
 func test_an_occupied_slot_offers_upgrade_and_sell() -> void:
 	var world := _make_world()
 	_place_tower(world, &"musket_tower", 1)
@@ -153,19 +168,33 @@ func test_the_refund_matches_what_selling_actually_pays() -> void:
 	# 這一輪價值最高的測試。退款的算法在 BuildSystem 與選單各有一份
 	# （ui/ 的分層守衛不允許選單認識 BuildSystem），兩者漂移時
 	# 玩家會看到「賣出 +52」而實際只回 45——除非有一條測試同時看兩邊。
-	var world := _make_world()
-	var tower := _place_tower(world, &"musket_tower", 2)
+	#
+	# 兩階都要測：level 2 的投入總額 200 × 0.65 = 130.0 剛好整除，floori、
+	# roundi、ceili 三個都回 130，看不出取捨的差別。level 1 的 70 × 0.65 = 45.5
+	# 才會讓 floor 與 round 分道揚鑣——只測 level 2 的話，_refund_for 把 floori
+	# 換成 roundi 這種「看起來像修 bug」的整理，測試會渾然不覺。
+	_assert_refund_matches_actual_payout(&"musket_tower", 1)
+	_assert_refund_matches_actual_payout(&"musket_tower", 2)
 
-	# musket_tower 在測試資料裡只有兩階，level 2 已達最高階，
-	# 所以只剩 sell 一個選項，落在 index 0（見 test_a_maxed_tower_offers_no_upgrade）。
-	var shown_refund: int = BuildMenuOptions.for_slot(world, _slot(world).id)[0]["refund"]
+## 建一座指定等級的塔、讀選單顯示的退款、實際賣掉、比較兩者。
+## sell 選項一定是陣列最後一筆（未滿級時前面還有一筆 upgrade，見 for_slot）。
+func _assert_refund_matches_actual_payout(tower_id: StringName, level: int) -> void:
+	var world := _make_world()
+	var tower := _place_tower(world, tower_id, level)
+
+	var options := BuildMenuOptions.for_slot(world, _slot(world).id)
+	var sell_option: Dictionary = options[options.size() - 1]
+	assert_str(sell_option["kind"]).override_failure_message(
+		"選項陣列最後一筆應該是 sell，測試假設不成立"
+	).is_equal("sell")
+	var shown_refund: int = sell_option["refund"]
 
 	var gold_before := world.gold
 	BuildSystem.apply(world, GameIntent.sell(tower.id))
 	var actually_paid := world.gold - gold_before
 
 	assert_int(shown_refund).override_failure_message(
-		"選單顯示的退款 %d 與實際退的 %d 不一致" % [shown_refund, actually_paid]
+		"level %d：選單顯示的退款 %d 與實際退的 %d 不一致" % [level, shown_refund, actually_paid]
 	).is_equal(actually_paid)
 	assert_int(actually_paid).override_failure_message(
 		"退款不該是 0，否則這條測試在比較兩個零"
