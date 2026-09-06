@@ -151,10 +151,10 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	enemy.position = world.paths[PATH_ID].position_at(0.0)
 	world.add_enemy(enemy)
 
-	var tower_def: Dictionary = registry.towers[&"archer_tower"]
+	var tower_def: Dictionary = registry.towers[&"musket_tower"]
 	var level_def: Dictionary = tower_def["levels"][0]
 	var tower := Tower.new()
-	tower.tower_id = &"archer_tower"
+	tower.tower_id = &"musket_tower"
 	tower.position = DEMO_TOWER_POSITION
 	tower.damage = level_def["damage"]
 	tower.damage_type = StringName(tower_def["damage_type"])
@@ -183,13 +183,13 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	# 「alive 變 false」在死亡與洩漏兩種情況下都成立,真正能分辨勝負的是
 	# leaked——這才是數值失衡時真正會炸開的斷言,因此把說明訊息掛在這裡。
 	assert_bool(enemy.leaked).override_failure_message(
-		"出貨數值(data/enemies/orc_grunt.json 的 hp/armor 與 data/towers/archer_tower.json 第一級的 damage/attack_range/fire_interval)已經無法在 demo 路徑上讓一座塔擊殺一隻敵人——敵人在塔殺死它之前就洩漏到路徑終點,里程碑的視覺驗收會失敗,請重新調整平衡數值。"
+		"出貨數值(data/enemies/orc_grunt.json 的 hp/armor 與 data/towers/musket_tower.json 第一級的 damage/attack_range/fire_interval)已經無法在 demo 路徑上讓一座塔擊殺一隻敵人——敵人在塔殺死它之前就洩漏到路徑終點,里程碑的視覺驗收會失敗,請重新調整平衡數值。"
 	).is_false()
 	assert_bool(enemy.alive).is_false()
 	assert_int(world.gold).is_equal(starting_gold + bounty)
 	assert_int(world.lives).is_equal(starting_lives)
 	assert_float(tower.projectile_speed).override_failure_message(
-		"Tower.projectile_speed 沒有從關卡資料複製過去——改 data/towers/archer_tower.json 的 projectile_speed 不會有任何效果"
+		"Tower.projectile_speed 沒有從關卡資料複製過去——改 data/towers/musket_tower.json 的 projectile_speed 不會有任何效果"
 	).is_equal_approx(float(level_def["projectile_speed"]), 0.001)
 
 func test_damage_is_not_applied_at_fire_time() -> void:
@@ -354,10 +354,10 @@ func test_shipped_data_drives_a_full_projectile_and_status_chain() -> void:
 	enemy.position = Vector2(50, 0)
 	world.add_enemy(enemy)
 
-	var tower_def: Dictionary = registry.towers[&"archer_tower"]
+	var tower_def: Dictionary = registry.towers[&"musket_tower"]
 	var level_def: Dictionary = tower_def["levels"][0]
 	var tower := Tower.new()
-	tower.tower_id = &"archer_tower"
+	tower.tower_id = &"musket_tower"
 	tower.position = Vector2(50, 0)
 	tower.damage = level_def["damage"]
 	tower.damage_type = StringName(tower_def["damage_type"])

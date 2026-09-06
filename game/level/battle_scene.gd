@@ -36,6 +36,10 @@ var _projectile_views: Dictionary = {}  ## instance_id -> ProjectileView
 var _slot_views: Dictionary = {}        ## slot_id -> BuildSlotView
 var _controller := InteractionController.new()
 var _hud: BattleHud = null
+
+## 每座塔上次畫出來的等級。升級換圖靠它偵測，與 HUD 只在值變動時才寫 Label
+## 是同一個手法——每幀無條件重載一張 128px 的圖是白燒的。
+var _shown_tower_levels: Dictionary = {}   ## tower id -> int
 var _spawn_timer: float = 0.0
 
 func _ready() -> void:
@@ -127,15 +131,20 @@ func _sync_views() -> void:
 	for tower: Tower in _sim.world.towers:
 		if not _tower_views.has(tower.id):
 			var view := TowerViewScript.new() as TowerView
-			view.setup(tower.id, _registry.towers[tower.tower_id]["sprite"], tower.position)
+			view.setup(tower.id, _tower_sprite_for(tower), tower.position)
 			_view_root.add_child(view)
 			_tower_views[tower.id] = view
+			_shown_tower_levels[tower.id] = tower.level
+		elif _shown_tower_levels.get(tower.id, 0) != tower.level:
+			_shown_tower_levels[tower.id] = tower.level
+			(_tower_views[tower.id] as TowerView).set_sprite(_tower_sprite_for(tower))
 
 	for view_id: int in _tower_views.keys():
 		if _find_tower_view_owner(view_id) == null:
 			var view: TowerView = _tower_views[view_id]
 			view.queue_free()
 			_tower_views.erase(view_id)
+			_shown_tower_levels.erase(view_id)
 
 	for tower: Tower in _sim.world.towers:
 		if tower.target_id == 0:
@@ -152,6 +161,11 @@ func _find_tower_view_owner(view_id: int) -> Tower:
 		if tower.id == view_id:
 			return tower
 	return null
+
+## 塔的等級自 1 起算，對應 levels 陣列的索引 level - 1——與 BuildSystem 一致。
+func _tower_sprite_for(tower: Tower) -> String:
+	var levels: Array = _registry.towers[tower.tower_id]["levels"]
+	return levels[tower.level - 1]["sprite"]
 
 ## 投射物的生滅比敵人頻繁得多，且身分是 instance_id 而非實體 id。
 ## 新出現的建 view、已消失的釋放 view。

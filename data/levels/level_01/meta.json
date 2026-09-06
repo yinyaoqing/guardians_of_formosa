@@ -4,5 +4,5 @@
   "starting_gold": 200,
   "starting_lives": 20,
   "sell_refund_ratio": 0.75,
-  "available_towers": ["archer_tower"]
+  "available_towers": ["musket_tower", "hunter_tower"]
 }

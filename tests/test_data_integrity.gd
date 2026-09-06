@@ -79,11 +79,38 @@ func test_every_referenced_sprite_path_exists() -> void:
 		assert_bool(ResourceLoader.exists(path)).override_failure_message(
 			"敵人 %s 引用的貼圖不存在: %s" % [enemy_id, path]
 		).is_true()
+
+	# 塔的三階在美術上是完全不同的東西（火繩槍手／三人排槍／稜堡砲位），
+	# 所以圖在每一階裡，不在頂層。頂層另有 icon 給建塔選單用。
 	for tower_id: StringName in _registry.towers:
-		var path: String = _registry.towers[tower_id]["sprite"]
-		assert_bool(ResourceLoader.exists(path)).override_failure_message(
-			"塔 %s 引用的貼圖不存在: %s" % [tower_id, path]
+		var def: Dictionary = _registry.towers[tower_id]
+
+		assert_bool(def.has("icon")).override_failure_message(
+			"塔 %s 沒有 icon。建塔選單靠它顯示，缺了選單上會是一個空按鈕。" % tower_id
 		).is_true()
+		var icon_path: String = def["icon"]
+		assert_bool(ResourceLoader.exists(icon_path)).override_failure_message(
+			"塔 %s 的選單圖示不存在: %s" % [tower_id, icon_path]
+		).is_true()
+
+		var levels: Array = def["levels"]
+		for i in levels.size():
+			var level_def: Dictionary = levels[i]
+			assert_bool(level_def.has("sprite")).override_failure_message(
+				"塔 %s 第 %d 級沒有 sprite。升級後畫面要換圖，每階都要有自己的圖。" % [tower_id, i + 1]
+			).is_true()
+			var level_path: String = level_def.get("sprite", "")
+			assert_bool(ResourceLoader.exists(level_path)).override_failure_message(
+				"塔 %s 第 %d 級引用的貼圖不存在: %s" % [tower_id, i + 1, level_path]
+			).is_true()
+
+func test_no_tower_keeps_a_top_level_sprite() -> void:
+	# 舊 schema 的殘留。留著不會壞，但會讓下一個人以為那是圖的來源，
+	# 而實際被畫出來的是每階的 sprite——兩者不一致時無聲無息。
+	for tower_id: StringName in _registry.towers:
+		assert_bool(_registry.towers[tower_id].has("sprite")).override_failure_message(
+			"塔 %s 還留著頂層 sprite，那是舊 schema 的殘留" % tower_id
+		).is_false()
 
 ## DataRegistry._load_dir 用 id 欄位當字典的 key，兩個檔案宣告同一個 id
 ## 就會互相覆蓋,而且誰贏由作業系統的目錄列舉順序決定。
