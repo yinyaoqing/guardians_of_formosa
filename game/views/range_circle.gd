@@ -13,8 +13,12 @@ const SEGMENTS := 64
 
 var _radius: float = 0.0
 
+## 預設隱藏，但不覆蓋已經設好的狀態。
+## 專案裡的其他 view 都是 new() → setup() → add_child()，若這裡也照那個順序，
+## 無條件的 visible = false 會把先呼叫的 show_at 蓋掉，而且畫面上不會有任何線索。
 func _ready() -> void:
-	visible = false
+	if _radius <= 0.0:
+		visible = false
 
 func show_at(world_position: Vector2, radius: float) -> void:
 	position = world_position

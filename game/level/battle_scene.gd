@@ -19,7 +19,7 @@ const BuildSlotViewScript := preload("res://game/views/build_slot_view.gd")
 ## 目前只有一種塔，寫成常數即可。
 const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 
-## 建塔點的置換標記。B3 會換成真正的美術。
+## 建塔點的美術。空位時顯示，蓋了塔就隱藏——塔就站在同一個座標上。
 const SLOT_SPRITE := "res://game/assets/chapter01/prop_buildsite.png"
 
 const BattleHudScene := preload("res://ui/battle_hud.tscn")

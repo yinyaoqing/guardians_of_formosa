@@ -13,9 +13,6 @@ const COLOR_SELECTED := Color(1.30, 1.25, 1.05, 1.0)
 
 var slot_id: int = 0
 
-var _occupied: bool = false
-var _selected: bool = false
-
 func setup(p_slot_id: int, sprite_path: String, slot_position: Vector2) -> void:
 	slot_id = p_slot_id
 	texture = load(sprite_path)
@@ -23,9 +20,7 @@ func setup(p_slot_id: int, sprite_path: String, slot_position: Vector2) -> void:
 	modulate = COLOR_IDLE
 
 func set_selected(selected: bool) -> void:
-	_selected = selected
 	modulate = COLOR_SELECTED if selected else COLOR_IDLE
 
 func set_occupied(occupied: bool) -> void:
-	_occupied = occupied
 	visible = not occupied
