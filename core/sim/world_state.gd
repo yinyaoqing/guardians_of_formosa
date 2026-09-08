@@ -13,6 +13,8 @@ var effect_defs: Dictionary = {}   ## StringName -> Dictionary
 
 ## 塔的 JSON 定義與本關可用的塔種，同樣由 configure_for_level 注入。
 var tower_defs: Dictionary = {}              ## StringName -> Dictionary
+## 波次系統從這裡造敵人。core/ 不讀檔，所以定義由 configure_for_level 注入，
+## 與 tower_defs、effect_defs 同一個模式。
 var enemy_defs: Dictionary = {}               ## StringName -> Dictionary
 var available_towers: Array[StringName] = []
 var sell_refund_ratio: float = 0.0

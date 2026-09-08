@@ -275,6 +275,10 @@ func test_configure_for_level_wires_everything_the_world_needs() -> void:
 	assert_int(world.tower_defs.size()).override_failure_message(
 		"未注入塔的定義，建塔會找不到資料"
 	).is_greater(0)
+	assert_int(world.enemy_defs.size()).override_failure_message(
+		"未注入敵人定義，波次系統會生不出任何敵人——而且是靜默的，" +
+		"因為 WaveSystem 對找不到的定義只會 push_error 然後跳過那一隻"
+	).is_greater(0)
 	assert_int(world.available_towers.size()).override_failure_message(
 		"未注入本關可用塔種，所有建造都會被拒絕"
 	).is_equal(meta["available_towers"].size())
