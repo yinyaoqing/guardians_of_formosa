@@ -10,6 +10,7 @@ extends GdUnitTestSuite
 
 const UI_ROOT := "res://ui"
 const HUD_SCENE := "res://ui/battle_hud.tscn"
+const BUILD_MENU_SCENE := "res://ui/build_menu.tscn"
 
 ## 出現這些字串即代表 ui/ 繞過了 signal，自己動手做事。
 ## core/systems/ 底下每一個系統類別都要列進來——只列 BuildSystem 漏掉了
@@ -44,7 +45,13 @@ const FORBIDDEN_PATTERNS := [
 ##    緊接著另一個 `=` 的情況；`!=`、`<=`、`>=` 因為第一個字元不是
 ##    `=`/`+`/`-`/`*`/`/`，同樣不會匹配。
 ##  - 複合賦值 `+=`、`-=`、`*=`、`/=` 必須抓到，所以明列在運算子群組裡。
-const HELD_REFERENCE_TYPES := ["WorldState", "BattleSim"]
+## B3b 起 ui/build_menu_options.gd 會從 world.towers / world.build_slots_by_id
+## 拉出活的 Tower、BuildSlot 參照來讀（例如 tower.level）。這些型別跟
+## WorldState/BattleSim 一樣是「持有就可能被誤改欄位」的對象——
+## `tower.level += 1` 不含任何系統類別名稱，FORBIDDEN_PATTERNS 抓不到，
+## 只有這裡的寫入偵測抓得到。Enemy、Projectile 目前 ui/ 還沒碰，
+## 一併列入是預防下一次真的碰到時忘記補這條守衛。
+const HELD_REFERENCE_TYPES := ["WorldState", "BattleSim", "Tower", "BuildSlot", "Enemy", "Projectile"]
 var _held_ref_regex := RegEx.create_from_string("(\\w+)\\s*:\\s*(?:%s)\\b" % "|".join(HELD_REFERENCE_TYPES))
 
 ## HUD 每個節點的路徑、型別與 mouse_filter 期望值。.tscn 是盲寫的，路徑打錯、
@@ -169,6 +176,77 @@ func test_the_hud_exposes_both_signals() -> void:
 			"HUD 少了 signal %s，battle_scene 接不上" % signal_name
 		).is_true()
 	hud.free()
+
+func test_the_build_menu_scene_loads_and_exposes_its_signals() -> void:
+	var packed: PackedScene = load(BUILD_MENU_SCENE)
+	assert_bool(packed != null).override_failure_message(
+		"載入不了 %s；.tscn 是手寫的，格式錯誤只會在這裡或人工驗收現形" % BUILD_MENU_SCENE
+	).is_true()
+	var menu := packed.instantiate()
+	for signal_name: String in ["option_chosen", "option_hovered", "option_unhovered"]:
+		assert_bool(menu.has_signal(signal_name)).override_failure_message(
+			"選單少了 signal %s，battle_scene 接不上" % signal_name
+		).is_true()
+	menu.free()
+
+## show_options 的結構與 signal 行為。幾何（角度、座標）不驗——那是人工驗收的
+## 範圍——但按鈕數量、索引有沒有對上按下去的按鈕、以及「換一批選項後舊按鈕
+## 真的消失了」這三件事都測得到，而且都測得便宜。
+func test_build_menu_show_options_creates_buttons_and_reports_the_right_index() -> void:
+	var menu: BuildMenu = auto_free(BuildMenu.new())
+
+	var three_options: Array[Dictionary] = [
+		{"kind": "sell", "refund": 10},
+		{"kind": "sell", "refund": 20},
+		{"kind": "sell", "refund": 30},
+	]
+	menu.show_options(three_options, Vector2(400, 200))
+	assert_int(menu.get_child_count()).override_failure_message(
+		"show_options 給三個選項應該建出三顆按鈕"
+	).is_equal(3)
+
+	# 按下中間那顆，option_chosen 帶的必須是 1——這正是「按鈕捕捉到錯的索引」
+	# 這種 bug 會現形的地方：捕捉錯了，這裡收到的會是 0 或 2。
+	#
+	# 用單元素陣列而不是單純的 int 變數來接：GDScript 的 lambda 對外圍區域變數是
+	# 「建立當下拷貝一份值」而不是共用同一份，直接在 lambda 裡寫 `received_index = i`
+	# 改的是拷貝，外面的變數看不到。陣列是參考型別，拷貝的是參考，兩邊仍指向
+	# 同一份資料，這樣才能把 signal 帶的值帶出 lambda。
+	var received := [-1]
+	menu.option_chosen.connect(func(i: int) -> void: received[0] = i)
+	var middle_button := menu.get_child(1) as Button
+	middle_button.pressed.emit()
+	assert_int(received[0]).override_failure_message(
+		"中間按鈕（index 1）按下去應該回報 1，實際回報 %d" % received[0]
+	).is_equal(1)
+
+	# fix #1 的原地更新路徑：只改變暗與否，不重建、不改變按鈕數量。
+	var updated_options: Array[Dictionary] = [
+		{"kind": "sell", "refund": 10, "affordable": false},
+		{"kind": "sell", "refund": 20, "affordable": true},
+		{"kind": "sell", "refund": 30, "affordable": true},
+	]
+	menu.update_affordability(updated_options)
+	assert_int(menu.get_child_count()).override_failure_message(
+		"update_affordability 是原地更新，不該增減按鈕"
+	).is_equal(3)
+	assert_bool((menu.get_child(0) as Button).modulate.a < 1.0).override_failure_message(
+		"標成買不起的選項，對應按鈕應該被調暗"
+	).is_true()
+	assert_bool(is_equal_approx((menu.get_child(1) as Button).modulate.a, 1.0)).override_failure_message(
+		"標成買得起的選項不該被調暗"
+	).is_true()
+
+	# 換一批只有一個選項：重新叫 show_options 之後，子節點數要「穩定」回到 1。
+	# queue_free() 是 call_deferred("free")——這一行呼叫完的當下，舊的三顆按鈕
+	# 理論上還沒真的被移除，這一幀裡 get_child_count() 可能還看得到它們。
+	# 所以不能緊接著斷言；要先讓一次 idle frame 把延後的 free() 真正跑完，
+	# 才去看數量有沒有穩定下來。
+	menu.show_options([{"kind": "sell", "refund": 99}], Vector2(400, 200))
+	await await_idle_frame()
+	assert_int(menu.get_child_count()).override_failure_message(
+		"stale-button regression：show_options 換過一批選項後，子節點數該穩定回到 1"
+	).is_equal(1)
 
 func _collect_gd_files(root: String) -> Array[String]:
 	var found: Array[String] = []

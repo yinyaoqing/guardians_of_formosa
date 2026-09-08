@@ -6,8 +6,11 @@ hud.pause,暫停,Pause
 hud.resume,繼續,Resume
 level.level_01.name,熱蘭遮,Zeelandia
 enemy.orc_grunt.name,獸人步兵,Orc Grunt
-tower.archer_tower.name,弓箭塔,Archer Tower
+tower.musket_tower.name,銃樓,Musket Tower
+tower.hunter_tower.name,獵寮,Hunter's Lodge
 status.chill.name,寒冰,Chill
 status.poison.name,中毒,Poison
 status.stun_shock.name,暈眩,Stun
 status.sunder.name,破甲,Sunder
+menu.upgrade_format,升級 %d,Upgrade %d
+menu.sell_format,賣出 +%d,Sell +%d

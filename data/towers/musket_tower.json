@@ -1,0 +1,11 @@
+{
+  "id": "musket_tower",
+  "name_key": "tower.musket_tower.name",
+  "damage_type": "physical",
+  "icon": "res://game/assets/chapter01/icon_tower_musket.png",
+  "levels": [
+    {"cost": 70,  "damage": 18.0, "attack_range": 200.0, "fire_interval": 1.2, "projectile_speed": 700.0, "splash_radius": 0.0,  "on_hit_effects": [], "sprite": "res://game/assets/chapter01/tower_musket_t1.png"},
+    {"cost": 130, "damage": 30.0, "attack_range": 210.0, "fire_interval": 1.1, "projectile_speed": 700.0, "splash_radius": 0.0,  "on_hit_effects": [], "sprite": "res://game/assets/chapter01/tower_musket_t2.png"},
+    {"cost": 230, "damage": 52.0, "attack_range": 230.0, "fire_interval": 1.5, "projectile_speed": 480.0, "splash_radius": 70.0, "on_hit_effects": [], "sprite": "res://game/assets/chapter01/tower_musket_t3.png"}
+  ]
+}
