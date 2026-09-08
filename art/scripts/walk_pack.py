@@ -1,0 +1,149 @@
+"""行走循環實驗的素材打包：AI 幀 → 對齊的 128／48px 幀；皮影母本 → 軀幹 + 兩腿分件。
+
+    python art/scripts/walk_pack.py
+
+輸出到 art_src/04_walk/，供 game/fx/walk_demo.gd 讀取。
+
+AI 幀**不做 trim**：每幀單獨裁切會讓腳的位置在幀間跳動，必須以整張畫布等比縮放，
+幀間對齊靠「母本與各幀同畫布、同構圖」這個前提（walk_frames.py 的 prompt 要求同框同大小）。
+
+拆件用固定的水平切線（由人看母本決定，見 HEM／LEG_TOP／HIP）：
+  軀幹 = 切線以上（含衣襬，蓋住腿的接縫）
+  腿   = 切線以下，以 alpha 連通區分成後腿／前腿（母本是跨步姿勢，兩腿在衣襬下方分開）
+髖關節 pivot 放在腿頂中央往上、衣襬之內，旋轉時接縫被衣襬遮住。
+"""
+
+import json
+import os
+
+from PIL import Image
+
+import postprocess as pp
+
+REPO = pp.REPO
+RAW = os.path.join(REPO, "art_src", "01_raw")
+OUT = os.path.join(REPO, "art_src", "04_walk")
+PUPPET_SRC = os.path.join(OUT, "xp_shadow_musketeer_full.png")
+
+# 母本 xp_shadow_musketeer_flux2_00002_（688×907 去背後）的切線，單位：母本像素
+HEM = 720       # 軀幹保留到這裡（含衣襬）
+LEG_TOP = 690   # 腿從這裡開始（與衣襬重疊 30px，藏接縫）
+HIP = 645       # 髖關節 y
+
+
+def pack_frames(name: str, size: int, outline_w: int, tag: str) -> int:
+    src = os.path.join(RAW, f"xp_walk_{name}", "stage_edit")
+    if not os.path.isdir(src):
+        return 0
+    n = 0
+    for i in range(1, 5):
+        f = os.path.join(src, f"frame_{i}.png")
+        if not os.path.exists(f):
+            continue
+        # 扁平幾何的淺膚（#F2D6B8）與灰底相距只有 ~48，預設容差 46 會把臉和腳一起泛洪掉；收緊到 28
+        im = pp.remove_background(Image.open(f), 28)
+        im = _drop_specks(im, 400)
+        k = size / im.height
+        im = im.resize((max(1, round(im.width * k)), size), Image.LANCZOS)
+        im = pp.quantize(im)
+        im = pp.outline(im, outline_w)
+        im.save(os.path.join(OUT, f"{tag}_{i}.png"))
+        n += 1
+    return n
+
+
+def _drop_specks(im: Image.Image, min_px: int) -> Image.Image:
+    """去掉泛洪沒吃到的背景雜點：Klein 編輯輸出的灰底有細微噪聲，孤島會被描邊成紅點。"""
+    mask = im.split()[3].point(lambda a: 255 if a > 0 else 0)
+    keep = Image.new("L", im.size, 0)
+    kp = keep.load()
+    for comp in _components(mask):
+        if len(comp) < min_px:
+            continue
+        for x, y in comp:
+            kp[x, y] = 255
+    return Image.composite(im, Image.new("RGBA", im.size, (0, 0, 0, 0)), keep)
+
+
+def _components(mask: Image.Image) -> list[set[tuple[int, int]]]:
+    """alpha 遮罩的 4 連通區，回傳像素集合，依大小遞減。"""
+    w, h = mask.size
+    px = mask.load()
+    seen = set()
+    comps = []
+    for y in range(h):
+        for x in range(w):
+            if px[x, y] == 0 or (x, y) in seen:
+                continue
+            comp = set()
+            stack = [(x, y)]
+            seen.add((x, y))
+            while stack:
+                cx, cy = stack.pop()
+                comp.add((cx, cy))
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if 0 <= nx < w and 0 <= ny < h and px[nx, ny] and (nx, ny) not in seen:
+                        seen.add((nx, ny))
+                        stack.append((nx, ny))
+            comps.append(comp)
+    return sorted(comps, key=len, reverse=True)
+
+
+def slice_puppet() -> dict:
+    src = Image.open(PUPPET_SRC).convert("RGBA")
+    W, H = src.size
+    k = 128 / H  # 與 128px 幀同比例
+    cx, cy = W / 2, H / 2
+
+    body = src.copy()
+    body.paste((0, 0, 0, 0), (0, HEM, W, H))
+    legs = src.copy()
+    legs.paste((0, 0, 0, 0), (0, 0, W, LEG_TOP))
+    comps = _components(legs.split()[3].point(lambda a: 255 if a > 0 else 0))[:2]
+    assert len(comps) == 2, f"腿的連通區不是 2 個：{len(comps)}"
+    comps.sort(key=lambda c: sum(x for x, _ in c) / len(c))  # 左＝後腿、右＝前腿
+
+    meta = {}
+
+    def emit(name: str, im: Image.Image, pixels: set | None, pivot: tuple | None) -> None:
+        if pixels is not None:
+            mask = Image.new("L", im.size, 0)
+            mp = mask.load()
+            for x, y in pixels:
+                mp[x, y] = 255
+            im = Image.composite(im, Image.new("RGBA", im.size, (0, 0, 0, 0)), mask)
+        bbox = im.getbbox()
+        piece = im.crop(bbox)
+        piece = piece.resize((max(1, round(piece.width * k)), max(1, round(piece.height * k))), Image.LANCZOS)
+        piece = pp.quantize(piece)
+        piece.save(os.path.join(OUT, f"puppet_{name}.png"))
+        entry = {"origin": [round((bbox[0] - cx) * k, 2), round((bbox[1] - cy) * k, 2)]}
+        if pivot:
+            entry["pivot"] = [round((pivot[0] - cx) * k, 2), round((pivot[1] - cy) * k, 2)]
+        meta[name] = entry
+
+    emit("body", body, None, None)
+    for name, comp in zip(("leg_back", "leg_front"), comps):
+        top = min(y for _, y in comp)
+        xs = [x for x, y in comp if y <= top + 20]
+        emit(name, legs, comp, (sum(xs) / len(xs), HIP))
+    with open(os.path.join(OUT, "puppet.json"), "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=1)
+    return meta
+
+
+def main() -> int:
+    pp._console.fix()
+    os.makedirs(OUT, exist_ok=True)
+    for name, size, ow, tag in (("face", 128, 2, "face"), ("face", 48, 1, "face48"), ("shadow", 128, 2, "shadow")):
+        n = pack_frames(name, size, ow, tag)
+        print(f"  {tag:<8} {n} 幀")
+    if os.path.exists(PUPPET_SRC):
+        meta = slice_puppet()
+        print("  puppet  ", json.dumps(meta))
+    print(f"=== → {os.path.relpath(OUT, REPO)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

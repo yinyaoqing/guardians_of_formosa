@@ -1,0 +1,19 @@
+{
+  "_doc": "FLUX.2 Klein 4B 參考圖編輯（多參考圖編輯是 Klein 的原生能力）。接法照 ComfyUI 官方藍圖「Image Edit (Flux.2 Klein 4B)」：文字條件 → ReferenceLatent(參考圖 VAE 編碼) → 引導 → 取樣；輸出 latent 尺寸取自參考圖。藍圖用的是 klein-base + CFGGuider cfg 5；本檔用蒸餾版 klein-4b，故維持 cfg 1.0 + FluxGuidance，負向走 ConditioningZeroOut（同 a1_flux2_unit）。用途：行走循環實驗——餵母本圖，逐幀改 prompt 產「同一角色的不同姿勢」。",
+  "_roles": {"positive": "4", "ref": "11", "latent": "7", "sampler": "8", "save": "10"},
+  "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "flux-2-klein-4b.safetensors", "weight_dtype": "default"}},
+  "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen_3_4b_fp4_flux2.safetensors", "type": "flux2", "device": "default"}},
+  "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
+  "11": {"class_type": "LoadImage", "inputs": {"image": "placeholder.png"}},
+  "12": {"class_type": "ImageScaleToTotalPixels", "inputs": {"image": ["11", 0], "upscale_method": "nearest-exact", "megapixels": 1.0, "resolution_steps": 1}},
+  "13": {"class_type": "VAEEncode", "inputs": {"pixels": ["12", 0], "vae": ["3", 0]}},
+  "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": "placeholder"}},
+  "14": {"class_type": "ReferenceLatent", "inputs": {"conditioning": ["4", 0], "latent": ["13", 0]}},
+  "5": {"class_type": "FluxGuidance", "inputs": {"conditioning": ["14", 0], "guidance": 3.5}},
+  "6": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["14", 0]}},
+  "15": {"class_type": "GetImageSize", "inputs": {"image": ["12", 0]}},
+  "7": {"class_type": "EmptyFlux2LatentImage", "inputs": {"width": ["15", 0], "height": ["15", 1], "batch_size": 1}},
+  "8": {"class_type": "KSampler", "inputs": {"model": ["1", 0], "positive": ["5", 0], "negative": ["6", 0], "latent_image": ["7", 0], "seed": 16610430, "steps": 20, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}},
+  "9": {"class_type": "VAEDecode", "inputs": {"samples": ["8", 0], "vae": ["3", 0]}},
+  "10": {"class_type": "SaveImage", "inputs": {"images": ["9", 0], "filename_prefix": "flux2_edit"}}
+}
