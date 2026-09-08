@@ -25,9 +25,9 @@ import postprocess as pp
 REPO = pp.REPO
 RAW = os.path.join(REPO, "art_src", "01_raw")
 OUT = os.path.join(REPO, "art_src", "04_walk")
+# 預設母本：皮影銃卒 xp_shadow_musketeer_flux2_00002_（688×907 去背後）。切線單位是母本像素。
+# 換母本時用 --src/--hem/--leg-top/--hip 覆蓋；兩腿在衣襬下方相連（3/4 視角）時再給 --split-x。
 PUPPET_SRC = os.path.join(OUT, "xp_shadow_musketeer_full.png")
-
-# 母本 xp_shadow_musketeer_flux2_00002_（688×907 去背後）的切線，單位：母本像素
 HEM = 720       # 軀幹保留到這裡（含衣襬）
 LEG_TOP = 690   # 腿從這裡開始（與衣襬重疊 30px，藏接縫）
 HIP = 645       # 髖關節 y
@@ -91,19 +91,31 @@ def _components(mask: Image.Image) -> list[set[tuple[int, int]]]:
     return sorted(comps, key=len, reverse=True)
 
 
-def slice_puppet() -> dict:
-    src = Image.open(PUPPET_SRC).convert("RGBA")
+def slice_puppet(src_path: str = PUPPET_SRC, hem: int = HEM, leg_top: int = LEG_TOP, hip: int = HIP,
+                 split_x: int | None = None) -> dict:
+    src = Image.open(src_path).convert("RGBA")
     W, H = src.size
     k = 128 / H  # 與 128px 幀同比例
     cx, cy = W / 2, H / 2
 
     body = src.copy()
-    body.paste((0, 0, 0, 0), (0, HEM, W, H))
+    body.paste((0, 0, 0, 0), (0, hem, W, H))
     legs = src.copy()
-    legs.paste((0, 0, 0, 0), (0, 0, W, LEG_TOP))
-    comps = _components(legs.split()[3].point(lambda a: 255 if a > 0 else 0))[:2]
-    assert len(comps) == 2, f"腿的連通區不是 2 個：{len(comps)}"
-    comps.sort(key=lambda c: sum(x for x, _ in c) / len(c))  # 左＝後腿、右＝前腿
+    legs.paste((0, 0, 0, 0), (0, 0, W, leg_top))
+    mask = legs.split()[3].point(lambda a: 255 if a > 0 else 0)
+    if split_x is not None:
+        # 3/4 視角兩腿在衣襬下相連，連通區分不開：改以一條垂直線切
+        px = mask.load()
+        left, right = set(), set()
+        for y in range(leg_top, H):
+            for x in range(W):
+                if px[x, y]:
+                    (left if x < split_x else right).add((x, y))
+        comps = [left, right]
+    else:
+        comps = _components(mask)[:2]
+        assert len(comps) == 2, f"腿的連通區不是 2 個：{len(comps)}（3/4 視角請給 --split-x）"
+        comps.sort(key=lambda c: sum(x for x, _ in c) / len(c))  # 左＝後腿、右＝前腿
 
     meta = {}
 
@@ -128,7 +140,7 @@ def slice_puppet() -> dict:
     for name, comp in zip(("leg_back", "leg_front"), comps):
         top = min(y for _, y in comp)
         xs = [x for x, y in comp if y <= top + 20]
-        emit(name, legs, comp, (sum(xs) / len(xs), HIP))
+        emit(name, legs, comp, (sum(xs) / len(xs), hip))
     with open(os.path.join(OUT, "puppet.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=1)
     return meta
@@ -172,13 +184,20 @@ def main() -> int:
     pp._console.fix()
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--install", metavar="NAME", help="把拆件裝進 game/assets/puppets/<NAME> 與 data/puppets/<NAME>.json")
+    ap.add_argument("--src", default=PUPPET_SRC, help="拆件母本（去背後的全尺寸圖）")
+    ap.add_argument("--hem", type=int, default=HEM)
+    ap.add_argument("--leg-top", type=int, default=LEG_TOP)
+    ap.add_argument("--hip", type=int, default=HIP)
+    ap.add_argument("--split-x", type=int, default=None, help="兩腿以垂直線切開的 x（3/4 視角用）")
+    ap.add_argument("--skip-frames", action="store_true", help="只拆件，不重打包 AI 幀")
     args = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
-    for name, size, ow, tag in (("face", 128, 2, "face"), ("face", 48, 1, "face48"), ("shadow", 128, 2, "shadow")):
-        n = pack_frames(name, size, ow, tag)
-        print(f"  {tag:<8} {n} 幀")
-    if os.path.exists(PUPPET_SRC):
-        meta = slice_puppet()
+    if not args.skip_frames:
+        for name, size, ow, tag in (("face", 128, 2, "face"), ("face", 48, 1, "face48"), ("shadow", 128, 2, "shadow")):
+            n = pack_frames(name, size, ow, tag)
+            print(f"  {tag:<8} {n} 幀")
+    if os.path.exists(args.src):
+        meta = slice_puppet(args.src, args.hem, args.leg_top, args.hip, args.split_x)
         print("  puppet  ", json.dumps(meta))
         if args.install:
             install(args.install, meta)

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://3rg6hrbhv40t"
-path="res://.godot/imported/leg_front.png-3bed73a78f5a7282fd8d3054ec1cc521.ctex"
+uid="uid://cpiupq4d35ld0"
+path="res://.godot/imported/body.png-1f12491e16d04ee9a322155352e0b025.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://game/assets/puppets/xp_musketeer/leg_front.png"
-dest_files=["res://.godot/imported/leg_front.png-3bed73a78f5a7282fd8d3054ec1cc521.ctex"]
+source_file="res://game/assets/puppets/zheng_musketeer/body.png"
+dest_files=["res://.godot/imported/body.png-1f12491e16d04ee9a322155352e0b025.ctex"]
 
 [params]
 

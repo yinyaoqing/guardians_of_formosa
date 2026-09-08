@@ -27,6 +27,9 @@ WORKFLOWS = {
     "a": os.path.join(REPO, "art", "workflows", "a1_unit_ref_pose.api.json"),
     "b": os.path.join(REPO, "art", "workflows", "a1_stage_b_restyle.api.json"),
     "flux2": os.path.join(REPO, "art", "workflows", "a1_flux2_unit.api.json"),
+    # 2026-09-09 風格改扁平幾何無五官後的重跑。工作流與 flux2 相同，只是產出落在 stage_flat/，
+    # 讓 stage_flux2 的舊風格候選留著可比對，不被覆蓋。
+    "flat": os.path.join(REPO, "art", "workflows", "a1_flux2_unit.api.json"),
 }
 
 # 各工作流的節點編號不同（FLUX.2 的正向在 4、latent 在 7、KSampler 在 8），
@@ -51,6 +54,8 @@ def build_prompts(m: dict, asset: dict) -> tuple[str, str]:
             # 陣營識別色同樣要獨立成段。寫在 subject 句尾實測不會被畫出來。
             asset.get("marker_text", ""),
             m["shared"]["style"],
+            # 依類別追加的風格句（例如人物的無五官條款），緊接共用風格之後
+            m.get("style_by_cat", {}).get(cat, ""),
             m["shared"]["palette"],
             m["proportions"][cat],
         )
@@ -153,8 +158,8 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=16610430, help="1661/04/30 大潮")
     ap.add_argument("--timeout", type=float, default=1200.0)
     ap.add_argument("--force", action="store_true", help="重做已有足量產出的資產")
-    ap.add_argument("--stage", choices=["text", "a", "b", "flux2"], default="text",
-                    help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字")
+    ap.add_argument("--stage", choices=["text", "a", "b", "flux2", "flat"], default="text",
+                    help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字；flat=同 flux2，扁平幾何風格重跑")
     ap.add_argument("--dry-run", action="store_true", help="只印 prompt 不出圖")
     # 風格實驗用另一份清單、另一組資產 id，產出才不會混進 chapter01 的候選目錄。
     ap.add_argument("--manifest", default=MANIFEST, help="資產清單路徑（預設 chapter01）")

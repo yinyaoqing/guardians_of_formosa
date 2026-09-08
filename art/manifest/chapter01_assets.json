@@ -2,11 +2,14 @@
   "_doc": "第一章：熱蘭遮 1661 資產清單。欄位 subject 為 prompt 主體區塊，其餘由 generate_batch.py 依 cat 與 fac 組裝。對應規格：chapter-01-zeelandia-design.md §3、§4；art-direction-bible.md §3、§4。",
   "_source_stage_note": "選用欄位 source_stage：指定該資產「正確」候選所在的 stage（如 \"a\"），會覆蓋 postprocess.py 與 check_lighting.py 的 --stage 參數，只對該資產生效。原因：這兩支腳本預設吃 stage_flux2，但少數資產（如 enemy_warjunk）改走 IP-Adapter 參考圖路線（stage_a）才修正成功，stage_flux2 底下留的是被拒絕的舊候選。若沒有這個欄位，任何人照文件跑一次不帶 --stage 覆寫的標準指令，就會在不出錯、不觸發任何閘門的情況下，把 03_processed 裡正確的圖換回錯的——色票檢查只驗顏色，驗不出主體或剪影錯誤。這些圖後續會被 A3 拿去訓練風格 LoRA，一張錯的母本混進訓練集，之後所有生成都會被污染。沒有這個欄位的資產維持原行為（吃 --stage 參數指定的目錄）。",
   "shared": {
-    "style": "STYLE: simple flat cartoon game art, clean bold simplified shapes, minimal internal detail, large readable areas of flat color, simple shading with at most two tones per color, colored linework in dark umber and deep green instead of black with slightly varying line weight, strong warm-cool contrast of terracotta red against deep jade green, light from the upper left with one short hard cast shadow, cheerful clean and easy to read.",
-    "_style_note": "2026-09-04 改為簡單卡通化（使用者指示）。原本的膠彩顆粒／色層堆疊／粗筆觸描述已移除。保留的區隔點：彩色描邊（非粗黑均勻）、限定色域、左上平光、4 頭身。此改動與美術聖經 §1.1「上色」列的『膠彩質感：可見礦物顆粒、色層堆疊』相牴觸，該規格需一併修訂。",
+    "style": "STYLE: minimalist flat geometric vector illustration. Every shape is a clean flat polygon or smooth cut-out with hard edges; forms are built from a few large flat facets with a single straight split between the lit side (upper left) and a shaded side one step darker. Two or three flat tones per object, no outlines, no gradients, no texture, no brush strokes, no highlights. Bold readable silhouette, poster-flat.",
+    "_style_note": "2026-09-09 改為扁平幾何無五官（使用者決定，A2x §5 實測）。舊的平塗卡通風格保留在 _style_history。人物的無五官條款在 style_by_cat.unit，只加在單位類別；擺件、場景、圖示只吃共用的扁平幾何描述。",
     "palette": "PALETTE: terracotta #B5442E, deep ochre #8C3A22, banyan green #2F5B3A, ink green #1E4029, jade #5C8A4A, sand #C9A96B, sun-bleached sand #D9C08E, oyster-lime white #E8DCC6, indigo #2C5470, tidal teal #3E7A94, gamboge #E0A93B, cinnabar #A8332B, burnt umber linework #3A2A22.",
     "negative_base": "chibi, 2-head-tall proportions, thick uniform black outline, glossy plastic rendering, rim lighting, anime, manga, western fantasy, neon colors, purple, magenta, teal, pastel, blurred background, bokeh, depth of field, photorealism, 3D render, blender render, watermark, text, signature, caption, turnaround sheet, multiple views, character design sheet, prop callouts, costume plate, museum illustration, aged paper, parchment, paper texture, torn edges, sepia, botanical plate, japanese, kimono, ronin, samurai, geta sandals, ukiyo-e, woodblock print, seamless pattern, tileable texture, texture swatch",
-    "_negative_base_note": "japanese / ukiyo-e / kimono 等詞是實測回填：SDXL 對「17 世紀東亞 + 手繪」的預設先驗是日本，西拉雅與漢人單位會穩定跑成日本浪人。seamless pattern 一組則是 prop 類跑成無縫貼片圖案的對策。見 docs/art/A1-findings.md。"
+    "_negative_base_note": "japanese / ukiyo-e / kimono 等詞是實測回填：SDXL 對「17 世紀東亞 + 手繪」的預設先驗是日本，西拉雅與漢人單位會穩定跑成日本浪人。seamless pattern 一組則是 prop 類跑成無縫貼片圖案的對策。見 docs/art/A1-findings.md。",
+    "_style_history": {
+      "2026-09-04_flat_cartoon": "STYLE: simple flat cartoon game art, clean bold simplified shapes, minimal internal detail, large readable areas of flat color, simple shading with at most two tones per color, colored linework in dark umber and deep green instead of black with slightly varying line weight, strong warm-cool contrast of terracotta red against deep jade green, light from the upper left with one short hard cast shadow, cheerful clean and easy to read."
+    }
   },
   "framing": {
     "unit": "full body game sprite of a single standing character, head to toe fully visible, 3/4 front view, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty.",
@@ -347,5 +350,9 @@
   },
   "_pose_note": "FLUX.2 Klein 沒有可用的 ControlNet（只有 dev 版，非商用且架構不同），make_poses.py 的骨架圖轉不過去。改以文字指定姿勢——FLUX.2 的提示遵循度足以承擔。姿勢的目的不是好看，是**讓剪影在 128px 下彼此分得開**（章節規格 §3.4）。見 A1-findings.md §9.4。",
   "_marker_note": "美術聖經 §2.2：玩家方一律帶一塊藤黃 #E0A93B，敵方一律沒有——這是「塔＝島上的人」（章節規格 §0.2 決定一）的視覺接點，當來襲方換陣營時玩家一眼看得出自己的人沒變。藤黃原本寫在 subject 句尾，實測沒被畫出來；改成獨立段落後才生效，與 pose_text 同理。**規格衝突**：章節規格 §3.2 給藤牌兵「藤黃盾面」、陳澤「金」，與 §2.2 的敵方無藤黃相牴觸。此處依 §2.2 處理（該節明言是機制接點），敵方改用沙洲黃與青銅金。待確認。",
-  "_shadow_note": "精緻度規格 L1：接觸陰影是引擎端共用的橢圓貼圖（Sprite2D 掛在單位下方，隨 y 座標微調長寬與濃度），**不可烘進資產**，否則會有兩層陰影且無法動態調整。故 framing 明確要求腳下不畫陰影；L2 要的『短而硬的投影』指的是角色身上的明暗，不是地面橢圓。"
+  "_shadow_note": "精緻度規格 L1：接觸陰影是引擎端共用的橢圓貼圖（Sprite2D 掛在單位下方，隨 y 座標微調長寬與濃度），**不可烘進資產**，否則會有兩層陰影且無法動態調整。故 framing 明確要求腳下不畫陰影；L2 要的『短而硬的投影』指的是角色身上的明暗，不是地面橢圓。",
+  "style_by_cat": {
+    "unit": "The face is ONE smooth featureless flat shape with no eyes, no mouth, no nose, no eyebrows drawn — the only detail on the face is the vertical light/dark split. Hair, beard, hat, helmet and collar are flat faceted shapes. Hands are simple mitten shapes.",
+    "_doc": "依類別追加的風格句，接在 shared.style 之後（generate_batch.build_prompts）。無五官只對人物成立，擺件不需要。"
+  }
 }

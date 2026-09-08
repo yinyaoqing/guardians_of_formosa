@@ -205,3 +205,32 @@ layer 100  只有紙紋       ← 讓單位也躺在紙上
 規格層面的結論：敘事大圖的內容正確性不能只靠文字。§6 已證明 Klein 參考圖編輯能鎖住角色——**下一步應該把 §5 產出的無五官肖像（揆一、頭目、奴工）與 chapter01 的 VOC 火槍手當參考圖，用 `a2x_flux2_edit` 的多參考圖編輯合成場景**，讓「誰穿什麼」由參考圖決定、版畫媒介由 prompt 決定。這與 A1 §7.4 的教訓一致：內容靠圖、風格靠字。
 
 另：兩色套印（terracotta + jade）仍沒出現，產出是全彩木版畫。若要嚴格雙色，交給後處理量化到四色即可，不必靠模型。
+
+---
+
+## 9. 三個決定的落實（2026-09-09）
+
+使用者決定：① 戰場風格採**扁平幾何無五官**；② 地圖改 TileMap **排進 M1 收尾**（此為對「要不要排」的解讀：三項並列為行動項）；③ 母本集用新量化器重跑並比對。
+
+### 9.1 風格決定 → 規格與清單
+
+- 美術聖經 §1.1 加 2026-09-09 修訂註記（形、光、臉、動畫、辨識度五點；無五官一視同仁的倫理條款）。
+- `chapter01_assets.json`：`shared.style` 換成扁平幾何描述，舊的平塗卡通保留在 `_style_history`；新增 `style_by_cat.unit` 放無五官條款（只加在人物，擺件不需要）；`generate_batch.build_prompts` 在共用風格之後接類別風格句。
+- `generate_batch.py` 新增 `--stage flat`：工作流同 flux2，產出落 `stage_flat/`，舊風格候選不被覆蓋。33 張重出中（每資產 2 張），母本挑選仍是人工。
+- 戰場分件換成無五官版：`walk_pack.py` 拆件參數化（`--src/--hem/--leg-top/--hip/--split-x`，3/4 視角兩腿相連時以垂直線切），`data/enemies/zheng_musketeer.json` 指向 `data/puppets/zheng_musketeer.json`，皮影版 `xp_musketeer` 移除。截圖 `art_src/contact/xp_battle_faceless.png`。
+
+### 9.2 TileMap → M1 收尾
+
+架構規格 §9 里程碑表新增「M1 收尾：地圖改 TileMap」一列；設計規格 `docs/superpowers/specs/2026-09-09-m1b4-tilemap-map-design.md`（草案）：路徑折線為唯一真相同時驅動 `Path2D` 與地磚、潮汐改為換格子、擺件 y_sort + L1 陰影。實作計畫待寫。
+
+### 9.3 重跑比對：Oklab 被否決，RGB + 兩個針對性修正
+
+先用 §7.1 的 Oklab 版重跑 33 張與 `game/assets/chapter01` 逐像素比對（`art_src/contact/requantize_diff.json`）：每張 15–50% 像素改變，並排看有**三個回歸**——藤黃火焰／旗幟被拉成曝曬沙（陣營標記色消失）、奴工的極深膚被拉成硃砂暗（美術聖經 §2.1 明列的「壞掉」）、鐵人的鐵灰幾乎消失。Oklab 的距離由明度主導，對本色票這種「色相分得開、明度擠在一起」的小色票反而更差。
+
+用真實像素樣本測 RGB／Oklab／Oklab 加色度權重 2–8 倍，沒有一種變體全對。**改回 RGB 距離，只保留兩個針對性修正**（鐵灰改選擇性、色票補硃砂暗）：兩個原始問題（榕樹掉鐵灰、暗紅掉褐）都解掉，樣本裡沒有回歸。`postprocess.py --metric oklab` 留作實驗選項。
+
+RGB 版重跑的差異落在 5–28%（鐵灰被吸走的陰影像素回到正確色相），視覺上一致。**兩張差異異常的是候選來源問題，不是量化器**：
+- `enemy_ironman` 92%：母本集是從 2 張候選挑的，A2 Task 3 之後 `stage_flux2` 有 10 張，`postprocess` 取 `files[0]` 已是另一張。
+- `enemy_warjunk` 140%：**`game/assets` 裡是被拒絕的歐式蓋倫船**，正確的中式硬帆在 `stage_a`。`source_stage` 的釘死（`5ac00a0`）晚於資產進 `game/assets`（`3fee8fa`），舊圖沒被換掉。
+
+兩者都不在此時修：母本集即將整批換成扁平幾何風格重挑，屆時一併處理。教訓寫下來：**母本的候選來源必須記錄在清單裡**（A2 Task 4 的 `master_set.json` 尚未實作），否則「重跑」根本無法對到同一張圖。

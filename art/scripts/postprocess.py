@@ -126,17 +126,26 @@ def oklab(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
 IRON_GREY = "鐵灰"
 
 
-def nearest(rgb: tuple[int, int, int], targets: list[tuple[int, int, int]]) -> tuple[int, int, int]:
-    lab = oklab(rgb)
-    tl = [(t, oklab(t)) for t in targets]
-    return min(tl, key=lambda tt: sum((a - b) ** 2 for a, b in zip(lab, tt[1])))[0]
+def nearest(rgb: tuple[int, int, int], targets: list[tuple[int, int, int]], metric: str = "rgb") -> tuple[int, int, int]:
+    """最近色。預設 RGB 歐氏距離；metric="oklab" 供實驗。
+
+    2026-09-09 實測（A2x §9）：Oklab 對整個母本集重跑後，藤黃火焰／旗幟被拉成曝曬沙（陣營標記色消失）、
+    極深膚被拉成硃砂暗（美術聖經 §2.1 明列的「壞掉」）——Oklab 的距離由明度主導，對本色票這種
+    色相分得開、明度擠在一起的小色票反而更差。榕樹掉鐵灰與暗紅掉褐這兩個原始問題，
+    靠「鐵灰改選擇性」與「補硃砂暗」兩個針對性修正就解掉了，不需要換距離。
+    """
+    if metric == "oklab":
+        lab = oklab(rgb)
+        return min(targets, key=lambda t: sum((a - b) ** 2 for a, b in zip(lab, oklab(t))))
+    return min(targets, key=lambda t: (t[0] - rgb[0]) ** 2 + (t[1] - rgb[1]) ** 2 + (t[2] - rgb[2]) ** 2)
 
 
-def quantize(im: Image.Image, allow: set[str] = frozenset()) -> Image.Image:
-    """把每個像素映射到最近的色票色（Oklab 距離）。透明像素不動。
+def quantize(im: Image.Image, allow: set[str] = frozenset(), metric: str = "rgb") -> Image.Image:
+    """把每個像素映射到最近的色票色。透明像素不動。
 
-    第一版用 RGB 歐氏距離，三個實驗都被咬到：暗紅（#7B2A20）掉成深赭、
-    藍綠（#416A53）掉成鐵灰——RGB 距離不看色相，Oklab 看。
+    兩個實測抓到的問題（A2x §2.2、§4.2）各有針對性的修法：
+    暗紅（#7B2A20）掉成深赭 → 色票補「硃砂暗」；藍綠（#416A53）掉成鐵灰 → 鐵灰改選擇性（allow）。
+    距離維持 RGB，理由見 nearest()。
     """
     targets = [v for k, v in PALETTE.items() if k != IRON_GREY or IRON_GREY in allow] + SKIN
     im = im.convert("RGBA")
@@ -150,7 +159,7 @@ def quantize(im: Image.Image, allow: set[str] = frozenset()) -> Image.Image:
             key = (r >> 2, g >> 2, b >> 2)  # 量化快取，避免逐像素跑 19 次距離
             hit = cache.get(key)
             if hit is None:
-                hit = nearest((r, g, b), targets)
+                hit = nearest((r, g, b), targets, metric)
                 cache[key] = hit
             px[x, y] = (*hit, a)
     return im
@@ -254,6 +263,7 @@ def main() -> int:
     # 不動 03_processed 的正式產出。描邊寬度也應一併減半（--outline-width 1）。
     ap.add_argument("--size-scale", type=float, default=1.0, help="輸出尺寸倍率（0.5 = 單位 64px）")
     ap.add_argument("--out", default=OUT, help="輸出目錄（預設 art_src/03_processed）")
+    ap.add_argument("--metric", choices=["rgb", "oklab"], default="rgb", help="最近色距離（oklab 僅供實驗，見 nearest()）")
     args = ap.parse_args()
     out_dir = args.out
 
@@ -300,7 +310,7 @@ def main() -> int:
         # 順帶好處：量化在 128px 上跑，比在 1024px 上快一個數量級。
         out = fit(im, max(8, round(SIZE_BY_CAT.get(a["cat"], 128) * args.size_scale)))
         if not args.no_quantize:
-            out = quantize(out, set(a.get("allow", [])))
+            out = quantize(out, set(a.get("allow", [])), args.metric)
         # 場景是滿版貼片，沒有外輪廓可描。
         if not args.no_outline and a["cat"] != "scene":
             out = outline(out, args.outline_width)
