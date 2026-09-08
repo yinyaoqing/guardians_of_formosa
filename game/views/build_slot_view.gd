@@ -1,13 +1,16 @@
 class_name BuildSlotView
 extends Sprite2D
 
-## 建塔點的視覺。B2 的置換品——B3 會換成真正的美術與選取提示。
+## 建塔點的視覺。B3b 起是真美術（prop_buildsite），不再是白方塊。
 ##
-## 沒有它的話玩家看不到建塔點在哪、也看不到自己選中了什麼，
-## B2 的人工驗收會變成對著記憶中的座標盲按。
+## 有塔時隱藏：塔蓋在同一個座標上，標記留著只會從塔底下露出來。
+##
+## 選取提示改成輕微提亮而不是染色——真美術染色會變濁，而且選中的主要回饋
+## 其實是選單打開與射程圈出現，標記只需要一點呼應。三個分量等量提升，
+## 沒有偏向任一色頻，避免變成換了個顏色的染色。
 
-const COLOR_IDLE := Color(1.0, 1.0, 1.0, 0.30)
-const COLOR_SELECTED := Color(1.0, 0.88, 0.30, 0.85)
+const COLOR_IDLE := Color(1.0, 1.0, 1.0, 1.0)
+const COLOR_SELECTED := Color(1.25, 1.25, 1.25, 1.0)
 
 var slot_id: int = 0
 
@@ -19,3 +22,6 @@ func setup(p_slot_id: int, sprite_path: String, slot_position: Vector2) -> void:
 
 func set_selected(selected: bool) -> void:
 	modulate = COLOR_SELECTED if selected else COLOR_IDLE
+
+func set_occupied(occupied: bool) -> void:
+	visible = not occupied

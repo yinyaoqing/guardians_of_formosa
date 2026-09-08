@@ -1,0 +1,9 @@
+{
+  "id": "hunter_tower",
+  "name_key": "tower.hunter_tower.name",
+  "damage_type": "physical",
+  "icon": "res://game/assets/chapter01/icon_tower_hunter.png",
+  "levels": [
+    {"cost": 50, "damage": 7.0, "attack_range": 130.0, "fire_interval": 0.9, "projectile_speed": 620.0, "splash_radius": 0.0, "on_hit_effects": ["chill"], "sprite": "res://game/assets/chapter01/tower_hunter_t1.png"}
+  ]
+}
