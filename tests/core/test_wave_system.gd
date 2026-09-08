@@ -39,7 +39,12 @@ func _configure(world: WorldState, waves: Array) -> void:
 	world.waves = waves
 	world.reset_wave_state()
 
-## 推進 seconds 秒，一次一個 tick
+## 推進 seconds 秒，一次一個 tick。
+##
+## 注意 FRAME 是 1/30，二進位下不精確，所以 int(seconds / FRAME) 偶爾會比
+## 「預期的」tick 數少一個（例如 4.1 秒算出來是 122 而不是 123）。現有的測試
+## 都留了足夠餘裕吸收這一個 tick；若之後寫的測試卡在剛好一個 tick 的邊界上，
+## 要改用明確的 tick 數而不是秒數。
 func _run(world: WorldState, seconds: float) -> void:
 	var ticks := int(seconds / FRAME)
 	for i in ticks:
@@ -207,4 +212,23 @@ func test_total_spawned_matches_the_data() -> void:
 
 	assert_array(world.enemies).override_failure_message(
 		"兩波合計 3 + 2 = 5 隻，多生或少生都是節奏錯誤"
+	).has_size(5)
+
+func test_a_sub_tick_interval_spawns_several_in_one_tick() -> void:
+	# 這條守著 _tick_spawning 那個 while 迴圈存在的理由：interval 小於一個 tick 時，
+	# 一個 tick 要生好幾隻。換成 if 會把生成速率靜默地壓在每秒 30 隻，而症狀是
+	# 「最後一波感覺比資料上寫的稀疏」——現有資料與其他測試的 interval 全都遠大於
+	# 一個 tick，所以在這條之前沒有任何一條抓得到。
+	var world := _make_world()
+	_configure(world, [
+		{"delay": 0.0, "groups": [
+			{"enemy_id": "orc_grunt", "count": 5, "interval": 0.001, "path_id": "main", "start_delay": 0.0},
+		]},
+	])
+
+	WaveSystem.tick(world, FRAME)   # 倒數歸零，這一 tick 只開始不生成
+	WaveSystem.tick(world, FRAME)   # 這一 tick 要把五隻都生完
+
+	assert_array(world.enemies).override_failure_message(
+		"interval 0.001 秒遠小於一個 tick，一個 tick 應該生完五隻；只生一隻代表 while 被換成了 if"
 	).has_size(5)
