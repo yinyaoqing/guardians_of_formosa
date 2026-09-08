@@ -40,7 +40,9 @@ func test_the_third_star_is_permanently_unreachable() -> void:
 	# 排除不掉任何實作。改成掃一片輸入斷言上限，這樣任何一個會在某組輸入吐出 3
 	# 的分支都會被抓到。
 	for saved in [0, 1, 13, 14, 15, 19, 20]:
-		var world := _make_world(14, saved, 20)
+		# 第三個參數才是 civilians_remaining——star_count() 只讀它與門檻，
+		# 傳到第二個位置（starting_civilians）的話每一輪其實都是同一組輸入。
+		var world := _make_world(14, 20, saved)
 		assert_bool(ResultSystem.star_count(world) <= 2).override_failure_message(
 			"救到 %d 人時算出 %d 顆星。聚落建物還不存在，沒有東西可以「沒有失去」，上限就是 2。" % [
 				saved, ResultSystem.star_count(world)

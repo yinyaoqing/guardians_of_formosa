@@ -156,12 +156,18 @@ func _collect_gd_files(root: String) -> Array[String]:
 ## 就往永遠不會被排空的佇列塞一筆意圖，而畫面上完全看不出來。
 func test_battle_scene_gates_hud_buttons_after_the_battle_ends() -> void:
 	var source := FileAccess.get_file_as_string("res://game/level/battle_scene.gd")
-	assert_bool(source.contains("_hud_input_accepted")).override_failure_message(
+	# 不能用 contains("_hud_input_accepted")：`func _hud_input_accepted() -> bool:`
+	# 這行自己就含有它，只要函式定義著就永遠是 true——三個 handler 少呼叫任何一個
+	# 都抓不到，而那正是這條守衛存在的理由。改數守衛那一行，數字就是 HUD 按鈕數；
+	# 之後多加一顆按鈕，這裡會逼人回來看一次。
+	assert_int(source.count("if not _hud_input_accepted():")).override_failure_message(
 		"battle_scene 的 HUD 按鈕處理器必須在通關後拒收。
 " +
 		"advance() 通關後回傳 0，_apply_pending_intents() 不再執行，所以排進去的意圖
 " +
 		"永遠不會被清掉——pending_intents 每按一下長一筆，had_intents 從此恆真。
 " +
-		"headless 測試套件不執行場景腳本，沒有其他測試抓得到。"
-	).is_true()
+		"headless 測試套件不執行場景腳本，沒有其他測試抓得到。
+" +
+		"目前有三顆 HUD 按鈕（暫停、倍速、呼叫下一波），三個都要擋。"
+	).is_equal(3)
