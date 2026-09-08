@@ -52,5 +52,14 @@ func _load_level_dirs(dir_path: String) -> Dictionary:
 		assert(parsed is Dictionary, "JSON 格式錯誤: %s" % meta_path)
 		var meta: Dictionary = parsed
 		assert(meta.has("id"), "關卡 meta 缺少 id 欄位: %s" % meta_path)
+		# 波次單獨一個檔：八波的陣列擺進 meta.json 會把它撐得看不完。
+		var waves_path := dir_path.path_join(sub_dir).path_join("waves.json")
+		assert(FileAccess.file_exists(waves_path), "關卡目錄缺少 waves.json: %s" % sub_dir)
+		var waves_text := FileAccess.get_file_as_string(waves_path)
+		var waves_parsed: Variant = JSON.parse_string(waves_text)
+		assert(waves_parsed is Dictionary, "JSON 格式錯誤: %s" % waves_path)
+		var waves_data: Dictionary = waves_parsed
+		meta["waves"] = waves_data["waves"]
+		meta["call_bonus_per_second"] = waves_data["call_bonus_per_second"]
 		result[StringName(meta["id"])] = meta
 	return result

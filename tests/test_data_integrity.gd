@@ -377,3 +377,50 @@ func test_level_directory_name_matches_its_id() -> void:
 	assert_int(_registry.levels.size()).override_failure_message(
 		"關卡目錄數與註冊表大小不符，表示有兩個關卡宣告了同一個 id 而互相覆蓋"
 	).is_equal(count)
+
+func test_every_wave_group_references_real_data() -> void:
+	var found_any := false
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+
+		assert_bool(meta.has("waves")).override_failure_message(
+			"關卡 %s 沒有 waves——沒有波次就沒有一局" % level_id
+		).is_true()
+		var waves: Array = meta["waves"]
+		assert_int(waves.size()).override_failure_message(
+			"關卡 %s 的波次是空的" % level_id
+		).is_greater(0)
+
+		for i in waves.size():
+			var wave: Dictionary = waves[i]
+			var groups: Array = wave["groups"]
+			assert_int(groups.size()).override_failure_message(
+				"關卡 %s 第 %d 波沒有任何群組" % [level_id, i + 1]
+			).is_greater(0)
+
+			for group: Dictionary in groups:
+				found_any = true
+				var enemy_id := StringName(group["enemy_id"])
+				assert_bool(_registry.enemies.has(enemy_id)).override_failure_message(
+					"關卡 %s 第 %d 波引用了不存在的敵人 %s。打錯字要到那一波真的生成時才會噴錯。" % [level_id, i + 1, enemy_id]
+				).is_true()
+				assert_int(int(group["count"])).override_failure_message(
+					"關卡 %s 第 %d 波的 count 必須為正" % [level_id, i + 1]
+				).is_greater(0)
+				assert_float(float(group["interval"])).override_failure_message(
+					"關卡 %s 第 %d 波的 interval 必須為正，否則一個 tick 會把整波生完" % [level_id, i + 1]
+				).is_greater(0.0)
+
+	assert_bool(found_any).override_failure_message(
+		"一個波次群組都沒掃到，守衛形同虛設"
+	).is_true()
+
+func test_the_call_bonus_rate_is_present_and_sane() -> void:
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+		assert_bool(meta.has("call_bonus_per_second")).override_failure_message(
+			"關卡 %s 缺少 call_bonus_per_second，提前呼叫會永遠給 0 獎勵" % level_id
+		).is_true()
+		assert_int(int(meta["call_bonus_per_second"])).override_failure_message(
+			"關卡 %s 的提前呼叫獎勵必須為正，否則那個操作沒有意義" % level_id
+		).is_greater(0)

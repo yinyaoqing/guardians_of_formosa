@@ -16,6 +16,9 @@ var tower_defs: Dictionary = {}              ## StringName -> Dictionary
 ## 波次系統從這裡造敵人。core/ 不讀檔，所以定義由 configure_for_level 注入，
 ## 與 tower_defs、effect_defs 同一個模式。
 var enemy_defs: Dictionary = {}               ## StringName -> Dictionary
+var waves: Array = []                         ## 每筆是一波的定義
+var call_bonus_per_second: int = 0
+var wave_state := WaveState.new()
 var available_towers: Array[StringName] = []
 var sell_refund_ratio: float = 0.0
 
@@ -74,6 +77,10 @@ func configure_for_level(registry: DataRegistry, level_id: StringName) -> void:
 	gold = int(meta["starting_gold"])
 	civilians_remaining = int(meta["starting_civilians"])
 
+	waves = meta.get("waves", [])
+	call_bonus_per_second = int(meta.get("call_bonus_per_second", 0))
+	reset_wave_state()
+
 func add_enemy(enemy: Enemy) -> void:
 	if enemy.id == 0:
 		enemy.id = next_id()
@@ -100,3 +107,10 @@ func next_id() -> int:
 	var id := _next_entity_id
 	_next_entity_id += 1
 	return id
+
+## 把波次狀態重設到第一波的倒數。configure_for_level 之後、以及測試裡
+## 直接指定 waves 之後都要呼叫，否則倒數是 0、第一波會立刻開始。
+func reset_wave_state() -> void:
+	wave_state = WaveState.new()
+	if not waves.is_empty():
+		wave_state.countdown = float(waves[0]["delay"])
