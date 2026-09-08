@@ -106,6 +106,8 @@ func _apply_pending_intents() -> void:
 				paused = not paused
 			GameIntent.KIND_CYCLE_SPEED:
 				_cycle_speed()
+			GameIntent.KIND_CALL_NEXT_WAVE:
+				WaveSystem.call_next_wave(world)
 			_:
 				BuildSystem.apply(world, intent)
 	world.pending_intents.clear()

@@ -33,6 +33,8 @@ func handle(action: InputAction, world: WorldState) -> void:
 			world.queue_intent(GameIntent.toggle_pause())
 		InputAction.CYCLE_SPEED:
 			world.queue_intent(GameIntent.cycle_speed())
+		InputAction.CALL_NEXT_WAVE:
+			world.queue_intent(GameIntent.call_next_wave())
 		_:
 			pass
 

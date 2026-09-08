@@ -463,3 +463,21 @@ func test_a_finished_battle_stops_advancing() -> void:
 	assert_int(sim.tick_count).override_failure_message(
 		"通關後 tick 不該再前進"
 	).is_equal(ticks_before)
+
+func test_a_call_next_wave_intent_starts_the_wave_and_pays() -> void:
+	var world := _make_one_enemy_wave_world()
+	world.waves[0]["delay"] = 5.0
+	world.call_bonus_per_second = 2
+	world.reset_wave_state()
+	world.gold = 0
+	var sim := BattleSim.new(world)
+
+	world.queue_intent(GameIntent.call_next_wave())
+	sim.advance(FRAME)
+
+	assert_int(world.gold).override_failure_message(
+		"意圖必須真的走到 WaveSystem——倒數剩 5 秒、每秒 2，應該入帳 10"
+	).is_equal(10)
+	assert_array(world.enemies).override_failure_message(
+		"呼叫之後那一波要立刻開始生"
+	).has_size(1)
