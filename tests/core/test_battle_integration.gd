@@ -286,7 +286,13 @@ func test_configure_for_level_wires_everything_the_world_needs() -> void:
 	assert_int(world.gold).is_equal(int(meta["starting_gold"]))
 	assert_int(world.civilians_remaining).is_equal(int(meta["starting_civilians"]))
 	assert_int(world.starting_civilians).override_failure_message(
-		"未注入 starting_civilians，ResultSystem.star_count() 就沒有分母，星等永遠算不出來"
+		"未注入 starting_civilians，結算面板的「救到 N / M 人」就沒有分母 M。
+" +
+		"（星等本身不讀它——那讀的是 civilians_remaining 與 star_civilian_threshold。）
+" +
+		"注意這三條斷言在 configure_for_level 之後都等於同一個 meta 值，所以互換兩個
+" +
+		"欄位的 bug 三條都攔不到；要攔那個得等它們在遊戲中真的分開之後。"
 	).is_equal(int(meta["starting_civilians"]))
 	assert_int(world.star_civilian_threshold).override_failure_message(
 		"未注入 star_civilian_threshold，ResultSystem.star_count() 沒有門檻可比，第二顆星永遠拿不到"

@@ -150,3 +150,18 @@ func _collect_gd_files(root: String) -> Array[String]:
 	for sub_dir in dir.get_directories():
 		found.append_array(_collect_gd_files(root.path_join(sub_dir)))
 	return found
+
+## HUD 的按鈕走 GUI 事件階段，不經過 _unhandled_input，所以那裡的通關檢查擋不到
+## 它們——三個 _on_hud_* 各自要再擋一次。漏掉的話通關後暫停與倍速仍可按，每按一下
+## 就往永遠不會被排空的佇列塞一筆意圖，而畫面上完全看不出來。
+func test_battle_scene_gates_hud_buttons_after_the_battle_ends() -> void:
+	var source := FileAccess.get_file_as_string("res://game/level/battle_scene.gd")
+	assert_bool(source.contains("_hud_input_accepted")).override_failure_message(
+		"battle_scene 的 HUD 按鈕處理器必須在通關後拒收。
+" +
+		"advance() 通關後回傳 0，_apply_pending_intents() 不再執行，所以排進去的意圖
+" +
+		"永遠不會被清掉——pending_intents 每按一下長一筆，had_intents 從此恆真。
+" +
+		"headless 測試套件不執行場景腳本，沒有其他測試抓得到。"
+	).is_true()

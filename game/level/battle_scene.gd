@@ -298,13 +298,25 @@ func _unhandled_input(event: InputEvent) -> void:
 ## HUD 的按鈕與鍵盤走同一條路：翻成 InputAction 餵給控制器，而不是直接改 sim。
 ## B2 已經有測試守著「動作 → 意圖 → 路由器」那條路；另開一條的話那條路上
 ## 一條測試都沒有，而兩條路遲早會漂移。
+## HUD 的按鈕走 GUI 事件階段，Button 會就地消費掉點擊並發 signal——**完全不經過
+## _unhandled_input**，所以那裡的通關檢查擋不到它們。通關後 advance() 回傳 0、
+## 佇列不再被排空，這三顆若不各自擋一次，每按一下就往永遠不會清空的佇列塞一筆。
+func _hud_input_accepted() -> bool:
+	return not _sim.world.battle_finished
+
 func _on_hud_pause_pressed() -> void:
+	if not _hud_input_accepted():
+		return
 	_controller.handle(InputAction.simple(InputAction.TOGGLE_PAUSE), _sim.world)
 
 func _on_hud_speed_pressed() -> void:
+	if not _hud_input_accepted():
+		return
 	_controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), _sim.world)
 
 func _on_hud_call_wave_pressed() -> void:
+	if not _hud_input_accepted():
+		return
 	_controller.handle(InputAction.simple(InputAction.CALL_NEXT_WAVE), _sim.world)
 
 ## 通關時把結算面板叫出來。只叫一次——面板不是每幀重畫的東西。
@@ -315,6 +327,11 @@ func _update_result_panel() -> void:
 	if _result_shown or not _sim.world.battle_finished:
 		return
 	_result_shown = true
+
+	# 通關後就不再更新選單與射程圈了（見 _process 的說明），所以要在這裡收一次，
+	# 否則最後一隻敵人剛好在選單開著時死掉，那個選單會凍在結算面板旁邊直到重來。
+	_build_menu.hide_menu()
+	_range_circle.hide_circle()
 
 	var stars := ResultSystem.star_count(_sim.world)
 	_result_panel.show_result(stars, _sim.world.waves.size(), _sim.world.civilians_remaining, _sim.world.starting_civilians)
