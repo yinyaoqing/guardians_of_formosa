@@ -12,7 +12,12 @@
   "proportions": {
     "unit": "PROPORTIONS: stylised puppet proportions — a large head in profile with a clear nose-and-chin line, short sturdy body, about 4 head-heights from crown to sole, thick simplified limbs, bold readable silhouette at 128 pixels."
   },
-  "size": { "unit": [768, 1024] },
+  "size": {
+    "unit": [
+      768,
+      1024
+    ]
+  },
   "negatives": {
     "zheng": "queue hairstyle, braid, shaved forehead, Qing dynasty uniform, samurai armor, ashigaru, japanese, boots, shoes, European knight, chainmail, great helm",
     "siraya": "feather headdress, native american, war paint, tribal mask, Polynesian tattoo, generic tribal, Atayal pattern, Paiwan pattern",
@@ -38,7 +43,10 @@
       "name": "皮影實驗：鐵人軍",
       "subject": "a 17th-century Ming Chinese heavy infantryman of the Iron Men corps as a shadow puppet. Full-body Chinese lamellar armour rendered as a dense cut-out grid of small rectangular plates covering torso, arms and legs, a rounded Chinese iron helmet with a lamellar neck guard, a solid featureless iron face mask with no visible face, a round rattan shield hung on the back, BARE FEET with no boots. The hide is iron grey and burnt umber only, no bright colors anywhere. An enormous two-handed Chinese horse-cutting sabre with a long straight single-edged blade.",
       "pose_text": "POSE: very wide braced stance in profile, feet far apart, the sabre gripped with both hands and resting across the shoulders behind the neck so the blade extends far behind the body — a broad, heavy, rectangular mass.",
-      "_silhouette_intent": "寬矩形塊 + 後伸長刀"
+      "_silhouette_intent": "寬矩形塊 + 後伸長刀",
+      "allow": [
+        "鐵灰"
+      ]
     },
     {
       "id": "xp_shadow_hunter",

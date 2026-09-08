@@ -6,6 +6,7 @@ hud.pause,暫停,Pause
 hud.resume,繼續,Resume
 level.level_01.name,熱蘭遮,Zeelandia
 enemy.orc_grunt.name,獸人步兵,Orc Grunt
+enemy.zheng_musketeer.name,鄭軍銃卒,Zheng Musketeer
 tower.musket_tower.name,銃樓,Musket Tower
 tower.hunter_tower.name,獵寮,Hunter's Lodge
 status.chill.name,寒冰,Chill

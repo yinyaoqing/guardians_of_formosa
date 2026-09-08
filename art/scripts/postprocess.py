@@ -101,9 +101,44 @@ def trim(im: Image.Image, pad: int = 2) -> Image.Image:
     return im.crop((max(0, l - pad), max(0, t - pad), min(w, r + pad), min(h, b + pad)))
 
 
-def quantize(im: Image.Image) -> Image.Image:
-    """把每個像素映射到最近的色票色。透明像素不動。"""
-    targets = list(PALETTE.values()) + SKIN
+def _srgb_to_linear(c: float) -> float:
+    c /= 255.0
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def oklab(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
+    """sRGB → Oklab（Björn Ottosson, 2020）。距離在這個空間裡才接近人眼的「像不像」。"""
+    r, g, b = (_srgb_to_linear(v) for v in rgb)
+    l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b
+    m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b
+    s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b
+    l, m, s = l ** (1 / 3), m ** (1 / 3), s ** (1 / 3)
+    return (
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+    )
+
+
+# 鐵灰是鐵人軍的陣營色，卻是色票裡唯一的中性灰：在 RGB 空間坐在正中央，任何低飽和的
+# 中間色（榕樹樹冠 #416A53、陰影紅）都會被它吸走——A2x §4.2 實測。故預設不參與量化，
+# 只對清單裡明列 "allow": ["鐵灰"] 的資產開放。
+IRON_GREY = "鐵灰"
+
+
+def nearest(rgb: tuple[int, int, int], targets: list[tuple[int, int, int]]) -> tuple[int, int, int]:
+    lab = oklab(rgb)
+    tl = [(t, oklab(t)) for t in targets]
+    return min(tl, key=lambda tt: sum((a - b) ** 2 for a, b in zip(lab, tt[1])))[0]
+
+
+def quantize(im: Image.Image, allow: set[str] = frozenset()) -> Image.Image:
+    """把每個像素映射到最近的色票色（Oklab 距離）。透明像素不動。
+
+    第一版用 RGB 歐氏距離，三個實驗都被咬到：暗紅（#7B2A20）掉成深赭、
+    藍綠（#416A53）掉成鐵灰——RGB 距離不看色相，Oklab 看。
+    """
+    targets = [v for k, v in PALETTE.items() if k != IRON_GREY or IRON_GREY in allow] + SKIN
     im = im.convert("RGBA")
     px = im.load()
     cache: dict[tuple[int, int, int], tuple[int, int, int]] = {}
@@ -115,7 +150,7 @@ def quantize(im: Image.Image) -> Image.Image:
             key = (r >> 2, g >> 2, b >> 2)  # 量化快取，避免逐像素跑 19 次距離
             hit = cache.get(key)
             if hit is None:
-                hit = min(targets, key=lambda c: (c[0] - r) ** 2 + (c[1] - g) ** 2 + (c[2] - b) ** 2)
+                hit = nearest((r, g, b), targets)
                 cache[key] = hit
             px[x, y] = (*hit, a)
     return im
@@ -265,7 +300,7 @@ def main() -> int:
         # 順帶好處：量化在 128px 上跑，比在 1024px 上快一個數量級。
         out = fit(im, max(8, round(SIZE_BY_CAT.get(a["cat"], 128) * args.size_scale)))
         if not args.no_quantize:
-            out = quantize(out)
+            out = quantize(out, set(a.get("allow", [])))
         # 場景是滿版貼片，沒有外輪廓可描。
         if not args.no_outline and a["cat"] != "scene":
             out = outline(out, args.outline_width)

@@ -1,0 +1,12 @@
+{
+  "id": "zheng_musketeer",
+  "name_key": "enemy.zheng_musketeer.name",
+  "hp": 120.0,
+  "speed": 45.0,
+  "armor": 0.2,
+  "magic_resist": 0.0,
+  "bounty": 6,
+  "sprite": "res://game/assets/puppets/xp_musketeer/body.png",
+  "puppet": "xp_musketeer",
+  "_note": "數值暫沿用 orc_grunt（M0 灰盒），只為讓分件動畫在真戰場上動起來。第一章正式數值依章節規格 §4.1 另訂。"
+}

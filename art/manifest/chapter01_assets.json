@@ -180,7 +180,10 @@
       "subject": "a 17th-century Ming Chinese heavy infantryman. Chinese lamellar armour made of hundreds of small overlapping rectangular iron plates laced with cord, NOT European chainmail and NOT a European great helm. A rounded Chinese iron helmet with a neck guard of the same lamellar plates, and a separate iron face mask covering the whole face. An enormous two-handed Chinese horse-cutting sabre with a long straight single-edged blade, held across the shoulders. A round rattan shield slung on the back. BARE FEET, no boots, no shoes. Bulky rectangular heavy silhouette, iron grey with no bright colors.",
       "ref": "ref_ming.jpg",
       "pose": "ironman_stance",
-      "pose_text": "POSE: very wide braced stance, feet far apart, an enormous two-handed sabre resting across the shoulders behind the neck with both arms raised and out — a broad rectangular mass."
+      "pose_text": "POSE: very wide braced stance, feet far apart, an enormous two-handed sabre resting across the shoulders behind the neck with both arms raised and out — a broad rectangular mass.",
+      "allow": [
+        "鐵灰"
+      ]
     },
     {
       "id": "enemy_sapper",

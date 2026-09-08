@@ -80,6 +80,37 @@ func test_every_referenced_sprite_path_exists() -> void:
 			"敵人 %s 引用的貼圖不存在: %s" % [enemy_id, path]
 		).is_true()
 
+## 分件動畫的敵人多一個 puppet 欄位，指向 data/puppets/<id>.json。
+## 這條守的是「JSON 指到的每一塊貼圖都在」——分件缺一塊不會報錯，只會少一條腿。
+func test_every_enemy_puppet_is_well_formed() -> void:
+	for enemy_id: StringName in _registry.enemies:
+		var def: Dictionary = _registry.enemies[enemy_id]
+		if not def.has("puppet"):
+			continue
+		var puppet_path := "res://data/puppets/%s.json" % def["puppet"]
+		assert_bool(FileAccess.file_exists(puppet_path)).override_failure_message(
+			"敵人 %s 的 puppet 定義不存在: %s" % [enemy_id, puppet_path]
+		).is_true()
+		var puppet: Variant = JSON.parse_string(FileAccess.get_file_as_string(puppet_path))
+		assert_bool(puppet is Dictionary and puppet.has("parts")).override_failure_message(
+			"%s 必須是帶 parts 陣列的物件" % puppet_path
+		).is_true()
+		var roles := {}
+		for part: Dictionary in puppet["parts"]:
+			for field: String in ["name", "texture", "origin", "pivot", "role"]:
+				assert_bool(part.has(field)).override_failure_message(
+					"%s 的分件缺少欄位 %s" % [puppet_path, field]
+				).is_true()
+			assert_bool(ResourceLoader.exists(part["texture"])).override_failure_message(
+				"%s 的分件 %s 引用的貼圖不存在: %s" % [puppet_path, part.get("name"), part.get("texture")]
+			).is_true()
+			roles[part["role"]] = true
+		# 行走循環至少要有軀幹與兩條腿，否則 EnemyView 沒東西可擺
+		for role: String in ["body", "leg_a", "leg_b"]:
+			assert_bool(roles.has(role)).override_failure_message(
+				"%s 缺少角色 %s 的分件" % [puppet_path, role]
+			).is_true()
+
 	# 塔的三階在美術上是完全不同的東西（火繩槍手／三人排槍／稜堡砲位），
 	# 所以圖在每一階裡，不在頂層。頂層另有 icon 給建塔選單用。
 	for tower_id: StringName in _registry.towers:

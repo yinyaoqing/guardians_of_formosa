@@ -91,7 +91,7 @@ func _process(delta: float) -> void:
 	_spawn_timer -= float(ticks) * BattleSim.TICK_DELTA
 	if _spawn_timer <= 0.0:
 		_spawn_timer = SPAWN_INTERVAL
-		_spawn_enemy(&"orc_grunt")
+		_spawn_enemy(&"zheng_musketeer")
 
 	if ticks > 0 or had_intents:
 		_sync_views()
@@ -130,7 +130,8 @@ func _spawn_enemy(enemy_id: StringName) -> void:
 	_sim.world.add_enemy(enemy)
 
 	var view := EnemyViewScript.new() as EnemyView
-	view.setup(enemy.id, _registry.enemies[enemy_id]["sprite"], enemy.position)
+	var def: Dictionary = _registry.enemies[enemy_id]
+	view.setup(enemy.id, def["sprite"], enemy.position, def.get("puppet", ""))
 	_view_root.add_child(view)
 	_enemy_views[enemy.id] = view
 

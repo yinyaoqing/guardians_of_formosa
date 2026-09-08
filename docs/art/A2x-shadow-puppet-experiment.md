@@ -167,3 +167,29 @@ layer 100  只有紙紋       ← 讓單位也躺在紙上
 - **Klein 參考圖編輯升格為正式產線工具**：產同角色的替代姿勢、拆件用的分件圖、以及肖像。美術聖經 §7.4 的 Blender 粗模路線可以撤。
 - 架構規格 §4.7「不用骨骼動畫」的理由（AI 產不出透視一致的分件）在平面風格下不成立，應改寫為「分件動畫，平面拆件」。
 - 先修量化器，再繼續任何母本審查——三個實驗都被它咬到。
+
+---
+
+## 7. 修量化器 + 分件動畫接進戰場（同日）
+
+### 7.1 量化器
+
+`quantize()` 改用 **Oklab 距離**，並把**鐵灰改為選擇性**：預設不參與量化，只對清單裡明列 `"allow": ["鐵灰"]` 的資產（鐵人軍）開放。實測：
+
+| 顏色 | 舊（RGB） | 新（Oklab、無鐵灰） |
+|---|---|---|
+| 榕樹樹冠 `#416A53` | 鐵灰 ✗ | 榕蔭綠 ✓ |
+| 陰影紅 `#7B2A20` | 深赭（褐） | 仍是深赭 |
+
+第二列說明**暗紅不是距離算法的問題，是色票沒有暗的紅**——深赭是紅瓦赭的陰影階，但它偏橙褐，硃砂沒有自己的陰影階。故色票補一階 **硃砂暗 `#7A2A24`**（美術聖經 §2.1 已同步），之後 `#7B2A20`／`#7A2E2A` 落到硃砂暗，`#8B3A35`（偏亮）仍落深赭，屬合理。
+
+`data/art_palette.json` 是量化器與 GdUnit 色票測試的共用來源，補色只改一處。
+
+### 7.2 分件動畫進 `EnemyView`
+
+- `EnemyView` 從 `Sprite2D` 改為 `Node2D`：敵人定義有 `"puppet"` 就依 `data/puppets/<id>.json` 建分件，否則維持單張貼圖。API（`setup`／`on_tick`／`interpolate`）不變，`battle_scene.gd` 只多傳一個參數。
+- 相位由**走過的距離**推進（`stride_px` 像素一圈），速度變步頻跟著變，不需要幀；往左走整個節點水平翻轉。
+- `walk_pack.py --install <name>` 把拆件貼圖裝進 `game/assets/puppets/<name>/`、定義寫進 `data/puppets/<name>.json`。
+- 新敵人 `zheng_musketeer`（數值暫沿用 orc_grunt），`battle_scene` 改生它；`test_data_integrity` 新增 `test_every_enemy_puppet_is_well_formed` 守分件定義與貼圖存在。
+
+踩到的坑：新加的 PNG 與 CSV 在 headless 測試前要先 `godot --headless --import`，否則 `ResourceLoader.exists()` 對未匯入的檔案回 false、翻譯檔也不會重生。

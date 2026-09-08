@@ -13,8 +13,10 @@ AI 幀**不做 trim**：每幀單獨裁切會讓腳的位置在幀間跳動，�
 髖關節 pivot 放在腿頂中央往上、衣襬之內，旋轉時接縫被衣襬遮住。
 """
 
+import argparse
 import json
 import os
+import shutil
 
 from PIL import Image
 
@@ -132,8 +134,45 @@ def slice_puppet() -> dict:
     return meta
 
 
+def install(name: str, meta: dict) -> None:
+    """把拆件裝進遊戲：貼圖進 game/assets/puppets/<name>/、定義進 data/puppets/<name>.json。
+
+    遊戲端的 JSON 格式（EnemyView._build_puppet 讀）：parts 依繪製順序排列，
+    role 決定誰是腿、誰是軀幹；origin／pivot 是相對圖心的像素座標（128px 版）。
+    """
+    asset_dir = os.path.join(REPO, "game", "assets", "puppets", name)
+    os.makedirs(asset_dir, exist_ok=True)
+    os.makedirs(os.path.join(REPO, "data", "puppets"), exist_ok=True)
+    parts = []
+    for piece, role in (("leg_back", "leg_a"), ("leg_front", "leg_b"), ("body", "body")):
+        shutil.copyfile(os.path.join(OUT, f"puppet_{piece}.png"), os.path.join(asset_dir, f"{piece}.png"))
+        entry = meta[piece]
+        parts.append({
+            "name": piece,
+            "texture": f"res://game/assets/puppets/{name}/{piece}.png",
+            "origin": entry["origin"],
+            "pivot": entry.get("pivot", entry["origin"]),
+            "role": role,
+        })
+    definition = {
+        "_doc": f"分件動畫定義，由 art/scripts/walk_pack.py --install {name} 產生。parts 依繪製順序；"
+                "origin／pivot 為相對圖心的像素（128px 版）。swing_deg 腿擺幅、bob_px 軀幹起伏、"
+                "stride_px 走幾像素算一圈——EnemyView 以走過的距離推進相位。",
+        "parts": parts,
+        "swing_deg": 28,
+        "bob_px": 2,
+        "stride_px": 40,
+    }
+    with open(os.path.join(REPO, "data", "puppets", f"{name}.json"), "w", encoding="utf-8") as f:
+        json.dump(definition, f, ensure_ascii=False, indent=1)
+    print(f"  installed → game/assets/puppets/{name}/, data/puppets/{name}.json")
+
+
 def main() -> int:
     pp._console.fix()
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--install", metavar="NAME", help="把拆件裝進 game/assets/puppets/<NAME> 與 data/puppets/<NAME>.json")
+    args = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     for name, size, ow, tag in (("face", 128, 2, "face"), ("face", 48, 1, "face48"), ("shadow", 128, 2, "shadow")):
         n = pack_frames(name, size, ow, tag)
@@ -141,6 +180,8 @@ def main() -> int:
     if os.path.exists(PUPPET_SRC):
         meta = slice_puppet()
         print("  puppet  ", json.dumps(meta))
+        if args.install:
+            install(args.install, meta)
     print(f"=== → {os.path.relpath(OUT, REPO)}")
     return 0
 
