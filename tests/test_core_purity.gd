@@ -99,6 +99,35 @@ func test_battle_scene_wires_up_the_hud() -> void:
 		"倍速鈕會正常顯示、正常可點，點下去卻毫無反應，同上一條，鍵盤仍然管用，\n" +
 		"讀不出這是接線漏掉而不是設計如此。"
 	).is_true()
+	assert_bool(source.contains("call_wave_pressed.connect")).override_failure_message(
+		"battle_scene.gd 沒有接上 _hud.call_wave_pressed。\n" +
+		"呼叫下一波的按鈕會正常顯示、正常可點，點下去卻毫無反應，同上兩條，\n" +
+		"鍵盤的 N 鍵仍然管用，讀不出這是接線漏掉而不是設計如此。"
+	).is_true()
+
+## 通關的收尾同樣是「靜默漏接」會出事的地方：少了 restart_pressed 的連線，
+## 「再來一次」鈕看起來完好、按下去卻沒有任何反應；少了 _update_result_panel()
+## 的呼叫，通關那一刻直接卡死——每隻敵人、投射物與 Label 全部凍結，沒有任何
+## 面板出現，玩家會以為遊戲當掉，而不是少了一步收尾。headless 測試套件不執行
+## 場景腳本，兩者都只有原始碼文本檢查抓得到。
+func test_battle_scene_wires_up_the_result_panel() -> void:
+	var battle_scene_path := "res://game/level/battle_scene.gd"
+	var source := FileAccess.get_file_as_string(battle_scene_path)
+	assert_bool(source.contains("restart_pressed.connect")).override_failure_message(
+		"battle_scene.gd 沒有接上 _result_panel.restart_pressed。\n" +
+		"結算面板的「再來一次」鈕會正常顯示、正常可點，點下去卻毫無反應——\n" +
+		"玩家只能手動重開關卡，而畫面上看不出任何異狀。"
+	).is_true()
+	# 不能用 contains("_update_result_panel()")：函式定義那一行
+	# `func _update_result_panel() -> void:` 本身就含有這個子字串，
+	# 只要函式還存在，這個判斷永遠是 true，抓不到「定義了卻沒被呼叫」。
+	# 呼叫端是無接收者的自呼叫，寫法與定義那行的尾巴完全相同，唯一能分辨
+	# 兩者的辦法是數出現次數：只有定義，代表沒人呼叫；定義 + 呼叫，至少兩次。
+	assert_int(source.count("_update_result_panel()")).override_failure_message(
+		"battle_scene.gd 的 _process() 沒有呼叫 _update_result_panel()（只找到函式定義本身）。\n" +
+		"通關那一刻會直接卡死：advance() 回傳 0 後，每隻敵人、投射物與 Label 全部凍結，\n" +
+		"卻沒有任何結算面板出現——玩家會以為遊戲當掉，而不是少了收尾的一步。"
+	).is_greater(1)
 
 ## 造敵人的邏輯只能有一份。DataRegistry 若自己重新展開欄位，兩條路就會漂移，
 ## 而 headless 測試不會發現——兩邊各自都「正確」，只是不一致。

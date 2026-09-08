@@ -93,7 +93,11 @@ func _process(delta: float) -> void:
 	if ticks > 0 or had_intents:
 		_sync_views()
 	_interpolate_views()
-	_update_slot_views()
+	# 通關後停止更新選取提示與建造選單：advance() 已經回傳 0、_apply_pending_intents()
+	# 不會再跑，這裡若繼續呼叫，點擊建塔點排出的意圖就會卡在 pending_intents 裡
+	# 永遠沒有人清空，had_intents 因此永遠是 true，_sync_views() 也會跟著永遠執行。
+	if not _sim.world.battle_finished:
+		_update_slot_views()
 	_update_result_panel()
 
 ## 把編輯器畫的 Curve2D 等距取樣成點陣列。
@@ -274,7 +278,15 @@ func _current_menu_structural_signature(slot_id: int, slot: BuildSlot) -> Array:
 ## 把原始事件翻成裝置無關的動作，交給控制器。
 ## 螢幕座標換算成世界座標需要 viewport，所以這一步留在場景。
 ## 關卡整幅入鏡、無鏡頭平移，因此只差一個畫布變換。
+##
+## 通關後直接不理會輸入：advance() 已經回傳 0，選取與建造再也沒有意義，
+## 讓 _controller 繼續處理只會把意圖排進一個永遠沒人清空的佇列。
+## 結算面板自己的按鈕不受影響——Button 是 Control，會在 GUI 事件階段
+## 先吃掉點擊、直接呼叫它自己的 pressed，事件根本不會落到這裡的
+## _unhandled_input；只有沒被任何 Control 接住的事件才會走到這裡。
 func _unhandled_input(event: InputEvent) -> void:
+	if _sim.world.battle_finished:
+		return
 	var world_position: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * event.position \
 		if event is InputEventMouse else Vector2.ZERO
 	var action := MouseKeyboardInput.translate(event, world_position)
@@ -297,20 +309,15 @@ func _on_hud_call_wave_pressed() -> void:
 
 ## 通關時把結算面板叫出來。只叫一次——面板不是每幀重畫的東西。
 ##
-## 星等依第一章規格 §4.6。第三顆（未失去聚落建物）恆為未達成，因為聚落建物
-## 還不存在；面板照樣畫出它的位置，之後補上時不必改版面。
+## 星等規則住在 core/systems/result_system.gd，這裡只負責讀 WorldState 顯示——
+## 門檻與起始平民數都經由 configure_for_level() 注入，不再直接讀 registry。
 func _update_result_panel() -> void:
 	if _result_shown or not _sim.world.battle_finished:
 		return
 	_result_shown = true
 
-	var meta: Dictionary = _registry.levels[LEVEL_ID]
-	var total := int(meta["starting_civilians"])
-	var saved := _sim.world.civilians_remaining
-	var stars := 1
-	if saved >= int(meta["star_civilian_threshold"]):
-		stars = 2
-	_result_panel.show_result(stars, _sim.world.waves.size(), saved, total)
+	var stars := ResultSystem.star_count(_sim.world)
+	_result_panel.show_result(stars, _sim.world.waves.size(), _sim.world.civilians_remaining, _sim.world.starting_civilians)
 
 func _on_restart_pressed() -> void:
 	get_tree().reload_current_scene()

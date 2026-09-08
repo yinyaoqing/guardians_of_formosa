@@ -99,8 +99,8 @@ func _process(_delta: float) -> void:
 		_shown_speed = speed
 		_speed_button.text = tr("hud.speed_format") % speed
 
-	var wave_index := _sim.world.wave_state.next_wave_index
-	var wave_total := _sim.world.waves.size()
+	var wave_index := _world.wave_state.next_wave_index
+	var wave_total := _world.waves.size()
 	if wave_index != _shown_wave_index or wave_total != _shown_wave_total:
 		_shown_wave_index = wave_index
 		_shown_wave_total = wave_total
@@ -109,10 +109,29 @@ func _process(_delta: float) -> void:
 		_wave_label.text = tr("hud.wave_format") % [mini(wave_index + 1, wave_total), wave_total]
 
 	# 倒數只顯示到秒。每幀寫一次 Label 是白燒的配置，而秒數一秒才變一次。
-	var countdown := 0 if _sim.world.wave_state.spawning else ceili(_sim.world.wave_state.countdown)
-	if countdown != _shown_countdown:
-		_shown_countdown = countdown
-		_countdown_label.text = tr("hud.wave_incoming") if countdown <= 0 else tr("hud.countdown_format") % countdown
+	var countdown := 0 if _world.wave_state.spawning else ceili(_world.wave_state.countdown)
+
+	# 全部波次生完之後，WaveSystem 不會再改 countdown——它停在最後一次被
+	# 減到的 0.0。單看 countdown 分不出「生成中」與「已經全部生完，剩下清場」
+	# 這兩種情境，兩者的 countdown 都是 0；用 wave_index/wave_total 額外分辨。
+	# all_done 用獨立的 -1 當顯示鍵，確保從「生成中」(countdown 0) 切到
+	# 「已清場」時，即使 countdown 數值沒變，_shown_countdown 比對也會偵測到
+	# 需要換字——否則清場的 60~75 秒整段時間會沿用生成中的「進行中」文字，
+	# 讓玩家誤以為下一波要來了。
+	var all_done := wave_index >= wave_total and not _world.wave_state.spawning
+	var display_key := -1 if all_done else countdown
+	if display_key != _shown_countdown:
+		_shown_countdown = display_key
+		if all_done:
+			_countdown_label.text = tr("hud.waves_cleared")
+		elif countdown <= 0:
+			_countdown_label.text = tr("hud.wave_incoming")
+		else:
+			_countdown_label.text = tr("hud.countdown_format") % countdown
+		# 規格 §8.1：呼叫鈕只在倒數中才按得下去。countdown <= 0 涵蓋生成中與
+		# 全部生完的收尾兩種情境，跟 WaveSystem.call_next_wave() 靜默忽略的
+		# 條件是同一組——按下去沒有反應時，按鈕本身至少要看起來按不下去。
+		_call_wave_button.disabled = countdown <= 0
 
 func _on_pause_button_pressed() -> void:
 	pause_pressed.emit()
