@@ -1,0 +1,58 @@
+{
+  "_doc": "風格實驗：地圖擺件（2026-09-08）。TileMap 實驗需要獨立的樹／石擺件，chapter01 清單沒有。風格與構圖區塊由 chapter01_assets.json 複製（用 art/scripts 內的一次性腳本產生），資產 id 加 xp_prop_ 前綴。用法：python art/scripts/generate_batch.py --manifest art/manifest/experiment_props.json --stage flux2 --batch 2",
+  "shared": {
+    "style": "STYLE: simple flat cartoon game art, clean bold simplified shapes, minimal internal detail, large readable areas of flat color, simple shading with at most two tones per color, colored linework in dark umber and deep green instead of black with slightly varying line weight, strong warm-cool contrast of terracotta red against deep jade green, light from the upper left with one short hard cast shadow, cheerful clean and easy to read.",
+    "_style_note": "2026-09-04 改為簡單卡通化（使用者指示）。原本的膠彩顆粒／色層堆疊／粗筆觸描述已移除。保留的區隔點：彩色描邊（非粗黑均勻）、限定色域、左上平光、4 頭身。此改動與美術聖經 §1.1「上色」列的『膠彩質感：可見礦物顆粒、色層堆疊』相牴觸，該規格需一併修訂。",
+    "palette": "PALETTE: terracotta #B5442E, deep ochre #8C3A22, banyan green #2F5B3A, ink green #1E4029, jade #5C8A4A, sand #C9A96B, sun-bleached sand #D9C08E, oyster-lime white #E8DCC6, indigo #2C5470, tidal teal #3E7A94, gamboge #E0A93B, cinnabar #A8332B, burnt umber linework #3A2A22.",
+    "negative_base": "chibi, 2-head-tall proportions, thick uniform black outline, glossy plastic rendering, rim lighting, anime, manga, western fantasy, neon colors, purple, magenta, teal, pastel, blurred background, bokeh, depth of field, photorealism, 3D render, blender render, watermark, text, signature, caption, turnaround sheet, multiple views, character design sheet, prop callouts, costume plate, museum illustration, aged paper, parchment, paper texture, torn edges, sepia, botanical plate, japanese, kimono, ronin, samurai, geta sandals, ukiyo-e, woodblock print, seamless pattern, tileable texture, texture swatch",
+    "_negative_base_note": "japanese / ukiyo-e / kimono 等詞是實測回填：SDXL 對「17 世紀東亞 + 手繪」的預設先驗是日本，西拉雅與漢人單位會穩定跑成日本浪人。seamless pattern 一組則是 prop 類跑成無縫貼片圖案的對策。見 docs/art/A1-findings.md。"
+  },
+  "framing": {
+    "prop": "a single hand-painted 2D game prop drawn from a slightly raised three-quarter angle, one small object, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty."
+  },
+  "proportions": {
+    "prop": "PROPORTIONS: compact chunky simplified game asset, bold readable silhouette at 128 pixels."
+  },
+  "size": {
+    "prop": [
+      896,
+      896
+    ]
+  },
+  "negatives": {
+    "none": ""
+  },
+  "negatives_by_cat": {
+    "prop": "people, characters, crowd, landscape, scenery, wide vista, still life painting, furniture, table, ground shadow, shadow ellipse, cast shadow on the floor"
+  },
+  "assets": [
+    {
+      "id": "xp_prop_banyan",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件實驗：榕樹",
+      "subject": "a single large banyan tree, a round dense dome of deep jade green foliage in two or three flat tones, thick short trunk with a few hanging aerial roots, drawn as one chunky rounded blob."
+    },
+    {
+      "id": "xp_prop_bamboo",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件實驗：竹叢",
+      "subject": "a single clump of tall green bamboo, six or seven straight culms leaning slightly outward with sparse leaf tufts at the top, drawn as one tall narrow simplified tuft."
+    },
+    {
+      "id": "xp_prop_rock",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件實驗：礁石",
+      "subject": "a single low coral reef rock, pale grey oyster-lime colour with a darker underside, a few barnacle dots, rounded chunky boulder shape."
+    },
+    {
+      "id": "xp_prop_palm",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件實驗：林投",
+      "subject": "a single screw pine (pandanus) shrub of coastal Formosa, a spiky rosette of long stiff green leaves on a short stilt-rooted trunk, drawn as one compact spiky tuft."
+    }
+  ]
+}

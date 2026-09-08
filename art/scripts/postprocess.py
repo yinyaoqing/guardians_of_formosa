@@ -214,9 +214,15 @@ def main() -> int:
     ap.add_argument("--no-outline", action="store_true", help="跳過統一描邊")
     ap.add_argument("--outline-width", type=int, default=2, help="描邊寬度（最終像素）")
     ap.add_argument("--verify-only", action="store_true", help="不重跑，只檢查現有產出的色票")
+    ap.add_argument("--manifest", default=MANIFEST, help="資產清單路徑（預設 chapter01）")
+    # 像素呈現實驗：同一批原圖縮到一半（單位 64、擺件 64、建物 96）另存一個目錄，
+    # 不動 03_processed 的正式產出。描邊寬度也應一併減半（--outline-width 1）。
+    ap.add_argument("--size-scale", type=float, default=1.0, help="輸出尺寸倍率（0.5 = 單位 64px）")
+    ap.add_argument("--out", default=OUT, help="輸出目錄（預設 art_src/03_processed）")
     args = ap.parse_args()
+    out_dir = args.out
 
-    with open(MANIFEST, encoding="utf-8") as f:
+    with open(args.manifest, encoding="utf-8") as f:
         assets = json.load(f)["assets"]
     if args.only:
         assets = [a for a in assets if a["id"] in args.only]
@@ -224,11 +230,11 @@ def main() -> int:
         assets = [a for a in assets if a["cat"] in args.cat]
 
     if args.verify_only:
-        paths = [os.path.join(OUT, f"{a['id']}.png") for a in assets
-                 if os.path.exists(os.path.join(OUT, f"{a['id']}.png"))]
+        paths = [os.path.join(out_dir, f"{a['id']}.png") for a in assets
+                 if os.path.exists(os.path.join(out_dir, f"{a['id']}.png"))]
         return 1 if verify(paths) else 0
 
-    os.makedirs(OUT, exist_ok=True)
+    os.makedirs(out_dir, exist_ok=True)
     written: list[str] = []
     done = skipped = 0
     for a in assets:
@@ -253,24 +259,24 @@ def main() -> int:
         else:
             im = trim(remove_background(src, args.tol))
         if args.keep_full:
-            im.save(os.path.join(OUT, f"{a['id']}_full.png"))
+            im.save(os.path.join(out_dir, f"{a['id']}_full.png"))
         # **必須先縮放再量化。** 反過來的話 LANCZOS 會把量化好的顏色重新插值出
         # 中間色，每通道差 1–2，量化等於白做——這是加了色票檢查才發現的。
         # 順帶好處：量化在 128px 上跑，比在 1024px 上快一個數量級。
-        out = fit(im, SIZE_BY_CAT.get(a["cat"], 128))
+        out = fit(im, max(8, round(SIZE_BY_CAT.get(a["cat"], 128) * args.size_scale)))
         if not args.no_quantize:
             out = quantize(out)
         # 場景是滿版貼片，沒有外輪廓可描。
         if not args.no_outline and a["cat"] != "scene":
             out = outline(out, args.outline_width)
-        dest = os.path.join(OUT, f"{a['id']}.png")
+        dest = os.path.join(out_dir, f"{a['id']}.png")
         out.save(dest)
         written.append(dest)
         opaque = sum(1 for p in out.getdata() if p[3] > 0)
         print(f"  {a['id']:<22} {out.width}x{out.height}  前景佔比 {opaque / (out.width * out.height):.0%}")
         done += 1
 
-    print(f"\n=== 完成 {done}，跳過 {skipped}（無產出）→ {os.path.relpath(OUT, REPO)}")
+    print(f"\n=== 完成 {done}，跳過 {skipped}（無產出）→ {os.path.relpath(out_dir, REPO)}")
     return 0
 
 

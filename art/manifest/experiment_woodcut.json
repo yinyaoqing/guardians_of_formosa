@@ -1,0 +1,27 @@
+{
+  "_doc": "風格實驗：過場大圖改走「木刻版畫」路線（2026-09-08）。與 experiment_shadow.json 成對——戰場是皮影、過場是版畫，同屬「紙上的戲」。獨立成一份清單是因為 generate_batch.py 的風格區塊是整份清單共用的。用法：python art/scripts/generate_batch.py --manifest art/manifest/experiment_woodcut.json --stage flux2 --batch 2",
+  "_why": "A1 §7.4 記錄的最大失敗是「史料參考圖會把媒介一起搬過來」——de Gheyn 的銅版畫、明代版畫都是那個時代的媒介本身。若目標風格就是版畫，這個失敗模式直接變成正確答案，A1 §7.5 那五種去媒介手段整個不需要。台灣另有 1940 年代木刻運動的傳統，刀味粗獷、黑白為主、一兩個套色，與章節「站在被統治者一邊」的立場相合。",
+  "shared": {
+    "style": "STYLE: bold expressive woodcut print in the manner of 1940s East Asian woodblock movement prints. Thick black ink lines cut with a knife, varying in weight, coarse parallel gouge marks for shading instead of smooth tone, large areas of untouched cream paper, visible wood grain inside the solid black areas. Exactly two flat spot colours printed as slightly misregistered blocks: terracotta red and deep jade green. No gradients, no photographic detail, no soft edges, no grey midtones — only black, paper, red and green.",
+    "palette": "PALETTE (strict): black ink #1E1611, cream paper #E8DCC6, terracotta #B5442E, banyan green #2F5B3A.",
+    "negative_base": "photorealism, 3D render, painting, watercolor, soft shading, gradient, grey midtones, halftone dots, comic book, anime, text, caption, watermark, border, frame"
+  },
+  "framing": {
+    "scene": "wide cinematic single-frame story illustration, eye-level view, one clear focal action at the centre, the composition fills the frame edge to edge."
+  },
+  "proportions": { "scene": "" },
+  "size": { "scene": [1344, 768] },
+  "negatives": { "siraya": "feather headdress, native american, war paint, tribal mask, Polynesian tattoo, generic tribal", "none": "" },
+  "negatives_by_cat": { "scene": "single character, portrait" },
+  "assets": [
+    {
+      "id": "xp_woodcut_staff",
+      "cat": "scene",
+      "fac": "siraya",
+      "name": "版畫實驗：地方會議頒藤杖",
+      "subject": "the village council (landdag) of 1650s Dutch Formosa. In the centre a seated Dutch East India Company official in a black coat with a wide white collar hands a long rattan staff of office with a silver head to a standing Siraya village elder — bare torso, deerskin wrap, dignified upright stance, barefoot. The staff is the visual focus, held horizontally between the two men. Behind them a row of other Siraya elders watch with folded arms, and two Dutch musketeers in wide-brimmed hats stand guard with matchlocks. The setting is an open thatched pavilion with bamboo posts; banyan trees behind.",
+      "pose_text": "",
+      "_note": "美術聖經 §3.4：藤杖是全章最重要的單一道具，應在過場中被特寫至少一次。"
+    }
+  ]
+}

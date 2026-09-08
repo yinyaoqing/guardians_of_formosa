@@ -1,0 +1,54 @@
+{
+  "_doc": "風格實驗：戰場單位改走「皮影戲」路線（2026-09-08）。這份清單與 chapter01_assets.json 結構相同，但資產 id 全部加 xp_shadow_ 前綴，產出落在 art_src/01_raw/xp_shadow_*/，不會混進第一章的候選目錄。用法：python art/scripts/generate_batch.py --manifest art/manifest/experiment_shadow.json --stage flux2 --batch 2",
+  "_why": "皮影是平面的、關節相連的剪紙，分件動畫在這個風格裡不是妥協而是本色——這直接解掉架構規格 §4.7「AI 產不出透視一致的分件」的死結。同時色數極少、輪廓極粗，風格漂移的空間被壓到最小。決定用**嚴格側面**：皮影本來就是側面戲，左右翻轉即可用於雙向路徑，且側面剪影的差異最大。",
+  "shared": {
+    "style": "STYLE: traditional Chinese shadow puppet (piying) figure. A flat, jointed leather cut-out puppet shown in strict side profile, pressed flat against a backlit paper screen. The whole figure reads as ONE bold dark silhouette; inside it the translucent dyed hide is divided into a few large flat panels of color with delicate cut-out openwork lattice patterns letting light through the costume. Every edge is a crisp dark umber outline of even weight. Small round rivets visible at the shoulder, elbow, hip and knee joints. Completely flat graphic look: no shading, no gradients, no brush strokes, no highlights, no 3D volume.",
+    "palette": "PALETTE (strict, only these): burnt umber #3A2A22 for all outlines and the darkest hide, terracotta #B5442E, cinnabar #A8332B, deep ochre #8C3A22, banyan green #2F5B3A, ink green #1E4029, sand #C9A96B, gamboge #E0A93B. Skin shown as translucent ochre hide, not pink.",
+    "negative_base": "3D render, photorealism, shading, gradient, soft light, painterly, watercolor, front view, three-quarter view, face turned to camera, bamboo control rods, puppet stage frame, screen border, curtain, hands of a puppeteer, character design sheet, multiple views, text, watermark"
+  },
+  "framing": {
+    "unit": "full body game sprite of a single shadow puppet character in strict side profile facing right, head to toe fully visible, centered, isolated on a plain flat solid pale cream background, standing on nothing — no ground line, no ground shadow, no stage, no screen frame, no bamboo control rods, the background is completely empty."
+  },
+  "proportions": {
+    "unit": "PROPORTIONS: stylised puppet proportions — a large head in profile with a clear nose-and-chin line, short sturdy body, about 4 head-heights from crown to sole, thick simplified limbs, bold readable silhouette at 128 pixels."
+  },
+  "size": { "unit": [768, 1024] },
+  "negatives": {
+    "zheng": "queue hairstyle, braid, shaved forehead, Qing dynasty uniform, samurai armor, ashigaru, japanese, boots, shoes, European knight, chainmail, great helm",
+    "siraya": "feather headdress, native american, war paint, tribal mask, Polynesian tattoo, generic tribal, Atayal pattern, Paiwan pattern",
+    "none": ""
+  },
+  "negatives_by_cat": {
+    "unit": "portrait, bust, half body, waist up, cropped, close-up, two people, crowd, ground shadow, shadow ellipse, patch of ground, pedestal"
+  },
+  "assets": [
+    {
+      "id": "xp_shadow_musketeer",
+      "cat": "unit",
+      "fac": "zheng",
+      "name": "皮影實驗：鄭軍銃卒",
+      "subject": "a 17th-century Ming loyalist musketeer of Koxinga's army as a shadow puppet. A conical lacquered iron helmet rising to a sharp triangular point above the head, hair in a topknot beneath it, a deep terracotta red Ming military tunic whose panels are filled with cut-out lattice patterns, cloth leg wraps, BARE FEET. Holding a long matchlock arquebus level at hip height so the barrel extends well in front of the body.",
+      "pose_text": "POSE: striding forward in profile, rear leg pushing off, musket held low and level — a compact triangular-headed figure with one long horizontal line.",
+      "_silhouette_intent": "三角笠盔 + 水平長槍"
+    },
+    {
+      "id": "xp_shadow_ironman",
+      "cat": "unit",
+      "fac": "zheng",
+      "name": "皮影實驗：鐵人軍",
+      "subject": "a 17th-century Ming Chinese heavy infantryman of the Iron Men corps as a shadow puppet. Full-body Chinese lamellar armour rendered as a dense cut-out grid of small rectangular plates covering torso, arms and legs, a rounded Chinese iron helmet with a lamellar neck guard, a solid featureless iron face mask with no visible face, a round rattan shield hung on the back, BARE FEET with no boots. The hide is iron grey and burnt umber only, no bright colors anywhere. An enormous two-handed Chinese horse-cutting sabre with a long straight single-edged blade.",
+      "pose_text": "POSE: very wide braced stance in profile, feet far apart, the sabre gripped with both hands and resting across the shoulders behind the neck so the blade extends far behind the body — a broad, heavy, rectangular mass.",
+      "_silhouette_intent": "寬矩形塊 + 後伸長刀"
+    },
+    {
+      "id": "xp_shadow_hunter",
+      "cat": "unit",
+      "fac": "siraya",
+      "name": "皮影實驗：新港社鏢手",
+      "subject": "a Siraya hunter of 17th-century Formosa as a shadow puppet. Lean athletic build, bare torso shown as translucent ochre hide with a single cut-out pattern band across the chest, a deerskin wrap at the waist, barefoot, no hat, hair tied up in a knot, a shell ear ornament. Holding a long bamboo-shafted javelin with an iron head, clearly longer than half his body height.",
+      "pose_text": "POSE: mid-throw in profile, the javelin arm drawn far back above and behind the head, the front arm pointing forward, one leg forward — the javelin makes one long diagonal line across the frame.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B on the wrist band and waist wrap — the single most saturated element in the whole image, clearly visible even at 128 pixels.",
+      "_silhouette_intent": "長對角線 + 藤黃色塊"
+    }
+  ]
+}

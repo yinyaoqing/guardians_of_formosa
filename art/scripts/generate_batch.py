@@ -156,9 +156,11 @@ def main() -> int:
     ap.add_argument("--stage", choices=["text", "a", "b", "flux2"], default="text",
                     help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字")
     ap.add_argument("--dry-run", action="store_true", help="只印 prompt 不出圖")
+    # 風格實驗用另一份清單、另一組資產 id，產出才不會混進 chapter01 的候選目錄。
+    ap.add_argument("--manifest", default=MANIFEST, help="資產清單路徑（預設 chapter01）")
     args = ap.parse_args()
 
-    with open(MANIFEST, encoding="utf-8") as f:
+    with open(args.manifest, encoding="utf-8") as f:
         m = json.load(f)
     with open(WORKFLOWS[args.stage], encoding="utf-8") as f:
         raw_wf = json.load(f)
