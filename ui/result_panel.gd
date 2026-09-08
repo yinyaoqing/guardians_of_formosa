@@ -16,6 +16,7 @@ const STAR_FILLED := "★"
 const STAR_EMPTY := "☆"
 const STAR_COUNT := 3
 
+@onready var _title_label: Label = $Root/Box/TitleLabel
 @onready var _stars_label: Label = $Root/Box/StarsLabel
 @onready var _waves_label: Label = $Root/Box/WavesLabel
 @onready var _saved_label: Label = $Root/Box/SavedLabel
@@ -23,6 +24,7 @@ const STAR_COUNT := 3
 
 func _ready() -> void:
 	visible = false
+	_title_label.text = tr("result.title")
 	_restart_button.text = tr("result.restart")
 	_restart_button.pressed.connect(func() -> void: restart_pressed.emit())
 

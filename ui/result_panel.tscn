@@ -24,6 +24,11 @@ layout_mode = 2
 theme_override_constants/separation = 24
 alignment = 1
 
+[node name="TitleLabel" type="Label" parent="Root/Box"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+
 [node name="StarsLabel" type="Label" parent="Root/Box"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 64
