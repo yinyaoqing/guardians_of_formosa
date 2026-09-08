@@ -7,7 +7,6 @@ extends Node2D
 
 const PATH_SAMPLE_SPACING := 8.0
 const MAIN_PATH_ID := &"main"
-const SPAWN_INTERVAL := 1.5
 const LEVEL_ID := &"level_01"
 
 const EnemyViewScript := preload("res://game/views/enemy_view.gd")
@@ -24,6 +23,7 @@ const SLOT_SPRITE := "res://game/assets/chapter01/prop_buildsite.png"
 
 const BattleHudScene := preload("res://ui/battle_hud.tscn")
 const BuildMenuScene := preload("res://ui/build_menu.tscn")
+const ResultPanelScene := preload("res://ui/result_panel.tscn")
 const RangeCircleScript := preload("res://game/views/range_circle.gd")
 
 @onready var _path_node: Path2D = $MainPath
@@ -42,10 +42,11 @@ var _hud: BattleHud = null
 ## 每座塔上次畫出來的等級。升級換圖靠它偵測，與 HUD 只在值變動時才寫 Label
 ## 是同一個手法——每幀無條件重載一張 128px 的圖是白燒的。
 var _shown_tower_levels: Dictionary = {}   ## tower id -> int
-var _spawn_timer: float = 0.0
 
 var _build_menu: BuildMenu = null
 var _range_circle: RangeCircle = null
+var _result_panel: ResultPanel = null
+var _result_shown: bool = false
 
 ## 選單目前畫的是哪一批選項。拆成結構與金錢兩個簽章，理由見 _update_build_menu()。
 var _menu_structural_signature: Array = []
@@ -68,6 +69,7 @@ func _ready() -> void:
 	_hud.setup(world, _sim, StringName(_registry.levels[LEVEL_ID]["name_key"]))
 	_hud.pause_pressed.connect(_on_hud_pause_pressed)
 	_hud.speed_pressed.connect(_on_hud_speed_pressed)
+	_hud.call_wave_pressed.connect(_on_hud_call_wave_pressed)
 
 	_build_menu = BuildMenuScene.instantiate() as BuildMenu
 	add_child(_build_menu)
@@ -78,25 +80,21 @@ func _ready() -> void:
 	_range_circle = RangeCircleScript.new() as RangeCircle
 	_view_root.add_child(_range_circle)
 
+	_result_panel = ResultPanelScene.instantiate() as ResultPanel
+	add_child(_result_panel)
+	_result_panel.restart_pressed.connect(_on_restart_pressed)
+
 func _process(delta: float) -> void:
 	# 暫停時 advance 回傳 0，但佇列仍會被排空（建造與賣出正是玩家暫停下來規劃時
 	# 要做的事）。只看 ticks 的話，暫停中蓋的塔要到恢復才出現在畫面上。
 	var had_intents := not _sim.world.pending_intents.is_empty()
 	var ticks := _sim.advance(delta)
 
-	# 生怪計時器走模擬時間而非渲染時間：暫停時 advance() 回傳 0 個 tick，
-	# 計時器因此完全不動；4 倍速下 ticks 對應的模擬時間也是 4 倍，生怪
-	# 頻率才會跟著倍率一起變快，而不是被渲染幀率牽著走。
-	# 生怪邏輯目前留在場景層是暫時的，等到波次系統子里程碑會搬進 tick 裡。
-	_spawn_timer -= float(ticks) * BattleSim.TICK_DELTA
-	if _spawn_timer <= 0.0:
-		_spawn_timer = SPAWN_INTERVAL
-		_spawn_enemy(&"orc_grunt")
-
 	if ticks > 0 or had_intents:
 		_sync_views()
 	_interpolate_views()
 	_update_slot_views()
+	_update_result_panel()
 
 ## 把編輯器畫的 Curve2D 等距取樣成點陣列。
 ## core/ 只認得點陣列，不認得 Curve2D——這個轉換就是分層的邊界。
@@ -122,23 +120,18 @@ func _bake_build_slots(world: WorldState) -> void:
 		_view_root.add_child(view)
 		_slot_views[slot.id] = view
 
-func _spawn_enemy(enemy_id: StringName) -> void:
-	var enemy := _registry.make_enemy(enemy_id, MAIN_PATH_ID)
-	# 先把座標設到路徑起點再建 view。否則 view 會先出現在原點，
-	# 等第一個 tick 才跳到路徑起點，看起來像瞬移。
-	enemy.position = _sim.world.paths[MAIN_PATH_ID].position_at(0.0)
-	_sim.world.add_enemy(enemy)
-
-	var view := EnemyViewScript.new() as EnemyView
-	view.setup(enemy.id, _registry.enemies[enemy_id]["sprite"], enemy.position)
-	_view_root.add_child(view)
-	_enemy_views[enemy.id] = view
-
 ## 每個邏輯 tick 後同步一次：推進插值目標、清掉已死亡的 view
 func _sync_views() -> void:
 	for enemy: Enemy in _sim.world.enemies:
 		var view: EnemyView = _enemy_views.get(enemy.id)
-		if view != null:
+		if view == null:
+			# 生成搬進 tick 之後，建立 view 的責任跟著移到這裡。
+			# 先用敵人當下的座標建，才不會從畫面原點滑進來。
+			view = EnemyViewScript.new() as EnemyView
+			view.setup(enemy.id, _registry.enemies[enemy.enemy_id]["sprite"], enemy.position)
+			_view_root.add_child(view)
+			_enemy_views[enemy.id] = view
+		else:
 			view.on_tick(enemy.position)
 
 	for view_id: int in _enemy_views.keys():
@@ -298,6 +291,29 @@ func _on_hud_pause_pressed() -> void:
 
 func _on_hud_speed_pressed() -> void:
 	_controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), _sim.world)
+
+func _on_hud_call_wave_pressed() -> void:
+	_controller.handle(InputAction.simple(InputAction.CALL_NEXT_WAVE), _sim.world)
+
+## 通關時把結算面板叫出來。只叫一次——面板不是每幀重畫的東西。
+##
+## 星等依第一章規格 §4.6。第三顆（未失去聚落建物）恆為未達成，因為聚落建物
+## 還不存在；面板照樣畫出它的位置，之後補上時不必改版面。
+func _update_result_panel() -> void:
+	if _result_shown or not _sim.world.battle_finished:
+		return
+	_result_shown = true
+
+	var meta: Dictionary = _registry.levels[LEVEL_ID]
+	var total := int(meta["starting_civilians"])
+	var saved := _sim.world.civilians_remaining
+	var stars := 1
+	if saved >= int(meta["star_civilian_threshold"]):
+		stars = 2
+	_result_panel.show_result(stars, _sim.world.waves.size(), saved, total)
+
+func _on_restart_pressed() -> void:
+	get_tree().reload_current_scene()
 
 ## 選中有塔的建塔點時顯示現有射程；空位不顯示，要滑過某一瓣才預覽。
 func _show_range_for_selection(slot: BuildSlot) -> void:
