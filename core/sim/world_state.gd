@@ -19,6 +19,12 @@ var enemy_defs: Dictionary = {}               ## StringName -> Dictionary
 var waves: Array = []                         ## 每筆是一波的定義
 var call_bonus_per_second: int = 0
 var wave_state := WaveState.new()
+
+## 所有波次都生成完畢，且場上沒有活著的敵人。
+##
+## 這一關沒有「輸」——第一章規格 §0.2 決定三排除強制失敗關卡，所以這是唯一
+## 的結束條件，成立即通關，差別只在救到多少平民。
+var battle_finished: bool = false
 var available_towers: Array[StringName] = []
 var sell_refund_ratio: float = 0.0
 

@@ -29,6 +29,10 @@ func _init(p_world: WorldState = null) -> void:
 ## 推進模擬。frame_delta 為渲染幀的實際經過秒數。
 ## 回傳本幀實際執行的 tick 數。
 func advance(frame_delta: float) -> int:
+	# 通關之後模擬自己停住。讓 UI 去寫 paused 會是第二條改變模擬狀態的路，
+	# 而 B2 與 B3a 花了整整兩個里程碑確保只有一條。
+	if world.battle_finished:
+		return 0
 	if paused:
 		# 排空佇列不受暫停阻擋：建造與賣出正是玩家暫停下來規劃時該做的事，
 		# 佇列若在暫停時只進不出，恢復的那一刻就會一次套用整個積壓的佇列。
@@ -72,6 +76,7 @@ func tick_progress() -> float:
 func _tick() -> void:
 	tick_count += 1
 	_apply_pending_intents()
+	WaveSystem.tick(world, TICK_DELTA)
 	world.status_system.tick(world.enemies, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
@@ -79,6 +84,7 @@ func _tick() -> void:
 	world.projectile_system.tick(TICK_DELTA)
 	_tick_towers()
 	_remove_dead()
+	_check_battle_finished()
 
 ## tick 的第一步。輸入發生在渲染幀上，模擬跑固定步長，兩者不對齊；
 ## 排隊到 tick 內套用，讓所有改變世界的事情都發生在明確的位置。
@@ -157,3 +163,19 @@ func _remove_dead() -> void:
 		world.status_system.release_all(enemy)
 		world.enemies_by_id.erase(enemy.id)
 	world.enemies = survivors
+
+## 通關判定。排在移除死亡之後——「場上沒有活著的敵人」要在死亡結算完才問得準，
+## 否則最後一隻剛死的那一 tick 會錯答成未完成，而畫面上完全看不出差別。
+func _check_battle_finished() -> void:
+	if world.battle_finished:
+		return
+	# 沒有波次資料就沒有「全部生成完畢」可言——WaveSystem.all_spawned() 對
+	# 空的 waves 會空真地回傳 true（0 波裡的 0 波都生完了），沒設 waves 的
+	# 世界因此不該被判定通關；真正的關卡一定經由 configure_for_level 灌入至少一波。
+	if world.waves.is_empty():
+		return
+	if not WaveSystem.all_spawned(world):
+		return
+	if not world.enemies.is_empty():
+		return
+	world.battle_finished = true

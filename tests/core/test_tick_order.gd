@@ -379,3 +379,87 @@ func test_civilians_never_go_below_zero() -> void:
 	assert_int(world.civilians_remaining).override_failure_message(
 		"三隻漏過去但只剩一個平民，應該夾在 0 而不是變成 -2"
 	).is_equal(0)
+
+## 一波、一隻、立刻生的世界，用來驗通關判定
+func _make_one_enemy_wave_world() -> WorldState:
+	var world := _make_world()
+	world.enemy_defs = {
+		&"orc_grunt": {
+			"id": "orc_grunt", "name_key": "enemy.orc_grunt.name",
+			"hp": 120.0, "speed": 0.0, "armor": 0.0, "magic_resist": 0.0,
+			"bounty": 6, "sprite": "res://game/assets/placeholder_enemy.png",
+			"frame_count": 8,
+		},
+	}
+	world.waves = [
+		{"delay": 0.0, "groups": [
+			{"enemy_id": "orc_grunt", "count": 1, "interval": 1.0, "path_id": "main", "start_delay": 0.0},
+		]},
+	]
+	world.reset_wave_state()
+	return world
+
+## WaveSystem 的第一個 tick 只把倒數歸零、把該波標記成 spawning（_start_wave），
+## 實際生成要等下一個 tick 的 _tick_spawning 才發生——這條 2-tick 節奏在
+## test_wave_system.gd（test_a_sub_tick_interval_spawns_several_in_one_tick）
+## 就已經釘住，不是本任務要改的行為。所以這裡也要跑滿 2 個 tick，
+## 那隻唯一的敵人才會真的在 world.enemies 裡。
+func _advance_until_the_one_enemy_spawns(sim: BattleSim) -> void:
+	sim.advance(FRAME)
+	sim.advance(FRAME)
+
+func test_waves_advance_inside_the_tick() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+
+	_advance_until_the_one_enemy_spawns(sim)
+
+	assert_array(world.enemies).override_failure_message(
+		"波次要在 tick 裡推進；還留在場景層的話這條會是空的"
+	).has_size(1)
+
+func test_the_battle_is_not_finished_while_an_enemy_is_alive() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+
+	assert_bool(world.battle_finished).override_failure_message(
+		"全部生成完但場上還有活著的敵人，還沒通關"
+	).is_false()
+
+func test_the_battle_finishes_on_the_very_tick_the_last_enemy_dies() -> void:
+	# 這條是本任務最重要的一條。一個在 _remove_dead() 之前判定的實作會通過
+	# 大部分測試——多數 tick 裡最後一隻敵人早就死了。這裡刻意讓牠「這一 tick
+	# 才剛被打死」：判定若排在移除死亡之前，這一 tick 就會錯答成未完成。
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+	var enemy: Enemy = world.enemies[0]
+
+	# 直接把牠打死，模擬「這一 tick 傷害剛好結算完」
+	enemy.hp = 0.0
+	enemy.alive = false
+	sim.advance(FRAME)
+
+	assert_array(world.enemies).has_size(0)
+	assert_bool(world.battle_finished).override_failure_message(
+		"最後一隻在這一 tick 被移除，通關判定必須在同一 tick 成立"
+	).is_true()
+
+func test_a_finished_battle_stops_advancing() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+	world.enemies[0].alive = false
+	sim.advance(FRAME)
+	assert_bool(world.battle_finished).is_true()
+
+	var ticks_before := sim.tick_count
+	var ticks := sim.advance(FRAME * 10.0)
+
+	assert_int(ticks).override_failure_message(
+		"通關後 advance() 必須回傳 0——模擬自己停住，不需要 UI 去暫停它"
+	).is_equal(0)
+	assert_int(sim.tick_count).override_failure_message(
+		"通關後 tick 不該再前進"
+	).is_equal(ticks_before)
