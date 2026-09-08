@@ -20,7 +20,12 @@ var available_towers: Array[StringName] = []
 var sell_refund_ratio: float = 0.0
 
 var gold: int = 0
-var lives: int = 20
+
+## 待撤離的平民數。漏過去一隻敵人就少救一個。
+##
+## 歸零**不是失敗**——第一章規格 §0.2 決定三明文排除強制失敗關卡：
+## 撐過波次即通關，差別在救到多少人。所以這個數字夾在 0，且不觸發任何事。
+var civilians_remaining: int = 20
 
 ## 每 tick 由 BattleSim 重建的查詢結構
 var grid := UniformGrid.new()
@@ -67,7 +72,7 @@ func configure_for_level(registry: DataRegistry, level_id: StringName) -> void:
 
 	sell_refund_ratio = meta["sell_refund_ratio"]
 	gold = int(meta["starting_gold"])
-	lives = int(meta["starting_lives"])
+	civilians_remaining = int(meta["starting_civilians"])
 
 func add_enemy(enemy: Enemy) -> void:
 	if enemy.id == 0:

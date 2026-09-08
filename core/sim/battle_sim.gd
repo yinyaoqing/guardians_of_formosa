@@ -110,12 +110,12 @@ func _cycle_speed() -> void:
 	var current := SPEED_STEPS.find(speed_multiplier)
 	speed_multiplier = SPEED_STEPS[(current + 1) % SPEED_STEPS.size()]
 
-## 走到終點的敵人扣玩家一條命，並立刻移出戰場（避免重複扣血）
+## 走到終點的敵人少救一個平民，並立刻移出戰場（避免重複扣人數）
 func _collect_leaked() -> void:
 	for enemy: Enemy in world.enemies:
 		if enemy.leaked and enemy.alive:
 			enemy.alive = false
-			world.lives -= 1
+			world.civilians_remaining = maxi(0, world.civilians_remaining - 1)
 
 func _rebuild_grid() -> void:
 	world.grid.clear()

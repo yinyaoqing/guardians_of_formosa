@@ -1,6 +1,6 @@
 keys,zh_TW,en
-hud.gold_format,金幣 %d,Gold %d
-hud.lives_format,生命 %d,Lives %d
+hud.gold_format,銀 %d,Silver %d
+hud.civilians_format,平民 %d,Civilians %d
 hud.speed_format,%d 倍速,%dx
 hud.pause,暫停,Pause
 hud.resume,繼續,Resume

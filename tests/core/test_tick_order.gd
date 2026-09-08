@@ -13,7 +13,7 @@ func _make_world() -> WorldState:
 	])
 	world.paths[PATH_ID] = PathData.new(points, 200.0)
 	world.gold = 0
-	world.lives = 20
+	world.civilians_remaining = 20
 	return world
 
 func _add_enemy(world: WorldState, speed: float) -> Enemy:
@@ -69,7 +69,7 @@ func test_leaked_enemy_awards_no_bounty() -> void:
 	assert_int(world.gold).override_failure_message(
 		"走到終點的敵人不該給玩家賞金"
 	).is_equal(0)
-	assert_int(world.lives).is_equal(19)
+	assert_int(world.civilians_remaining).is_equal(19)
 
 func test_effects_on_a_killed_enemy_are_returned_to_the_pool() -> void:
 	var world := _make_world()
@@ -350,3 +350,32 @@ func test_pause_drained_mid_catchup_stops_the_loop_immediately() -> void:
 		"若這裡跑出的 tick 數不是 4，代表 _accumulator 在暫停跳出的那一刻被清空或改動了，" +
 		"暫停期間積欠的模擬時間就這樣憑空消失，戰鬥時間軸會對不上。"
 	).is_equal(4)
+
+func test_a_leaked_enemy_costs_one_civilian() -> void:
+	var world := _make_world()
+	world.civilians_remaining = 3
+	var enemy := _add_enemy(world, 100000.0)   # 一 tick 就走完整條路
+	var sim := BattleSim.new(world)
+
+	sim.advance(FRAME)
+
+	assert_bool(enemy.leaked).is_true()
+	assert_int(world.civilians_remaining).override_failure_message(
+		"漏過去一隻敵人，就少救一個平民"
+	).is_equal(2)
+
+func test_civilians_never_go_below_zero() -> void:
+	# 歸零不是失敗，只是一個都沒救到。玩家會繼續打完剩下的波次，
+	# 期間漏掉的敵人不該讓計數變成負數——結算畫面會印出負的人數。
+	var world := _make_world()
+	world.civilians_remaining = 1
+	_add_enemy(world, 100000.0)
+	_add_enemy(world, 100000.0)
+	_add_enemy(world, 100000.0)
+	var sim := BattleSim.new(world)
+
+	sim.advance(FRAME)
+
+	assert_int(world.civilians_remaining).override_failure_message(
+		"三隻漏過去但只剩一個平民，應該夾在 0 而不是變成 -2"
+	).is_equal(0)

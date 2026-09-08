@@ -311,8 +311,8 @@ func test_at_least_one_level_is_loaded() -> void:
 
 func test_every_level_has_required_fields() -> void:
 	var required := [
-		"id", "name_key", "starting_gold", "starting_lives",
-		"sell_refund_ratio", "available_towers",
+		"id", "name_key", "starting_gold", "starting_civilians",
+		"star_civilian_threshold", "sell_refund_ratio", "available_towers",
 	]
 	for level_id: StringName in _registry.levels:
 		var meta: Dictionary = _registry.levels[level_id]
@@ -328,9 +328,22 @@ func test_every_level_has_sane_starting_resources() -> void:
 		assert_float(meta["starting_gold"]).override_failure_message(
 			"關卡 %s 的起始金幣必須為正" % level_id
 		).is_greater(0.0)
-		assert_float(meta["starting_lives"]).override_failure_message(
-			"關卡 %s 的起始生命必須為正" % level_id
+		assert_float(meta["starting_civilians"]).override_failure_message(
+			"關卡 %s 的待撤離平民數必須為正" % level_id
 		).is_greater(0.0)
+
+func test_star_civilian_threshold_is_reachable() -> void:
+	# 門檻是「救到多少人給星」，必須落在 (0, starting_civilians] 之間——
+	# 大於起始平民數的門檻永遠拿不到星，關卡設計就出錯了。
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+		var starting_civilians: float = meta["starting_civilians"]
+		assert_float(meta["star_civilian_threshold"]).override_failure_message(
+			"關卡 %s 的 star_civilian_threshold 必須為正" % level_id
+		).is_greater(0.0)
+		assert_bool(float(meta["star_civilian_threshold"]) <= starting_civilians).override_failure_message(
+			"關卡 %s 的 star_civilian_threshold 超過 starting_civilians，星等永遠拿不到" % level_id
+		).is_true()
 
 func test_sell_refund_ratio_is_within_zero_to_one() -> void:
 	# 大於 1 等於賣塔賺錢，玩家可以無限套利

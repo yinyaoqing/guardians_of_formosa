@@ -72,7 +72,7 @@ const NODE_EXPECTATIONS := {
 	"Root": {"type": "MarginContainer", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top": {"type": "HBoxContainer", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/GoldLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
-	"Root/Top/LivesLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
+	"Root/Top/CiviliansLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/SpacerLeft": {"type": "Control", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/LevelNameLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/SpacerRight": {"type": "Control", "mouse_filter": Control.MOUSE_FILTER_IGNORE},

@@ -2,7 +2,8 @@
   "id": "level_01",
   "name_key": "level.level_01.name",
   "starting_gold": 200,
-  "starting_lives": 20,
+  "starting_civilians": 20,
+  "star_civilian_threshold": 14,
   "sell_refund_ratio": 0.75,
   "available_towers": ["musket_tower", "hunter_tower"]
 }

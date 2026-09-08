@@ -34,7 +34,7 @@ signal speed_pressed
 
 @onready var _root: MarginContainer = $Root
 @onready var _gold_label: Label = $Root/Top/GoldLabel
-@onready var _lives_label: Label = $Root/Top/LivesLabel
+@onready var _civilians_label: Label = $Root/Top/CiviliansLabel
 @onready var _level_name_label: Label = $Root/Top/LevelNameLabel
 @onready var _pause_button: Button = $Root/Top/PauseButton
 @onready var _speed_button: Button = $Root/Top/SpeedButton
@@ -48,7 +48,7 @@ var _sim: BattleSim = null
 ##
 ## 初始值刻意取不可能出現的數，強制第一幀一定寫入。
 var _shown_gold: int = -1
-var _shown_lives: int = -1
+var _shown_civilians: int = -1
 var _shown_speed: int = -1
 var _shown_paused: bool = true    ## sim 起始為 false，故第一幀必定不同
 
@@ -77,9 +77,9 @@ func _process(_delta: float) -> void:
 		_shown_gold = _world.gold
 		_gold_label.text = tr("hud.gold_format") % _shown_gold
 
-	if _world.lives != _shown_lives:
-		_shown_lives = _world.lives
-		_lives_label.text = tr("hud.lives_format") % _shown_lives
+	if _world.civilians_remaining != _shown_civilians:
+		_shown_civilians = _world.civilians_remaining
+		_civilians_label.text = tr("hud.civilians_format") % _shown_civilians
 
 	if _sim.paused != _shown_paused:
 		_shown_paused = _sim.paused
