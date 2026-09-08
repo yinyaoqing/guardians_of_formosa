@@ -13,6 +13,7 @@ var effect_defs: Dictionary = {}   ## StringName -> Dictionary
 
 ## 塔的 JSON 定義與本關可用的塔種，同樣由 configure_for_level 注入。
 var tower_defs: Dictionary = {}              ## StringName -> Dictionary
+var enemy_defs: Dictionary = {}               ## StringName -> Dictionary
 var available_towers: Array[StringName] = []
 var sell_refund_ratio: float = 0.0
 
@@ -55,6 +56,7 @@ func configure_for_level(registry: DataRegistry, level_id: StringName) -> void:
 
 	effect_defs = registry.status_effects
 	tower_defs = registry.towers
+	enemy_defs = registry.enemies
 
 	var towers_for_level: Array[StringName] = []
 	for tower_id in meta["available_towers"]:

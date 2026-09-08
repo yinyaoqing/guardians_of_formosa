@@ -20,18 +20,7 @@ func load_from_disk(root: String = "res://data") -> void:
 ## 靜默回傳 null 會讓錯誤在很遠的地方才炸開。
 func make_enemy(enemy_id: StringName, path_id: StringName) -> Enemy:
 	assert(enemies.has(enemy_id), "找不到敵人定義: %s" % enemy_id)
-	var def: Dictionary = enemies[enemy_id]
-	var enemy := Enemy.new()
-	enemy.enemy_id = enemy_id
-	enemy.hp = def["hp"]
-	enemy.max_hp = def["hp"]
-	enemy.base_speed = def["speed"]
-	enemy.base_armor = def["armor"]
-	enemy.base_magic_resist = def["magic_resist"]
-	enemy.reset_derived_stats()
-	enemy.bounty = def["bounty"]
-	enemy.path_id = path_id
-	return enemy
+	return EnemyFactory.from_def(enemies[enemy_id], enemy_id, path_id)
 
 func _load_dir(dir_path: String) -> Dictionary:
 	var result: Dictionary = {}

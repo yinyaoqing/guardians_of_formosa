@@ -100,6 +100,16 @@ func test_battle_scene_wires_up_the_hud() -> void:
 		"讀不出這是接線漏掉而不是設計如此。"
 	).is_true()
 
+## 造敵人的邏輯只能有一份。DataRegistry 若自己重新展開欄位，兩條路就會漂移，
+## 而 headless 測試不會發現——兩邊各自都「正確」，只是不一致。
+## 與本檔其他守衛同樣是原始碼文字檢查，因為沒有其他手段看得到「有沒有委派」。
+func test_data_registry_delegates_enemy_construction() -> void:
+	var source := FileAccess.get_file_as_string("res://core/data/data_registry.gd")
+	assert_bool(source.contains("EnemyFactory.from_def")).override_failure_message(
+		"DataRegistry.make_enemy 必須委派給 EnemyFactory.from_def。\n" +
+		"自己展開欄位的話，它與 WaveSystem 生出來的敵人會靜默漂移。"
+	).is_true()
+
 func _collect_gd_files(root: String) -> Array[String]:
 	var found: Array[String] = []
 	var dir := DirAccess.open(root)
