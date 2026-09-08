@@ -36,6 +36,15 @@ var gold: int = 0
 ## 撐過波次即通關，差別在救到多少人。所以這個數字夾在 0，且不觸發任何事。
 var civilians_remaining: int = 20
 
+## 平民撤離數的原始總量，供 ResultSystem.star_count() 算第二顆星用。
+## civilians_remaining 會隨戰局遞減，星等規則需要的是「總共要救幾個」，
+## 兩者不是同一個數字，所以另開一個欄位，不是把 civilians_remaining 覆用。
+var starting_civilians: int = 0
+
+## 拿到第二顆星所需的平民撤離門檻。規格是「≥ 門檻」，判定邏輯在
+## core/systems/result_system.gd，這裡只負責從關卡資料注入。
+var star_civilian_threshold: int = 0
+
 ## 每 tick 由 BattleSim 重建的查詢結構
 var grid := UniformGrid.new()
 var enemies_by_id: Dictionary = {}  ## int -> Enemy
@@ -82,6 +91,8 @@ func configure_for_level(registry: DataRegistry, level_id: StringName) -> void:
 	sell_refund_ratio = meta["sell_refund_ratio"]
 	gold = int(meta["starting_gold"])
 	civilians_remaining = int(meta["starting_civilians"])
+	starting_civilians = int(meta["starting_civilians"])
+	star_civilian_threshold = int(meta["star_civilian_threshold"])
 
 	waves = meta.get("waves", [])
 	call_bonus_per_second = int(meta.get("call_bonus_per_second", 0))

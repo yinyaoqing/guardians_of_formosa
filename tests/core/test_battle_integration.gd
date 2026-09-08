@@ -285,6 +285,12 @@ func test_configure_for_level_wires_everything_the_world_needs() -> void:
 	assert_float(world.sell_refund_ratio).is_equal_approx(meta["sell_refund_ratio"], 0.001)
 	assert_int(world.gold).is_equal(int(meta["starting_gold"]))
 	assert_int(world.civilians_remaining).is_equal(int(meta["starting_civilians"]))
+	assert_int(world.starting_civilians).override_failure_message(
+		"未注入 starting_civilians，ResultSystem.star_count() 就沒有分母，星等永遠算不出來"
+	).is_equal(int(meta["starting_civilians"]))
+	assert_int(world.star_civilian_threshold).override_failure_message(
+		"未注入 star_civilian_threshold，ResultSystem.star_count() 沒有門檻可比，第二顆星永遠拿不到"
+	).is_equal(int(meta["star_civilian_threshold"]))
 
 ## Fix 5 的浸泡測試:池的斷言到目前為止都只涵蓋單一物件、單一 tick,
 ## 真正的洩漏只會在一整場戰鬥的規模下才會現形。這裡連續生成數十隻敵人、

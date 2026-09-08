@@ -393,6 +393,23 @@ func test_every_wave_group_references_real_data() -> void:
 
 		for i in waves.size():
 			var wave: Dictionary = waves[i]
+			# delay 被 WaveSystem 與 WorldState 直接索引（缺漏是原始的 KeyError，
+			# 不是可控的錯誤訊息）；漏了 delay 要到那一波真的要開始時才會炸，
+			# 負的 delay 更陰險——完全不炸，只是讓那一波緊接著前一波立刻開始，
+			# 沒有任何倒數,原因無從追查。
+			# 零本身是合法值、不在檢查範圍內——第一波「立刻開始，不等待」正是
+			# 靠 delay == 0 表達的（見 _make_one_enemy_wave_world 等測試世界），
+			# 拒絕零會連這個正常用法都擋下來；只有負數才是純粹的資料錯誤。
+			assert_bool(wave.has("delay")).override_failure_message(
+				"關卡 %s 第 %d 波缺少 delay，WaveSystem 與 WorldState 都直接索引這個欄位，" % [level_id, i + 1] +
+				"缺漏要到那一波真的該開始時才會噴出原始的 KeyError"
+			).is_true()
+			if wave.has("delay"):
+				assert_bool(float(wave["delay"]) >= 0.0).override_failure_message(
+					"關卡 %s 第 %d 波的 delay 是負數。負的 delay 不會有任何錯誤，" % [level_id, i + 1] +
+					"只會讓那一波緊接著前一波生完就立刻開始，沒有倒數，原因無從追查"
+				).is_true()
+
 			var groups: Array = wave["groups"]
 			assert_int(groups.size()).override_failure_message(
 				"關卡 %s 第 %d 波沒有任何群組" % [level_id, i + 1]

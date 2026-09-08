@@ -84,12 +84,18 @@ static func _spawn_one(world: WorldState, group: Dictionary) -> void:
 	var enemy_id: StringName = group["enemy_id"]
 	var def: Dictionary = world.enemy_defs.get(enemy_id, {})
 	if def.is_empty():
+		# push_error 留給出貨版本，assert 讓開發與測試期間的失敗夠大聲——
+		# 否則呼叫端（_tick_spawning）仍會無條件把 remaining 減一，一整組敵人
+		# 就這樣悄悄被跳過，波次照樣標記成生成完畢，玩家永遠不知道少打了一波。
+		# 與 ProjectileSystem._hit_one() 對狀態效果缺漏的處理是同一個形狀。
 		push_error("波次引用了不存在的敵人: %s" % enemy_id)
+		assert(false, "波次引用了不存在的敵人: %s" % enemy_id)
 		return
 	var path_id: StringName = group["path_id"]
 	var path: PathData = world.paths.get(path_id)
 	if path == null:
 		push_error("波次引用了不存在的路徑: %s" % path_id)
+		assert(false, "波次引用了不存在的路徑: %s" % path_id)
 		return
 
 	var enemy := EnemyFactory.from_def(def, enemy_id, path_id)

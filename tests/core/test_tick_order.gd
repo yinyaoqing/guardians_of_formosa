@@ -464,6 +464,33 @@ func test_a_finished_battle_stops_advancing() -> void:
 		"通關後 tick 不該再前進"
 	).is_equal(ticks_before)
 
+## 與 test_pause_drained_mid_catchup_stops_the_loop_immediately() 同一個道理，
+## 換成 battle_finished 這個跳出條件：一次補跑欠 5 個 tick，若唯一的敵人在
+## 第 2 個 tick 才漏過終點（battle_finished 因此在第 2 個 tick 結尾成立），
+## 其餘 3 個 tick 不該再跑——不然通關那一刻之後敵人、投射物、金幣仍會照跑，
+## 只是「碰巧」在下一幀才真的停下來，跟 ui/result_panel.gd 依賴的
+## 「world.battle_finished 成立時模擬已經自己停了」這個假設矛盾。
+func test_battle_finished_mid_catchup_stops_the_loop_immediately() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+	var enemy: Enemy = world.enemies[0]
+	# 路徑總長 600px。每 tick 走 400px：第 1 個 tick 到 400（未漏），
+	# 第 2 個 tick 累積到 800（觸發漏過終點）——刻意不讓它在第 1 個 tick 就結束，
+	# 否則跟「補跑迴圈根本沒機會多跑」的情境測不出差別。
+	enemy.base_speed = 12000.0
+	enemy.reset_derived_stats()
+
+	var ticks := sim.advance(FRAME * 5.0)   # 一次欠 5 個 tick
+
+	assert_int(ticks).override_failure_message(
+		"迴圈條件必須重讀 battle_finished：欠 5 個 tick 時，唯一的敵人在第 2 個 tick 漏過終點，" +
+		"其餘 3 個 tick 完全不該跑"
+	).is_equal(2)
+	assert_bool(world.battle_finished).override_failure_message(
+		"battle_finished 必須在敵人漏過終點、場上不再有活著敵人的那個 tick 就成立"
+	).is_true()
+
 func test_a_call_next_wave_intent_starts_the_wave_and_pays() -> void:
 	var world := _make_one_enemy_wave_world()
 	world.waves[0]["delay"] = 5.0

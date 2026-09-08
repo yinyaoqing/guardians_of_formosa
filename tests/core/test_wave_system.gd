@@ -139,6 +139,13 @@ func test_a_spawned_enemy_starts_at_the_path_origin() -> void:
 
 func test_calling_early_pays_the_remaining_countdown() -> void:
 	# 與 B3b 的退款一致性同類：顯示的與實付的漂移，是玩家會發現、測試不會的錯。
+	#
+	# 注意：這裡的 expected 是用實作自己的算式（countdown_before * call_bonus_per_second
+	# 向下取整）算出來的，所以它守不住「比率本身對不對」——換掉比率或改變無條件捨去的
+	# 規則，這條測試照樣是綠的。它真正守住的是「回傳值等於金幣的實際變動量」與
+	# 「不是 0」，這兩點仍然值錢。比率本身由 tests/core/test_tick_order.gd 的
+	# test_a_call_next_wave_intent_starts_the_wave_and_pays() 用具體數字釘死
+	# （倒數 5 秒、每秒 2，斷言入帳恰好 10）——不要刪錯測試。
 	var world := _make_world()
 	_configure(world, _two_waves())
 

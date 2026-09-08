@@ -47,7 +47,14 @@ func advance(frame_delta: float) -> int:
 	# 在按下的那個瞬間生效，而不是拖到下一次 advance() 呼叫。
 	# 因暫停而提前跳出時 _accumulator 保留剩下欠的整數個 tick 份量——
 	# 這些時間不是被丟棄，而是留到解除暫停後補跑，戰鬥時間軸不會憑空消失。
-	while _accumulator >= TICK_DELTA and not paused and ticks < MAX_TICKS_PER_FRAME:
+	# world.battle_finished 跟 paused 一樣要在迴圈條件裡重讀，理由對稱：
+	# 補跑迴圈裡任何一個 _tick() 都可能在 _check_battle_finished() 讓它翻成
+	# true（例如這一幀積欠 5 個 tick、最後一隻敵人在第 2 個 tick 就死了）。
+	# 一旦發生就立刻停止，不把本幀還積欠的其餘 tick 跑完——不然通關那一刻
+	# 之後的 tick 仍會照跑，敵人、投射物、金幣都還在動，只是「碰巧」在下一幀
+	# 才真的停下來。ui/result_panel.gd 的假設是「world.battle_finished 成立時
+	# 模擬已經自己停了」，這裡若不擋，該假設只在幀與幀之間成立，幀內仍會失守。
+	while _accumulator >= TICK_DELTA and not paused and not world.battle_finished and ticks < MAX_TICKS_PER_FRAME:
 		_accumulator -= TICK_DELTA
 		_tick()
 		ticks += 1
@@ -65,6 +72,14 @@ func advance(frame_delta: float) -> int:
 	# 因此必然是 1，遠小於 MAX_TICKS_PER_FRAME，兩個跳出原因不會同時成立。
 	# 這個不變式一旦被打破（例如未來波次腳本、boss 自動暫停等「tick 內
 	# 產生 intent」的功能）就必須重新檢查這裡的假設。
+	#
+	# battle_finished 提前跳出同樣不會誤觸這個丟棄分支，但理由更簡單：
+	# battle_finished 只可能在補跑迴圈裡的某個 _tick() 結尾被設成 true
+	# （_check_battle_finished()），不可能發生在恰好第 MAX_TICKS_PER_FRAME
+	# 個 iteration——若真的撞上這個邊界，那就跟正常跑滿上限沒有差別，丟棄
+	# 也無妨。無論丟不丟，battle_finished 提前跳出之後 _accumulator 剩下什麼
+	# 都不再重要：advance() 開頭那個 `if world.battle_finished: return 0`
+	# 會讓後續每一次呼叫都直接短路，_accumulator 再也不會被讀取或使用。
 	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks
