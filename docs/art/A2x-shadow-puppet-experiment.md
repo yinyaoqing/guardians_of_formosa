@@ -193,3 +193,15 @@ layer 100  只有紙紋       ← 讓單位也躺在紙上
 - 新敵人 `zheng_musketeer`（數值暫沿用 orc_grunt），`battle_scene` 改生它；`test_data_integrity` 新增 `test_every_enemy_puppet_is_well_formed` 守分件定義與貼圖存在。
 
 踩到的坑：新加的 PNG 與 CSV 在 headless 測試前要先 `godot --headless --import`，否則 `ResourceLoader.exists()` 對未匯入的檔案回 false、翻譯檔也不會重生。
+
+---
+
+## 8. 版畫 prompt 修訂重出（同日）
+
+依 §2.3 的修法重出：style 拿掉「1940s East Asian woodblock movement」只留刀法描述；subject 把衛兵寫成 17 世紀 VOC 火繩槍手的具體形制（寬邊氈帽、亞麻衫、及膝馬褲、木藥管彈藥帶、火繩槍，並明寫 NOT peaked caps／NOT boots）。
+
+**結果：好一半。** 大盤帽消失、寬邊帽與彈藥帶出現；但衛兵仍是 20 世紀殖民地軍警的體態與皮帶配置（Sam Browne 式斜帶、彈藥包、長靴），一張的火繩槍畫成上刺刀的步槍；旁觀的西拉雅長老也被穿上襯衫馬褲。**「福爾摩沙 + 版畫」這個組合本身就把日治時期的先驗拉進來**，負面詞與形制描述都壓不完全。
+
+規格層面的結論：敘事大圖的內容正確性不能只靠文字。§6 已證明 Klein 參考圖編輯能鎖住角色——**下一步應該把 §5 產出的無五官肖像（揆一、頭目、奴工）與 chapter01 的 VOC 火槍手當參考圖，用 `a2x_flux2_edit` 的多參考圖編輯合成場景**，讓「誰穿什麼」由參考圖決定、版畫媒介由 prompt 決定。這與 A1 §7.4 的教訓一致：內容靠圖、風格靠字。
+
+另：兩色套印（terracotta + jade）仍沒出現，產出是全彩木版畫。若要嚴格雙色，交給後處理量化到四色即可，不必靠模型。
