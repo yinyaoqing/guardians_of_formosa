@@ -65,14 +65,14 @@ func test_killing_enemy_awards_bounty_once() -> void:
 	_run(sim, 3.0)
 	assert_int(world.gold).is_equal(7)
 
-func test_enemy_reaching_end_costs_a_life() -> void:
+func test_enemy_reaching_end_costs_a_civilian() -> void:
 	var world := _make_world()
 	_add_enemy(world, 1000.0, 400.0, 5)
 	var sim := BattleSim.new(world)
 	_run(sim, 2.0)
 	assert_int(world.civilians_remaining).is_equal(19)
 
-func test_leaked_enemy_only_costs_one_life() -> void:
+func test_leaked_enemy_only_costs_one_civilian() -> void:
 	var world := _make_world()
 	_add_enemy(world, 1000.0, 400.0, 5)
 	var sim := BattleSim.new(world)
