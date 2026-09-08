@@ -31,11 +31,15 @@ extends CanvasLayer
 
 signal pause_pressed
 signal speed_pressed
+signal call_wave_pressed
 
 @onready var _root: MarginContainer = $Root
 @onready var _gold_label: Label = $Root/Top/GoldLabel
 @onready var _civilians_label: Label = $Root/Top/CiviliansLabel
 @onready var _level_name_label: Label = $Root/Top/LevelNameLabel
+@onready var _wave_label: Label = $Root/Top/WaveLabel
+@onready var _countdown_label: Label = $Root/Top/CountdownLabel
+@onready var _call_wave_button: Button = $Root/Top/CallWaveButton
 @onready var _pause_button: Button = $Root/Top/PauseButton
 @onready var _speed_button: Button = $Root/Top/SpeedButton
 
@@ -51,10 +55,15 @@ var _shown_gold: int = -1
 var _shown_civilians: int = -1
 var _shown_speed: int = -1
 var _shown_paused: bool = true    ## sim 起始為 false，故第一幀必定不同
+var _shown_wave_index: int = -1
+var _shown_wave_total: int = -1
+var _shown_countdown: int = -1
 
 func _ready() -> void:
 	_pause_button.pressed.connect(_on_pause_button_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
+	_call_wave_button.text = tr("hud.call_wave")
+	_call_wave_button.pressed.connect(_on_call_wave_button_pressed)
 	_apply_safe_area()
 
 ## 前提：呼叫前必須先 add_child 把這個節點放進場景樹。_level_name_label 是
@@ -90,11 +99,29 @@ func _process(_delta: float) -> void:
 		_shown_speed = speed
 		_speed_button.text = tr("hud.speed_format") % speed
 
+	var wave_index := _sim.world.wave_state.next_wave_index
+	var wave_total := _sim.world.waves.size()
+	if wave_index != _shown_wave_index or wave_total != _shown_wave_total:
+		_shown_wave_index = wave_index
+		_shown_wave_total = wave_total
+		# 顯示是 1 起算：next_wave_index 是 0 起算的索引，全部生完時等於總數，
+		# 那時顯示總數本身而不是總數 + 1。
+		_wave_label.text = tr("hud.wave_format") % [mini(wave_index + 1, wave_total), wave_total]
+
+	# 倒數只顯示到秒。每幀寫一次 Label 是白燒的配置，而秒數一秒才變一次。
+	var countdown := 0 if _sim.world.wave_state.spawning else ceili(_sim.world.wave_state.countdown)
+	if countdown != _shown_countdown:
+		_shown_countdown = countdown
+		_countdown_label.text = tr("hud.wave_incoming") if countdown <= 0 else tr("hud.countdown_format") % countdown
+
 func _on_pause_button_pressed() -> void:
 	pause_pressed.emit()
 
 func _on_speed_button_pressed() -> void:
 	speed_pressed.emit()
+
+func _on_call_wave_button_pressed() -> void:
+	call_wave_pressed.emit()
 
 ## 手機的瀏海與 home indicator 會直接吃掉角落的數字。
 ##
