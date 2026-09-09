@@ -76,8 +76,8 @@ func _def() -> Dictionary:
 		"path_width": 2,
 		"water": {"rect": [7, 0, 10, 2]},
 		"tide": {"low_extra_sand": [[7, 1], [8, 1]]},
-		"props": [{"id": "prop_banyan", "cell": [1, 0]}, {"id": "prop_settlement", "cell": [8, 5], "shadow": false}],
-		"build_slots": [[2, 0], [6, 5]],
+		"props": [{"id": "prop_banyan", "cell": [1, 0]}, {"id": "prop_settlement", "cell": [8, 3], "shadow": false}],
+		"build_slots": [[2, 0], [6, 1]],
 	}
 
 func test_cell_center_is_middle_of_tile() -> void:
