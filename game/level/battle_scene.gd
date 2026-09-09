@@ -232,6 +232,7 @@ func _sync_projectile_views() -> void:
 			view.setup(projectile.instance_id, PROJECTILE_SPRITE, projectile.position)
 			_view_root.add_child(view)
 			_projectile_views[projectile.instance_id] = view
+			_play_tower_fire(projectile)
 		else:
 			view.on_tick(projectile.position)
 
@@ -240,6 +241,21 @@ func _sync_projectile_views() -> void:
 			var view: ProjectileView = _projectile_views[view_id]
 			view.queue_free()
 			_projectile_views.erase(view_id)
+
+## 投射物只記得塔種不記得是哪一座（source_tower_id 是 StringName），
+## 但它生成在發射它的塔的座標上——用座標找回那座塔，播後座與槍口閃光。
+const FIRE_MATCH_PX := 12.0
+
+func _play_tower_fire(projectile: Projectile) -> void:
+	var target: Enemy = _sim.world.enemies_by_id.get(projectile.target_id)
+	if target == null:
+		return
+	for tower: Tower in _sim.world.towers:
+		if tower.position.distance_to(projectile.position) <= FIRE_MATCH_PX:
+			var view: TowerView = _tower_views.get(tower.id)
+			if view != null:
+				view.play_fire(target.position)
+			return
 
 ## 每個渲染幀插值一次，讓 30Hz 的邏輯看起來是 60fps 的平滑移動
 func _interpolate_views() -> void:
