@@ -1,7 +1,7 @@
 extends Node2D
 
 ## 表現層的組裝點：
-##  1. 從編輯器畫好的 Path2D 等距取樣出 PathData（core/ 不接觸 Curve2D）
+##  1. 從 map.json 的折線等距取樣出 PathData（core/ 不接觸 Curve2D，也不再需要 Path2D）
 ##  2. 驅動 BattleSim
 ##  3. 依模擬狀態建立與更新 view
 
@@ -22,16 +22,21 @@ const PROJECTILE_SPRITE := "res://game/assets/placeholder_projectile.png"
 ## 建塔點的美術。空位時顯示，蓋了塔就隱藏——塔就站在同一個座標上。
 const SLOT_SPRITE := "res://game/assets/chapter01/prop_buildsite.png"
 
+const TILES_ATLAS := "res://game/assets/chapter01/tiles.png"
+const SHADOW_ELLIPSE := "res://game/assets/chapter01/shadow_ellipse.png"
+const PROP_ASSET_DIR := "res://game/assets/chapter01"
+
 const BattleHudScene := preload("res://ui/battle_hud.tscn")
 const BuildMenuScene := preload("res://ui/build_menu.tscn")
 const RangeCircleScript := preload("res://game/views/range_circle.gd")
 
-@onready var _path_node: Path2D = $MainPath
 @onready var _view_root: Node2D = $Views
-@onready var _build_slots_root: Node2D = $BuildSlots
 
 var _registry := DataRegistry.new()
 var _sim: BattleSim
+var _level_map: LevelMap
+var _ground: GroundLayer
+var _props: PropLayer
 var _enemy_views: Dictionary = {}       ## int -> EnemyView
 var _tower_views: Dictionary = {}       ## int -> TowerView
 var _projectile_views: Dictionary = {}  ## instance_id -> ProjectileView
@@ -55,9 +60,26 @@ var _menu_options: Array[Dictionary] = []
 func _ready() -> void:
 	_registry.load_from_disk()
 
+	var meta: Dictionary = _registry.levels[LEVEL_ID]
+	assert(meta.has("map"), "關卡 %s 沒有 map.json" % LEVEL_ID)
+	_level_map = LevelMap.new(meta["map"])
+
+	# 地面與擺件放在 CanvasLayer -10：一定在單位（根層，layer 0）之下，
+	# 而且 Task 8 的描邊 pass（layer -5）只看得到它們、看不到單位。
+	var ground_layers := CanvasLayer.new()
+	ground_layers.name = "GroundLayers"
+	ground_layers.layer = -10
+	add_child(ground_layers)
+	_ground = GroundLayer.new()
+	_ground.setup(_level_map, load(TILES_ATLAS))
+	ground_layers.add_child(_ground)
+	_props = PropLayer.new()
+	_props.setup(_level_map, PROP_ASSET_DIR, load(SHADOW_ELLIPSE))
+	ground_layers.add_child(_props)
+
 	var world := WorldState.new()
 	world.configure_for_level(_registry, LEVEL_ID)
-	world.paths[MAIN_PATH_ID] = _bake_path(_path_node)
+	world.paths[MAIN_PATH_ID] = PathData.new(_level_map.sample_path(PATH_SAMPLE_SPACING), PATH_SAMPLE_SPACING)
 
 	_sim = BattleSim.new(world)
 	_bake_build_slots(world)
@@ -100,21 +122,12 @@ func _process(delta: float) -> void:
 
 ## 把編輯器畫的 Curve2D 等距取樣成點陣列。
 ## core/ 只認得點陣列，不認得 Curve2D——這個轉換就是分層的邊界。
-func _bake_path(path_node: Path2D) -> PathData:
-	var curve := path_node.curve
-	var length := curve.get_baked_length()
-	var sample_count := int(length / PATH_SAMPLE_SPACING) + 1
-	var points := PackedVector2Array()
-	for i in sample_count:
-		points.append(curve.sample_baked(float(i) * PATH_SAMPLE_SPACING))
-	return PathData.new(points, PATH_SAMPLE_SPACING)
-
-## 把場景中的 Marker2D 烘焙成 BuildSlot 交給 core/。
-## core/ 不認得 Marker2D，與 Path2D → PathData 是同一個分層邊界。
+## 建塔點由 map.json 指定格子，LevelMap 換算成像素座標交給 core/。
+## core/ 不認得格子與貼圖，與 LevelMap → PathData 是同一個分層邊界。
 func _bake_build_slots(world: WorldState) -> void:
-	for marker in _build_slots_root.get_children():
+	for pos in _level_map.build_slot_positions():
 		var slot := BuildSlot.new()
-		slot.position = marker.position
+		slot.position = pos
 		world.add_build_slot(slot)
 
 		var view := BuildSlotViewScript.new() as BuildSlotView

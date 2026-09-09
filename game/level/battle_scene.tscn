@@ -1,30 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://c4hxr1a8w2qfn"]
+[gd_scene load_steps=2 format=3 uid="uid://c4hxr1a8w2qfn"]
 
 [ext_resource type="Script" path="res://game/level/battle_scene.gd" id="1_bscn0"]
-
-[sub_resource type="Curve2D" id="Curve2D_bscn0"]
-_data = {
-"points": PackedVector2Array(0, 0, 0, 0, 100, 150, 0, 0, 0, 0, 700, 150, 0, 0, 0, 0, 700, 250, 0, 0, 0, 0, 100, 250, 0, 0, 0, 0, 100, 600, 0, 0, 0, 0, 1850, 600)
-}
 
 [node name="BattleScene" type="Node2D"]
 script = ExtResource("1_bscn0")
 
-[node name="MainPath" type="Path2D" parent="."]
-curve = SubResource("Curve2D_bscn0")
-
 [node name="Views" type="Node2D" parent="."]
-
-[node name="BuildSlots" type="Node2D" parent="."]
-
-[node name="Slot0" type="Marker2D" parent="BuildSlots"]
-position = Vector2(400, 200)
-
-[node name="Slot1" type="Marker2D" parent="BuildSlots"]
-position = Vector2(400, 450)
-
-[node name="Slot2" type="Marker2D" parent="BuildSlots"]
-position = Vector2(900, 480)
-
-[node name="Slot3" type="Marker2D" parent="BuildSlots"]
-position = Vector2(1400, 480)
