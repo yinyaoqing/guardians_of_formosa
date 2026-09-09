@@ -5,11 +5,12 @@
 
 圖集配置（每格 32×32）：
     列 0  草地（榕蔭綠底 + 翠綠／墨綠碎點）×4 變體
-    列 1  沙洲路徑（沙洲黃底 + 曝曬沙卵石）×4 變體
+    列 1  沙洲路徑（沙洲黃平色，素沙）×4 變體
     列 2  水（台江靛底 + 潮水青波紋）×2 變體
 另輸出一張接觸陰影橢圓（精緻度規格 L1）。
 
-    python art/scripts/make_tiles.py
+    python art/scripts/make_tiles.py                              # 正式：game/assets/chapter01/
+    python art/scripts/make_tiles.py --out art_src/03_processed_px  # 實驗（pixel_demo）
 """
 
 import json
@@ -19,7 +20,7 @@ import random
 from PIL import Image, ImageDraw
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT_DIR = os.path.join(REPO, "art_src", "03_processed_px")
+OUT_DIR = os.path.join(REPO, "game", "assets", "chapter01")
 TILE = 32
 
 
@@ -56,15 +57,13 @@ def grass(rng: random.Random) -> Image.Image:
 
 
 def path(rng: random.Random) -> Image.Image:
-    # 卵石：曝曬沙的圓塊，縫隙留沙洲黃——對應參考圖的橙色石板路，但用本作色票
+    # 素沙（2026-09-09 決定）：沙洲黃平色，只撒極少量曝曬沙碎點打破重複感。
+    # 路徑靠「沙洲黃 vs 翠綠」的色對比讀，不靠紋理——扁平幾何風格下紋理反而突兀。
     im = Image.new("RGBA", (TILE, TILE), P["sand"])
     d = ImageDraw.Draw(im)
-    for gy in range(0, TILE, 8):
-        off = 4 if (gy // 8) % 2 else 0
-        for gx in range(-4, TILE, 8):
-            x, y = gx + off + rng.randint(-1, 1), gy + rng.randint(-1, 1)
-            w, h = rng.randint(5, 7), rng.randint(4, 6)
-            d.rounded_rectangle((x, y, x + w, y + h), radius=2, fill=P["sun_sand"])
+    for _ in range(rng.randint(1, 3)):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        d.point((x, y), P["sun_sand"])
     return im
 
 
@@ -79,21 +78,26 @@ def water(rng: random.Random) -> Image.Image:
 
 def shadow_ellipse() -> Image.Image:
     im = Image.new("RGBA", (24, 10), (0, 0, 0, 0))
-    ImageDraw.Draw(im).ellipse((0, 0, 23, 9), fill=(30, 22, 17, 110))
+    ImageDraw.Draw(im).ellipse((0, 0, 23, 9), fill=(58, 42, 34, 110))  # 焦茶 #3A2A22 + alpha，色票測試看 RGB
     return im
 
 
 def main() -> int:
-    os.makedirs(OUT_DIR, exist_ok=True)
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--out", default=OUT_DIR, help="輸出目錄（預設 game/assets/chapter01；實驗用 art_src/03_processed_px）")
+    args = ap.parse_args()
+    out_dir = args.out
+    os.makedirs(out_dir, exist_ok=True)
     rng = random.Random(1661)
     rows = [[grass(rng) for _ in range(4)], [path(rng) for _ in range(4)], [water(rng) for _ in range(2)]]
     atlas = Image.new("RGBA", (TILE * 4, TILE * 3), (0, 0, 0, 0))
     for r, tiles in enumerate(rows):
         for c, t in enumerate(tiles):
             atlas.paste(t, (c * TILE, r * TILE))
-    atlas.save(os.path.join(OUT_DIR, "xp_tiles.png"))
-    shadow_ellipse().save(os.path.join(OUT_DIR, "xp_shadow_ellipse.png"))
-    print(f"→ {os.path.relpath(OUT_DIR, REPO)}/xp_tiles.png ({atlas.width}x{atlas.height}), xp_shadow_ellipse.png")
+    atlas.save(os.path.join(out_dir, "tiles.png"))
+    shadow_ellipse().save(os.path.join(out_dir, "shadow_ellipse.png"))
+    print(f"→ {os.path.relpath(out_dir, REPO)}/tiles.png ({atlas.width}x{atlas.height}), shadow_ellipse.png")
     return 0
 
 
