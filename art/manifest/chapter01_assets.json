@@ -17,7 +17,10 @@
     "prop": "a single hand-painted 2D game prop drawn from a slightly raised three-quarter angle, one small object, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty.",
     "vessel": "single 3/4 side view game asset of a whole ship seen from slightly above, entire hull and rigging visible, centered, isolated on a plain flat neutral background, standing on nothing — no ground shadow, no shadow ellipse under the feet, no patch of ground, the background is completely empty.",
     "scene": "top-down 3/4 isometric tower defense battle map, wide establishing view.",
-    "icon": "single centered game UI icon, one simple bold readable shape, thick contrasting border, isolated on a plain flat neutral background."
+    "icon": "a flat vector pictogram sticker cut out along its own silhouette, floating alone in empty space: the pictogram's own edges ARE the outer boundary of the artwork, with nothing drawn around or behind it — no plate, no tile, no coin, no badge, no rounded square, no circle. Plain flat neutral background only.",
+    "_icon_history": "single centered game UI icon, one simple bold readable shape, thick contrasting border, isolated on a plain flat neutral background.",
+    "_icon_note": "2026-09-09：底框改由 UI 主題畫一次，AI 只出符號。第一版寫「NO frame」否定句，12 張裡 8 張仍有底板（否定句對擴散模型無效，A1 §4.3 早有同樣觀察）；第二版改正向描述「貼紙沿自身輪廓裁切」。舊 framing 在 _icon_history／_icon_v2_history。",
+    "_icon_v2_history": "a single centered flat game UI symbol, one simple bold readable pictogram, NO frame, NO border, NO badge, NO background plate, NO circle or square behind it — just the symbol itself isolated on a plain flat neutral background."
   },
   "proportions": {
     "unit": "PROPORTIONS: stylised game character proportions — a noticeably large head, short sturdy body, only 4 head-heights from crown to sole, thick limbs, bold readable silhouette at 128 pixels, simplified hands and face. NOT realistic adult proportions.",

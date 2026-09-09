@@ -245,3 +245,13 @@ RGB 版重跑的差異落在 5–28%（鐵灰被吸走的陰影像素回到正�
 - 仍錯的是老問題：鐵人軍歐式盔、大熕船歐式蓋倫——知識缺口，要走 Klein 參考圖編輯餵史料。
 - 圖示底框樣式不一，應由 UI 主題畫、AI 只出符號。
 - 後續順序見 `docs/art/roadmap-2026-09-09.md`。
+
+---
+
+## 11. 計畫 §1：挑選工具、參考圖編輯補候選、圖示改符號（2026-09-09）
+
+- `select_masters.py`：帶編號印樣（`art_src/candidates/<id>_<stage>.png`）、`--pick id=n --stage s`、`--apply`、`--status`；`master_set.json` 記 stage + 檔名 + 日期。`postprocess.py` 優先讀它，沒有紀錄的資產列出提醒。
+- `generate_batch.py --stage ref`：史料參考圖 + Klein 編輯（`a2x_flux2_edit`），資產需有 `ref`。**鐵人軍 4/4 有面罩、札甲、大刀；大熕船 4/4 是中式硬帆**——A1 §9.3 記錄至今的兩個知識缺口，第一次同時做對。「內容靠圖、風格靠字」再次成立。
+- 圖示：framing 改「只出符號、無底框」，第一版用否定句（NO frame）12 張裡 8 張仍有底板——否定句對擴散模型無效，A1 §4.3 早有同樣觀察。第二版改正向措辭（貼紙沿自身輪廓裁切）重出中；若仍失敗，備案是程式去底板或 UI 主題直接蓋在底板上。
+
+待人工：在 `art_src/candidates/` 挑 33 張，指令 `python art/scripts/select_masters.py --pick <id>=<n> [--stage flat|ref]`。

@@ -30,6 +30,9 @@ WORKFLOWS = {
     # 2026-09-09 風格改扁平幾何無五官後的重跑。工作流與 flux2 相同，只是產出落在 stage_flat/，
     # 讓 stage_flux2 的舊風格候選留著可比對，不被覆蓋。
     "flat": os.path.join(REPO, "art", "workflows", "a1_flux2_unit.api.json"),
+    # 史料參考圖 + Klein 參考圖編輯：內容靠圖、風格靠字（A2x §8 結論）。給鐵人軍、大熕船這類
+    # 純文字叫不出正確形制的資產用；資產需有 ref 欄位（檔案已在 comfyui/input/）。
+    "ref": os.path.join(REPO, "art", "workflows", "a2x_flux2_edit.api.json"),
 }
 
 # 各工作流的節點編號不同（FLUX.2 的正向在 4、latent 在 7、KSampler 在 8），
@@ -127,8 +130,9 @@ def run_one(base_wf: dict, m: dict, asset: dict, batch: int, seed: int, timeout:
         wf[r["source"]]["inputs"]["image"] = source_image
     else:
         wf[r["latent"]]["inputs"].update({"width": w, "height": h, "batch_size": batch})
-    if stage == "a":
+    if stage in ("a", "ref"):
         wf[r["ref"]]["inputs"]["image"] = asset["ref"]
+    if stage == "a":
         wf[r["pose"]]["inputs"]["image"] = f"pose_{asset['pose']}.png"
 
     prompt_id = post("/prompt", {"prompt": wf})["prompt_id"]
@@ -158,8 +162,8 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=16610430, help="1661/04/30 大潮")
     ap.add_argument("--timeout", type=float, default=1200.0)
     ap.add_argument("--force", action="store_true", help="重做已有足量產出的資產")
-    ap.add_argument("--stage", choices=["text", "a", "b", "flux2", "flat"], default="text",
-                    help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字；flat=同 flux2，扁平幾何風格重跑")
+    ap.add_argument("--stage", choices=["text", "a", "b", "flux2", "flat", "ref"], default="text",
+                    help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字；flat=同 flux2，扁平幾何風格重跑；ref=史料參考圖 + Klein 編輯")
     ap.add_argument("--dry-run", action="store_true", help="只印 prompt 不出圖")
     # 風格實驗用另一份清單、另一組資產 id，產出才不會混進 chapter01 的候選目錄。
     ap.add_argument("--manifest", default=MANIFEST, help="資產清單路徑（預設 chapter01）")
@@ -177,6 +181,8 @@ def main() -> int:
     if args.stage in ("a", "b"):
         # 階段 A/B 需要史料參考與骨架，沒標註的資產跳過而不是靜默走錯的路徑。
         assets = [a for a in assets if a.get("ref") and a.get("pose")]
+    elif args.stage == "ref":
+        assets = [a for a in assets if a.get("ref")]
     if args.only:
         assets = [a for a in assets if a["id"] in args.only]
     if args.cat:

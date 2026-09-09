@@ -416,6 +416,8 @@ tail -5 art_src/lighting_baseline.txt
 
 ### Task 4：挑選工具與母本集清單
 
+> **2026-09-09 實作完成**（`art/scripts/select_masters.py`）。與本計畫的差異：`master_set.json` 每筆多記 `stage`（候選可能來自 `flat`／`ref`／`a` 不同 stage）；預設 stage 改為 `flat`（風格已定案扁平幾何無五官）；`02_selected/master/` 取代 `02_selected/flux2/`；`postprocess.py` 直接讀 `master_set.json` 取圖、沒有紀錄的資產印提醒。理由見 `docs/art/A2x` §9.3——沒有來源紀錄，重跑管線對不到同一張圖。
+
 人工挑選需要兩件東西：一次看得到十張的帶編號印樣，以及一個記錄「選了哪張」的檔案。**選擇必須留痕**，否則 A3 訓練 LoRA 時無從得知母本是哪些圖。
 
 **Files:**

@@ -27,6 +27,7 @@
 import argparse
 import json
 import os
+import sys
 from collections import deque
 
 from PIL import Image
@@ -35,6 +36,7 @@ import _console
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MANIFEST = os.path.join(REPO, "art", "manifest", "chapter01_assets.json")
+MASTER_SET = os.path.join(REPO, "art", "manifest", "master_set.json")
 RAW = os.path.join(REPO, "art_src", "01_raw")
 OUT = os.path.join(REPO, "art_src", "03_processed")
 
@@ -280,6 +282,11 @@ def main() -> int:
         return 1 if verify(paths) else 0
 
     os.makedirs(out_dir, exist_ok=True)
+    master_selections: dict = {}
+    if os.path.exists(MASTER_SET):
+        with open(MASTER_SET, encoding="utf-8") as f:
+            master_selections = json.load(f).get("selections", {})
+    unpicked: list[str] = []
     written: list[str] = []
     done = skipped = 0
     for a in assets:
@@ -288,16 +295,28 @@ def main() -> int:
         # 不這樣做的話，任何一次不帶 --stage 覆寫的標準指令都會靜靜讀到
         # stage_flux2 裡被拒絕的舊候選，把 03_processed 換回錯的圖，
         # 而色票檢查驗不出主體錯誤，不會有任何錯誤訊息。
-        stage = a.get("source_stage", args.stage)
-        d = os.path.join(RAW, a["id"], f"stage_{stage}") if stage else os.path.join(RAW, a["id"])
-        if not os.path.isdir(d):
-            skipped += 1
-            continue
-        files = sorted(f for f in os.listdir(d) if f.lower().endswith(".png"))
-        if not files:
-            skipped += 1
-            continue
-        src = Image.open(os.path.join(d, files[0]))
+        # 候選來源的優先序：master_set.json 的人工挑選 > 清單的 source_stage > --stage 的 files[0]。
+        # 沒有人工挑選紀錄時退回舊行為，但會印出提醒——A2x §9.3 的教訓是「沒留痕就對不到同一張圖」。
+        picked = master_selections.get(a["id"])
+        if picked:
+            src_path = os.path.join(RAW, a["id"], f"stage_{picked['stage']}", picked["file"])
+            if not os.path.exists(src_path):
+                print(f"  {a['id']:<22} 母本集指定的檔不存在：{os.path.relpath(src_path, REPO)}", file=sys.stderr)
+                skipped += 1
+                continue
+        else:
+            stage = a.get("source_stage", args.stage)
+            d = os.path.join(RAW, a["id"], f"stage_{stage}") if stage else os.path.join(RAW, a["id"])
+            if not os.path.isdir(d):
+                skipped += 1
+                continue
+            files = sorted(f for f in os.listdir(d) if f.lower().endswith(".png"))
+            if not files:
+                skipped += 1
+                continue
+            src_path = os.path.join(d, files[0])
+            unpicked.append(a["id"])
+        src = Image.open(src_path)
         # 場景是滿版地形，沒有「背景」可去——對它泛洪會把邊角吃掉。
         if a["cat"] == "scene":
             im = src.convert("RGBA")
@@ -321,6 +340,8 @@ def main() -> int:
         print(f"  {a['id']:<22} {out.width}x{out.height}  前景佔比 {opaque / (out.width * out.height):.0%}")
         done += 1
 
+    if unpicked:
+        print(f"\n  未在 master_set.json 留痕、取 files[0] 的資產 {len(unpicked)} 個：{', '.join(unpicked)}")
     print(f"\n=== 完成 {done}，跳過 {skipped}（無產出）→ {os.path.relpath(out_dir, REPO)}")
     return 0
 
