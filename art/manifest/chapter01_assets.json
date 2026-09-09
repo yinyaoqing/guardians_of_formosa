@@ -139,18 +139,26 @@
       "cat": "unit",
       "fac": "han",
       "name": "柵欄二級：刀盾壯丁",
-      "subject": "a 17th-century Han Chinese militiaman of Tayouan town in Formosa, a short stocky sturdy build, an indigo blue short jacket and trousers, a gamboge yellow sash at the waist, straw sandals, a topknot with a cloth headband, NOT braided. Holding a short sabre and a round rattan shield.",
-      "pose_text": "POSE: crouched low behind a round shield held forward, sabre arm extended out to the side away from the body.",
-      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
+      "subject": "a 17th-century Han Chinese militiaman of Tayouan town in Formosa, a short stocky sturdy build, an indigo blue short jacket and trousers, a gamboge yellow sash at the waist, straw sandals, a topknot with a cloth headband, NOT braided. In his LEFT hand a round rattan shield of natural woven rattan in sand colour (NOT yellow, NOT metal), held up in front of the body; in his RIGHT hand a short sabre raised ready to strike — one weapon per hand, both clearly visible.",
+      "pose_text": "POSE: crouched low behind the round shield held forward in the left hand, the sabre arm raised high and out to the right side — shield and sabre on opposite sides of the body.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels.",
+      "_prompt_history_r2": {
+        "subject": "a 17th-century Han Chinese militiaman of Tayouan town in Formosa, a short stocky sturdy build, an indigo blue short jacket and trousers, a gamboge yellow sash at the waist, straw sandals, a topknot with a cloth headband, NOT braided. Holding a short sabre and a round rattan shield.",
+        "pose_text": "POSE: crouched low behind a round shield held forward, sabre arm extended out to the side away from the body."
+      }
     },
     {
       "id": "tower_fence_t3",
       "cat": "unit",
       "fac": "han",
       "name": "柵欄三級：藤牌隊",
-      "subject": "two 17th-century Han Chinese militiamen of Tayouan town in Formosa crouching behind large round rattan shields held forward, indigo blue short jackets, gamboge yellow sashes, straw sandals, short sabres, topknots with cloth headbands, NOT braided.",
-      "pose_text": "POSE: two figures crouched very low side by side, round shields locked forward filling the lower half, a wide flat mass.",
-      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
+      "subject": "two 17th-century Han Chinese militiamen of Tayouan town in Formosa standing shoulder to shoulder behind two large round rattan shields. The shields are natural woven rattan with a visible concentric weave texture in sand and light brown colour (NOT yellow, NOT metal, NOT plain flat discs). The shields are held so that the men's hands and forearms are completely hidden behind them — no hands visible anywhere. Indigo blue short jackets, gamboge yellow sashes, straw sandals, topknots with cloth headbands, NOT braided; short sabres tucked at the waist.",
+      "pose_text": "POSE: two figures crouched very low side by side, round shields locked forward filling the lower half and hiding their hands, a wide flat mass.",
+      "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels.",
+      "_prompt_history_r2": {
+        "subject": "two 17th-century Han Chinese militiamen of Tayouan town in Formosa crouching behind large round rattan shields held forward, indigo blue short jackets, gamboge yellow sashes, straw sandals, short sabres, topknots with cloth headbands, NOT braided.",
+        "pose_text": "POSE: two figures crouched very low side by side, round shields locked forward filling the lower half, a wide flat mass."
+      }
     },
     {
       "id": "enemy_musketeer",
@@ -167,8 +175,12 @@
       "cat": "unit",
       "fac": "zheng",
       "name": "鄭軍藤牌兵",
-      "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a natural sand-coloured woven rattan face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET.",
-      "pose_text": "POSE: deep crouching charge, the round shield thrust forward and up so it covers a third of the whole silhouette, sabre low behind."
+      "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army, hair in a topknot, a terracotta red tunic, cloth leg wraps, BARE FEET. In his LEFT hand a large round rattan shield with a natural sand-coloured woven rattan face, held forward and up so it covers a third of the silhouette; in his RIGHT hand a sabre held low and back — one shield and one sabre, on opposite sides of the body.",
+      "pose_text": "POSE: deep crouching forward-leaning charge, the shield thrust forward in the left hand, the sabre trailing low behind in the right hand.",
+      "_prompt_history_r2": {
+        "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a natural sand-coloured woven rattan face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET.",
+        "pose_text": "POSE: deep crouching charge, the round shield thrust forward and up so it covers a third of the whole silhouette, sabre low behind."
+      }
     },
     {
       "id": "enemy_archer",
@@ -239,8 +251,12 @@
       "cat": "unit",
       "fac": "voc",
       "name": "VOC 砲手",
-      "subject": "a Dutch East India Company artillery gunner in tropical Formosa 1661, no hat, rolled up shirt sleeves, an off-white linen shirt open at the neck, knee breeches, leather shoes, holding a long cannon rammer staff, a powder horn at the hip, sun-burnt and sweating.",
-      "pose_text": "POSE: both hands gripping a long rammer staff held horizontally at waist height, leaning into a push — a strong horizontal line."
+      "subject": "a Dutch East India Company artillery gunner in tropical Formosa 1661, no hat, rolled up sleeves, an off-white linen shirt open at the neck, knee breeches, leather shoes, a powder horn at the hip. He holds a cannon rammer: a long straight wooden pole taller than himself with a thick cylindrical wooden head at the top, gripped with both hands and planted upright on the ground beside him like a staff. Sun-burnt, sweating.",
+      "pose_text": "POSE: standing squarely, the rammer planted vertically beside him and gripped with both hands at chest height — one tall vertical line next to the figure.",
+      "_prompt_history_r2": {
+        "subject": "a Dutch East India Company artillery gunner in tropical Formosa 1661, no hat, rolled up shirt sleeves, an off-white linen shirt open at the neck, knee breeches, leather shoes, holding a long cannon rammer staff, a powder horn at the hip, sun-burnt and sweating.",
+        "pose_text": "POSE: both hands gripping a long rammer staff held horizontally at waist height, leaning into a push — a strong horizontal line."
+      }
     },
     {
       "id": "voc_coyett",
