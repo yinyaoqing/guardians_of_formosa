@@ -171,3 +171,17 @@ func test_battle_scene_gates_hud_buttons_after_the_battle_ends() -> void:
 " +
 		"目前有三顆 HUD 按鈕（暫停、倍速、呼叫下一波），三個都要擋。"
 	).is_equal(3)
+
+## 同一種問題的又一個實例：battle_scene.gd 若沒有同步小兵的 view，
+## 兵營蓋起來會完全正常——扣錢、換圖、擋住敵人、敵人真的停下來——
+## 但戰場上一個小兵都看不到。core/ 的測試全綠，headless 套件不執行場景腳本，
+## 沒有任何自動化測試能抓到它。
+func test_battle_scene_syncs_soldier_views() -> void:
+	var battle_scene_path := "res://game/level/battle_scene.gd"
+	var source := FileAccess.get_file_as_string(battle_scene_path)
+	# 用 count(...) > 1 而非 contains(...)：函式自己的定義行也含這個字串，
+	# contains 會匹配到定義本身，於是「定義了但沒人呼叫」也算通過。
+	assert_int(source.count("_sync_soldier_views()")).override_failure_message(
+		"battle_scene.gd 沒有呼叫 _sync_soldier_views()。\n" +
+		"兵營會完全正常運作——扣錢、擋敵人、敵人真的停住——但畫面上看不到小兵。"
+	).is_greater(1)
