@@ -1,0 +1,12 @@
+{
+  "id": "zheng_ironman",
+  "name_key": "enemy.zheng_ironman.name",
+  "hp": 320.0,
+  "speed": 25.0,
+  "armor": 0.6,
+  "magic_resist": 0.0,
+  "bounty": 15,
+  "sprite": "res://game/assets/puppets/enemy_ironman/body.png",
+  "puppet": "enemy_ironman",
+  "_note": "數值暫定（M0 灰盒基準 orc_grunt 的相對值，依章節規格 §4.1 的特性方向調），正式數值待玩法調校。分件母本＝母本集扁平幾何版。"
+}

@@ -1,0 +1,47 @@
+{
+ "_doc": "分件動畫定義，由 art/scripts/walk_pack.py --install boss_chenze 產生。parts 依繪製順序；origin／pivot 為相對圖心的像素（128px 版）。swing_deg 腿擺幅、bob_px 軀幹起伏、stride_px 走幾像素算一圈——EnemyView 以走過的距離推進相位。",
+ "parts": [
+  {
+   "name": "leg_back",
+   "texture": "res://game/assets/puppets/boss_chenze/leg_back.png",
+   "origin": [
+    -39.92,
+    28.07
+   ],
+   "pivot": [
+    -18.85,
+    22.92
+   ],
+   "role": "leg_a"
+  },
+  {
+   "name": "leg_front",
+   "texture": "res://game/assets/puppets/boss_chenze/leg_front.png",
+   "origin": [
+    -1.55,
+    28.07
+   ],
+   "pivot": [
+    18.59,
+    22.92
+   ],
+   "role": "leg_b"
+  },
+  {
+   "name": "body",
+   "texture": "res://game/assets/puppets/boss_chenze/body.png",
+   "origin": [
+    -37.6,
+    -63.74
+   ],
+   "pivot": [
+    -37.6,
+    -63.74
+   ],
+   "role": "body"
+  }
+ ],
+ "swing_deg": 28,
+ "bob_px": 2,
+ "stride_px": 40
+}

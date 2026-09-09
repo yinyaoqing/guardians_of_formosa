@@ -168,7 +168,13 @@
       "subject": "a 17th-century Ming loyalist musketeer of Koxinga's army. East Asian face, clean shaven, hair in a topknot under a conical lacquered iron helmet forming a clear triangular silhouette. A deep terracotta red Ming military tunic, cloth leg wraps, BARE FEET. Holding a matchlock arquebus.",
       "ref": "ref_ming.jpg",
       "pose": "musket_ready",
-      "pose_text": "POSE: walking forward, musket carried low and level at the hip, both arms close to the body, compact upright silhouette."
+      "pose_text": "POSE: walking forward, musket carried low and level at the hip, both arms close to the body, compact upright silhouette.",
+      "puppet": {
+        "hem": 600,
+        "leg_top": 560,
+        "hip": 520,
+        "split_x": 235
+      }
     },
     {
       "id": "enemy_rattan",
@@ -180,6 +186,12 @@
       "_prompt_history_r2": {
         "subject": "a 17th-century Ming loyalist rattan shield soldier of Koxinga's army. East Asian face, a low crouching forward-leaning charge posture. A large round rattan shield with a natural sand-coloured woven rattan face occupying a third of the silhouette, a sabre in the other hand. A terracotta red tunic, cloth leg wraps, BARE FEET.",
         "pose_text": "POSE: deep crouching charge, the round shield thrust forward and up so it covers a third of the whole silhouette, sabre low behind."
+      },
+      "puppet": {
+        "hem": 740,
+        "leg_top": 700,
+        "hip": 660,
+        "split_x": 490
       }
     },
     {
@@ -188,7 +200,13 @@
       "fac": "zheng",
       "name": "鄭軍弓箭手",
       "subject": "a 17th-century Ming loyalist archer of Koxinga's army. East Asian face, hair in a topknot, a deep indigo blue Ming military tunic, cloth leg wraps, BARE FEET. Drawing a Ming composite recurve bow at full draw forming a taut triangular shape, a quiver of arrows at the hip.",
-      "pose_text": "POSE: bow at full draw, both arms wide apart horizontally, the bow forming a large open arc — a wide symmetrical silhouette."
+      "pose_text": "POSE: bow at full draw, both arms wide apart horizontally, the bow forming a large open arc — a wide symmetrical silhouette.",
+      "puppet": {
+        "hem": 800,
+        "leg_top": 760,
+        "hip": 720,
+        "split_x": 620
+      }
     },
     {
       "id": "enemy_ironman",
@@ -201,7 +219,13 @@
       "pose_text": "POSE: very wide braced stance, feet far apart, an enormous two-handed sabre resting across the shoulders behind the neck with both arms raised and out — a broad rectangular mass.",
       "allow": [
         "鐵灰"
-      ]
+      ],
+      "puppet": {
+        "hem": 600,
+        "leg_top": 565,
+        "hip": 525,
+        "split_x": 340
+      }
     },
     {
       "id": "enemy_sapper",
@@ -209,7 +233,13 @@
       "fac": "zheng",
       "name": "鄭軍掘壕隊",
       "subject": "a 17th-century Ming loyalist trench digger of Koxinga's army, an unarmed labourer. Sand yellow and ochre worn clothing, hair in a topknot, cloth leg wraps, BARE FEET. Carrying a mattock over the shoulder and a woven earth basket, a rolled earth bag at the waist. A stooped working posture.",
-      "pose_text": "POSE: stooped forward under a mattock carried across one shoulder, a heavy basket hanging from the other hand, weight clearly to one side."
+      "pose_text": "POSE: stooped forward under a mattock carried across one shoulder, a heavy basket hanging from the other hand, weight clearly to one side.",
+      "puppet": {
+        "hem": 620,
+        "leg_top": 585,
+        "hip": 545,
+        "split_x": 255
+      }
     },
     {
       "id": "enemy_warjunk",
@@ -228,7 +258,13 @@
       "fac": "zheng",
       "name": "陳澤（1-2 Boss）",
       "subject": "a 17th-century Ming loyalist general of Koxinga's army, taller and heavier than a common soldier. East Asian face, a lacquered iron helmet with a tall cinnabar red plume, Ming mountain-pattern lamellar armor in cinnabar red and dark bronze gold, a flowing cape, a commander's signal banner in one hand and a sabre in the other. Cloth leg wraps, BARE FEET.",
-      "pose_text": "POSE: commanding stance, a tall signal banner raised high in one hand well above the head, cape spread wide behind, sabre lowered in the other hand."
+      "pose_text": "POSE: commanding stance, a tall signal banner raised high in one hand well above the head, cape spread wide behind, sabre lowered in the other hand.",
+      "puppet": {
+        "hem": 750,
+        "leg_top": 715,
+        "hip": 675,
+        "split_x": 300
+      }
     },
     {
       "id": "civilian_family",
@@ -405,5 +441,6 @@
   "style_by_cat": {
     "unit": "The face is ONE smooth featureless flat shape with no eyes, no mouth, no nose, no eyebrows drawn — the only detail on the face is the vertical light/dark split. Hair, beard, hat, helmet and collar are flat faceted shapes. Hands are simple mitten shapes.",
     "_doc": "依類別追加的風格句，接在 shared.style 之後（generate_batch.build_prompts）。無五官只對人物成立，擺件不需要。"
-  }
+  },
+  "_puppet_doc": "puppet 欄位：分件動畫的切線（母本去背裁切後的像素座標，人看一次格線圖填）。hem＝軀幹保留到此列（含衣襬，蓋接縫）；leg_top＝腿從此列開始（與衣襬重疊藏接縫）；hip＝髖關節列（腿的旋轉中心）；split_x＝兩腿以此垂直線切開（3/4 視角兩腿在衣襬下相連時必填）。python art/scripts/walk_pack.py --from-manifest 依此批次拆件並安裝到 game/assets/puppets/<id>/ 與 data/puppets/<id>.json。"
 }

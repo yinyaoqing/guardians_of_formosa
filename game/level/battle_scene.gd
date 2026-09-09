@@ -8,6 +8,9 @@ extends Node2D
 const PATH_SAMPLE_SPACING := 8.0
 const MAIN_PATH_ID := &"main"
 const SPAWN_INTERVAL := 1.5
+const SPAWN_ROSTER: Array[StringName] = [
+	&"zheng_musketeer", &"zheng_rattan", &"zheng_archer", &"zheng_sapper", &"zheng_ironman", &"zheng_chenze",
+]
 const LEVEL_ID := &"level_01"
 
 const EnemyViewScript := preload("res://game/views/enemy_view.gd")
@@ -48,6 +51,7 @@ var _hud: BattleHud = null
 ## 是同一個手法——每幀無條件重載一張 128px 的圖是白燒的。
 var _shown_tower_levels: Dictionary = {}   ## tower id -> int
 var _spawn_timer: float = 0.0
+var _spawn_index: int = 0
 
 var _build_menu: BuildMenu = null
 var _range_circle: RangeCircle = null
@@ -116,7 +120,10 @@ func _process(delta: float) -> void:
 	_spawn_timer -= float(ticks) * BattleSim.TICK_DELTA
 	if _spawn_timer <= 0.0:
 		_spawn_timer = SPAWN_INTERVAL
-		_spawn_enemy(&"zheng_musketeer")
+		# 暫時的生怪輪替：把第一章六種敵人輪流放出來，看分件動畫與剪影是否都成立。
+		# 波次系統子里程碑會把這段搬進 tick、改由關卡資料驅動。
+		_spawn_enemy(SPAWN_ROSTER[_spawn_index % SPAWN_ROSTER.size()])
+		_spawn_index += 1
 
 	if ticks > 0 or had_intents:
 		_sync_views()

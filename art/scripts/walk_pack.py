@@ -1,6 +1,7 @@
 """行走循環實驗的素材打包：AI 幀 → 對齊的 128／48px 幀；皮影母本 → 軀幹 + 兩腿分件。
 
-    python art/scripts/walk_pack.py
+    python art/scripts/walk_pack.py                     # 實驗：AI 幀打包 + 預設母本拆件
+    python art/scripts/walk_pack.py --from-manifest     # 正式：依清單 puppet 欄位批次拆件並安裝
 
 輸出到 art_src/04_walk/，供 game/fx/walk_demo.gd 讀取。
 
@@ -91,9 +92,9 @@ def _components(mask: Image.Image) -> list[set[tuple[int, int]]]:
     return sorted(comps, key=len, reverse=True)
 
 
-def slice_puppet(src_path: str = PUPPET_SRC, hem: int = HEM, leg_top: int = LEG_TOP, hip: int = HIP,
+def slice_puppet(src_path=PUPPET_SRC, hem: int = HEM, leg_top: int = LEG_TOP, hip: int = HIP,
                  split_x: int | None = None) -> dict:
-    src = Image.open(src_path).convert("RGBA")
+    src = (src_path if isinstance(src_path, Image.Image) else Image.open(src_path)).convert("RGBA")
     W, H = src.size
     k = 128 / H  # 與 128px 幀同比例
     cx, cy = W / 2, H / 2
@@ -180,6 +181,32 @@ def install(name: str, meta: dict) -> None:
     print(f"  installed → game/assets/puppets/{name}/, data/puppets/{name}.json")
 
 
+def from_manifest(only: list[str] | None) -> int:
+    """依 chapter01 清單的 puppet 欄位批次拆件並安裝。母本取 master_set.json 挑定的那一張，
+    去背裁切後即為切線的座標系（與 postprocess --keep-full 的 *_full.png 相同）。"""
+    import glob
+    with open(pp.MANIFEST, encoding="utf-8") as f:
+        assets = json.load(f)["assets"]
+    with open(pp.MASTER_SET, encoding="utf-8") as f:
+        picks = json.load(f)["selections"]
+    done = 0
+    for a in assets:
+        if "puppet" not in a or (only and a["id"] not in only):
+            continue
+        sel = picks.get(a["id"])
+        if not sel:
+            print(f"  {a['id']}: master_set.json 沒有挑選紀錄，略過")
+            continue
+        src = os.path.join(RAW, a["id"], f"stage_{sel['stage']}", sel["file"])
+        full = pp.trim(pp.remove_background(Image.open(src)))
+        q = a["puppet"]
+        meta = slice_puppet(full, q["hem"], q["leg_top"], q["hip"], q.get("split_x"))
+        install(a["id"], meta)
+        done += 1
+    print(f"=== 拆件安裝 {done} 個")
+    return 0
+
+
 def main() -> int:
     pp._console.fix()
     ap = argparse.ArgumentParser(description=__doc__)
@@ -190,7 +217,11 @@ def main() -> int:
     ap.add_argument("--hip", type=int, default=HIP)
     ap.add_argument("--split-x", type=int, default=None, help="兩腿以垂直線切開的 x（3/4 視角用）")
     ap.add_argument("--skip-frames", action="store_true", help="只拆件，不重打包 AI 幀")
+    ap.add_argument("--from-manifest", action="store_true", help="依清單 puppet 欄位批次拆件並安裝（母本取 master_set.json）")
+    ap.add_argument("--only", action="append", help="--from-manifest 只做這些資產")
     args = ap.parse_args()
+    if args.from_manifest:
+        return from_manifest(args.only)
     os.makedirs(OUT, exist_ok=True)
     if not args.skip_frames:
         for name, size, ow, tag in (("face", 128, 2, "face"), ("face", 48, 1, "face48"), ("shadow", 128, 2, "shadow")):

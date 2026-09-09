@@ -1,12 +1,12 @@
 {
-  "id": "zheng_musketeer",
-  "name_key": "enemy.zheng_musketeer.name",
-  "hp": 120.0,
-  "speed": 45.0,
+  "id": "zheng_sapper",
+  "name_key": "enemy.zheng_sapper.name",
+  "hp": 110.0,
+  "speed": 40.0,
   "armor": 0.2,
   "magic_resist": 0.0,
-  "bounty": 6,
-  "sprite": "res://game/assets/puppets/enemy_musketeer/body.png",
-  "puppet": "enemy_musketeer",
+  "bounty": 8,
+  "sprite": "res://game/assets/puppets/enemy_sapper/body.png",
+  "puppet": "enemy_sapper",
   "_note": "數值暫定（M0 灰盒基準 orc_grunt 的相對值，依章節規格 §4.1 的特性方向調），正式數值待玩法調校。分件母本＝母本集扁平幾何版。"
 }
