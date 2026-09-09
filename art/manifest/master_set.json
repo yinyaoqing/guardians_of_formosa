@@ -1,0 +1,105 @@
+{
+  "_doc": "黃金母本集定版（美術聖經 §8 A2）。每筆記錄候選來源 stage 與檔名，postprocess.py 據此取圖；此檔亦是日後任何風格訓練的資料集清單。由 select_masters.py 維護。",
+  "selections": {
+    "tower_musket_t1": {
+      "stage": "flat",
+      "file": "tower_musket_t1_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "tower_musket_t2": {
+      "stage": "flat",
+      "file": "tower_musket_t2_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "enemy_musketeer": {
+      "stage": "flat",
+      "file": "enemy_musketeer_flat_00002_.png",
+      "picked_at": "2026-09-09"
+    },
+    "civilian_family": {
+      "stage": "flat",
+      "file": "civilian_family_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "civilian_slave": {
+      "stage": "flat",
+      "file": "civilian_slave_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "voc_coyett": {
+      "stage": "flat",
+      "file": "voc_coyett_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "siraya_woman": {
+      "stage": "flat",
+      "file": "siraya_woman_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "enemy_warjunk": {
+      "stage": "flat",
+      "file": "enemy_warjunk_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "tower_hunter_t2": {
+      "stage": "flat",
+      "file": "tower_hunter_t2_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "tower_hunter_t3": {
+      "stage": "flat",
+      "file": "tower_hunter_t3_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "tower_fence_t1": {
+      "stage": "flat",
+      "file": "tower_fence_t1_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "prop_buildsite": {
+      "stage": "flat",
+      "file": "prop_buildsite_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "icon_silver": {
+      "stage": "flat",
+      "file": "icon_silver_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "icon_civilian": {
+      "stage": "flat",
+      "file": "icon_civilian_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "icon_tide": {
+      "stage": "flat",
+      "file": "icon_tide_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "icon_tower_musket": {
+      "stage": "flat",
+      "file": "icon_tower_musket_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "icon_tower_hunter": {
+      "stage": "flat",
+      "file": "icon_tower_hunter_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "icon_tower_fence": {
+      "stage": "flat",
+      "file": "icon_tower_fence_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "map_1_1": {
+      "stage": "flat",
+      "file": "map_1_1_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "map_tile_town": {
+      "stage": "flat",
+      "file": "map_tile_town_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    }
+  }
+}
