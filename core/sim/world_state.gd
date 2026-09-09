@@ -129,6 +129,21 @@ func add_soldier(soldier: Soldier) -> void:
 	soldiers.append(soldier)
 	soldiers_by_id[soldier.id] = soldier
 
+## 把一個小兵移出世界：解開它攔住的敵人、自索引移除、歸還物件池。
+##
+## 與 add_soldier() 對稱，住在 WorldState 是因為那三件事動到的全是它自己的
+## 容器與池子。死亡與賣塔都要做這三件事，差別只在死亡還要空出兵營名額並
+## 起算重生倒數——那一部分留在各自的呼叫端。
+##
+## 刻意不動 world.soldiers 陣列：兩個呼叫端都是在走訪它的過程中決定誰該走，
+## 邊走訪邊 erase 是典型的漏元素 bug。呼叫端各自蒐集倖存者後整個換掉。
+func release_soldier(soldier: Soldier) -> void:
+	var enemy: Enemy = enemies_by_id.get(soldier.engaged_enemy_id)
+	if enemy != null and enemy.blocked_by == soldier.id:
+		enemy.blocked_by = 0
+	soldiers_by_id.erase(soldier.id)
+	soldier_pool.release(soldier)
+
 func queue_intent(intent: GameIntent) -> void:
 	pending_intents.append(intent)
 

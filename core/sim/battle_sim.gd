@@ -172,6 +172,9 @@ func _tick_towers() -> void:
 ## 死亡與洩漏的敵人移出集合，並在此處統一發放賞金。
 ## 傷害來源不只一處（塔、投射物、DoT），賞金邏輯若跟著複製會失去單一事實來源；
 ## 這裡本來就走訪所有死亡的敵人，且 leaked 旗標剛好能區分「被擊殺」與「走到終點」。
+##
+## 敵人這一段要先跑（順便解開它綁住的小兵），再處理小兵那一段——漏掉任一
+## 方向的解綁，畫面上都會看起來像另一種 bug，而不是「清理漏了一步」。
 func _remove_dead() -> void:
 	var survivors: Array[Enemy] = []
 	for enemy: Enemy in world.enemies:
@@ -180,12 +183,42 @@ func _remove_dead() -> void:
 			continue
 		if not enemy.leaked:
 			world.gold += enemy.bounty
+		# 攔住它的小兵要放開，否則那個小兵會一直「在跟一具屍體交戰」——
+		# 它不會接下一個敵人，也不會回血。
+		var blocker: Soldier = world.soldiers_by_id.get(enemy.blocked_by)
+		if blocker != null and blocker.engaged_enemy_id == enemy.id:
+			blocker.engaged_enemy_id = 0
+		enemy.blocked_by = 0
 		# 效果實例的歸還交給 StatusSystem——它是效果池的唯一擁有者。
 		# 若這裡自己抓 world.effect_pool 來釋放，一旦有人用不同的池建構
 		# StatusSystem（測試裡每一個都是這樣建的），兩邊帳目就會分家。
 		world.status_system.release_all(enemy)
 		world.enemies_by_id.erase(enemy.id)
 	world.enemies = survivors
+
+	_remove_dead_soldiers()
+
+## 小兵離開世界的唯一地點。三件事必須一起做，漏任何一件都會留下幽靈狀態：
+## 解開被它攔住的敵人（由 world.release_soldier() 負責）、把名額空出來並
+## 起算重生倒數（死亡獨有，賣塔／升級不做這件事）、歸還到物件池。
+func _remove_dead_soldiers() -> void:
+	var survivors: Array[Soldier] = []
+	for soldier: Soldier in world.soldiers:
+		if soldier.alive:
+			survivors.append(soldier)
+			continue
+		var barracks := _find_tower(soldier.barracks_id)
+		if barracks != null and soldier.slot_index < barracks.soldier_ids.size():
+			barracks.soldier_ids[soldier.slot_index] = 0
+			barracks.respawn_timers[soldier.slot_index] = barracks.respawn_time
+		world.release_soldier(soldier)
+	world.soldiers = survivors
+
+func _find_tower(tower_id: int) -> Tower:
+	for tower: Tower in world.towers:
+		if tower.id == tower_id:
+			return tower
+	return null
 
 ## 通關判定。排在移除死亡之後——「場上沒有活著的敵人」要在死亡結算完才問得準，
 ## 否則最後一隻剛死的那一 tick 會錯答成未完成，而畫面上完全看不出差別。

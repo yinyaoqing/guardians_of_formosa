@@ -97,6 +97,10 @@ static func _upgrade(world: WorldState, intent: GameIntent) -> void:
 		return
 
 	world.gold -= cost
+	# 升級把整批小兵換掉：規格 §2 規則 5，升級即滿血、重生倒數清零。
+	# 先移除再套數值，因為 _apply_barracks_stats 會重建名額陣列。
+	if tower.kind == Tower.KIND_BARRACKS:
+		_remove_soldiers_of(world, tower)
 	_apply_level_stats(tower, def, tower.level + 1)
 
 static func _sell(world: WorldState, intent: GameIntent) -> void:
@@ -116,7 +120,23 @@ static func _sell(world: WorldState, intent: GameIntent) -> void:
 		if slot.occupied_by == tower.id:
 			slot.occupied_by = 0
 			break
+	_remove_soldiers_of(world, tower)
 	world.towers.erase(tower)
+
+## 把某座兵營的小兵全部移出世界。賣出與升級共用。
+##
+## 不走 _remove_dead 的路徑，因為那條路會起算重生倒數——賣掉的塔不該重生，
+## 升級後的兵要立刻補滿而不是等倒數。
+static func _remove_soldiers_of(world: WorldState, tower: Tower) -> void:
+	if tower.kind != Tower.KIND_BARRACKS:
+		return
+	var survivors: Array[Soldier] = []
+	for soldier: Soldier in world.soldiers:
+		if soldier.barracks_id != tower.id:
+			survivors.append(soldier)
+			continue
+		world.release_soldier(soldier)
+	world.soldiers = survivors
 
 ## 退款 = 比例 × 已投入的所有等級造價總和，向下取整。
 ## 不在塔身上記帳，而是自等級反推——少一個會與資料不同步的欄位。
