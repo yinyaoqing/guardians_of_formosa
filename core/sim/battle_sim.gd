@@ -96,6 +96,9 @@ func _tick() -> void:
 	# GarrisonSystem 在 MeleeSystem 之前：重生出來的小兵應該在同一個 tick
 	# 就能接戰，而不是站著發呆一拍。
 	GarrisonSystem.tick(world, TICK_DELTA)
+	# MeleeSystem 必須在 MovementSystem 之前：否則剛被擋下的敵人會在本 tick
+	# 多走一步，4 倍速下每個 tick 都發生，玩家看得到敵人「陷進」小兵裡。
+	MeleeSystem.tick(world, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
 	_rebuild_grid()

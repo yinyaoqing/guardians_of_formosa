@@ -17,6 +17,11 @@ var leaked: bool = false          ## 已走到路徑終點，玩家扣血
 ## 攔截者的實體 id，0 表示未被攔截。M1 的士兵系統會用到。
 var blocked_by: int = 0
 
+## 近戰數值。被小兵攔截時用來還手；沒有小兵時完全不會被讀到。
+var melee_damage: float = 0.0
+var melee_interval: float = 1.0
+var melee_cooldown: float = 0.0   ## 距離下次可攻擊的剩餘秒數
+
 ## 基礎數值：資料載入時填入，之後永不寫入。
 ## 狀態效果只改衍生值，基礎值必須保持乾淨，否則效果到期後無法還原。
 var base_speed: float = 0.0            ## 像素 / 秒

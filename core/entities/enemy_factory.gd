@@ -17,5 +17,9 @@ static func from_def(def: Dictionary, enemy_id: StringName, path_id: StringName)
 	enemy.base_magic_resist = def["magic_resist"]
 	enemy.reset_derived_stats()
 	enemy.bounty = int(def["bounty"])
+	# get() 帶預設值：M1 的敵人資料才開始有近戰欄位，缺鍵時傷害為 0，
+	# 表現為「這隻敵人被擋住就只會挨打」——那是合理的降級，不是當掉。
+	enemy.melee_damage = float(def.get("melee_damage", 0.0))
+	enemy.melee_interval = float(def.get("melee_interval", 1.0))
 	enemy.path_id = path_id
 	return enemy
