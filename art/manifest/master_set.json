@@ -37,8 +37,8 @@
       "picked_at": "2026-09-09"
     },
     "enemy_warjunk": {
-      "stage": "flat",
-      "file": "enemy_warjunk_flat_00001_.png",
+      "stage": "ref",
+      "file": "enemy_warjunk_ref_00001_.png",
       "picked_at": "2026-09-09"
     },
     "tower_hunter_t2": {
