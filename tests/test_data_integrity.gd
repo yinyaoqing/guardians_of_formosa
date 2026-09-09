@@ -45,7 +45,7 @@ func test_every_enemy_has_sane_numbers() -> void:
 const SHOOTER_LEVEL_FIELDS := ["cost", "damage", "attack_range", "fire_interval"]
 const BARRACKS_LEVEL_FIELDS := [
 	"cost", "soldier_count", "soldier_hp", "soldier_damage",
-	"soldier_attack_interval", "respawn_time", "regen_per_second"
+	"soldier_attack_interval", "soldier_armor", "respawn_time", "regen_per_second"
 ]
 
 func test_every_tower_level_has_required_fields() -> void:

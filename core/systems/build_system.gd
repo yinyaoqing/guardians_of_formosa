@@ -68,8 +68,12 @@ static func _assign_post(world: WorldState, tower: Tower) -> void:
 			tower.post_distance = distance
 			tower.post_position = candidate
 	if tower.post_path_id == &"":
-		push_error("兵營 id=%d 找不到任何路徑可以站崗——關卡沒有定義路徑" % tower.id)
-		assert(false, "兵營找不到任何路徑可以站崗")
+		# 此處仍在 world.add_tower() 之前，tower.id 尚未配發（仍是預設值 0），
+		# 印出來會永遠是 0、對除錯沒有幫助。tower_id（StringName，塔種）
+		# 在建構時就已賦值，是這裡唯一能用的線索——與 _apply_level_stats() 未知 kind
+		# 分支印 tower.tower_id 的既有寫法一致。
+		push_error("兵營 %s 找不到任何路徑可以站崗——關卡沒有定義路徑" % tower.tower_id)
+		assert(false, "兵營找不到任何路徑可以站崗（塔種 %s）" % tower.tower_id)
 
 static func _upgrade(world: WorldState, intent: GameIntent) -> void:
 	var tower := _find_tower(world, intent.entity_id)
