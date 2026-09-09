@@ -100,6 +100,36 @@
       "stage": "flat",
       "file": "map_tile_town_flat_00001_.png",
       "picked_at": "2026-09-09"
+    },
+    "enemy_ironman": {
+      "stage": "ref",
+      "file": "enemy_ironman_ref_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "enemy_sapper": {
+      "stage": "flat",
+      "file": "enemy_sapper_flat_00004_.png",
+      "picked_at": "2026-09-09"
+    },
+    "siraya_elder": {
+      "stage": "flat",
+      "file": "siraya_elder_flat_00004_.png",
+      "picked_at": "2026-09-09"
+    },
+    "tower_musket_t3": {
+      "stage": "flat",
+      "file": "tower_musket_t3_flat_00002_.png",
+      "picked_at": "2026-09-09"
+    },
+    "prop_settlement": {
+      "stage": "flat",
+      "file": "prop_settlement_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "map_tile_sandbar": {
+      "stage": "flat",
+      "file": "map_tile_sandbar_flat_00002_.png",
+      "picked_at": "2026-09-09"
     }
   }
 }
