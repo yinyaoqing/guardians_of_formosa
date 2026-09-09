@@ -28,10 +28,11 @@ BG = (232, 220, 198)  # 蚵殼灰，避免白底讓淺色資產看不出邊界
 FG = (58, 42, 34)  # 焦茶
 
 
-def cells_for(asset_ids: list[str]) -> list[tuple[str, str]]:
+def cells_for(asset_ids: list[str], stage: str = "") -> list[tuple[str, str]]:
     out = []
     for aid in asset_ids:
-        d = os.path.join(RAW, aid)
+        # stage 為空＝資產目錄本身（SDXL 純文字時代的產出）；否則讀 stage_<stage>/
+        d = os.path.join(RAW, aid, f"stage_{stage}") if stage else os.path.join(RAW, aid)
         if not os.path.isdir(d):
             continue
         for n in sorted(os.listdir(d)):
@@ -67,6 +68,7 @@ def main() -> int:
     ap.add_argument("--cat", action="append", help="只收這些分類")
     ap.add_argument("--cols", type=int, default=8)
     ap.add_argument("--per-asset", action="store_true", help="每個資產各輸出一張")
+    ap.add_argument("--stage", default="", help="讀 stage_<stage>/（如 flux2、flat）；空字串為資產目錄本身")
     args = ap.parse_args()
 
     with open(MANIFEST, encoding="utf-8") as f:
@@ -76,11 +78,12 @@ def main() -> int:
 
     if args.per_asset:
         for a in assets:
-            build(cells_for([a["id"]]), args.cols, os.path.join(OUT, f"{a['id']}.png"))
+            build(cells_for([a["id"]], args.stage), args.cols, os.path.join(OUT, f"{a['id']}.png"))
         return 0
 
     name = "all" if not args.cat else "-".join(sorted(args.cat))
-    build(cells_for([a["id"] for a in assets]), args.cols, os.path.join(OUT, f"contact_{name}.png"))
+    name = f"{name}_{args.stage}" if args.stage else name
+    build(cells_for([a["id"] for a in assets], args.stage), args.cols, os.path.join(OUT, f"contact_{name}.png"))
     return 0
 
 
