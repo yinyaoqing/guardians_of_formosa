@@ -113,6 +113,31 @@ func test_selling_a_barracks_removes_its_soldiers_and_frees_the_enemy() -> void:
 	assert_int(world.soldiers_by_id.size()).is_equal(0)
 	assert_int(enemy.blocked_by).is_equal(0)
 
+## _tick_towers() 必須依 kind 跳過兵營（規格 §3.3 第 3 點），不能無條件當射擊塔跑。
+## 把敵人的座標直接對齊塔的座標（而非崗位）：TargetingSystem.find_first 用
+## tower.position 當圓心、tower.attack_range 當半徑做精確距離判定，兵營的
+## attack_range 恆為 0.0，只有敵人與塔座標「完全重合」時距離平方才不大於 0、
+## 才可能被選中——這正是拿掉 battle_sim.gd 那個 continue 之後會發生的事。
+func test_a_barracks_never_acts_like_a_shooter_tower() -> void:
+	var world := _world()
+	var tower := _build(world)
+	var sim := BattleSim.new(world)
+	var enemy := _enemy_at(world, tower.post_distance, 500.0)
+	# 敵人這一 tick 會被剛補上的小兵攔住（distance_along == post_distance），
+	# MovementSystem 因此不會重算它的 position，這裡設的座標會原封不動地
+	# 留到 _tick_towers() 執行的那一刻。
+	enemy.position = tower.position
+
+	sim.advance(TICK)
+
+	assert_int(tower.target_id).override_failure_message(
+		"兵營的 target_id 被寫入了。_tick_towers() 沒有依 kind 跳過兵營——" +
+		"用 projectile_speed == 0.0 發射投射物會讓它永遠不動、永遠不歸還物件池。"
+	).is_equal(0)
+	assert_int(world.projectiles.size()).override_failure_message(
+		"兵營發射了投射物。_tick_towers() 沒有依 kind 跳過兵營。"
+	).is_equal(0)
+
 func test_upgrading_a_barracks_heals_its_soldiers_to_the_new_max() -> void:
 	var world := _world()
 	var tower := _build(world)

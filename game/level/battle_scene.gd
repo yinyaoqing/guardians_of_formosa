@@ -180,7 +180,7 @@ func _sync_soldier_views() -> void:
 		var view: SoldierView = _soldier_views.get(soldier.id)
 		if view == null:
 			view = SoldierViewScript.new() as SoldierView
-			view.setup(soldier.id, soldier.position)
+			view.setup(soldier.id, soldier.position, soldier.slot_index)
 			_view_root.add_child(view)
 			_soldier_views[soldier.id] = view
 		view.on_tick(soldier.hp / maxf(1.0, soldier.max_hp))
@@ -396,13 +396,18 @@ func _on_menu_option_hovered(option_index: int) -> void:
 	match StringName(option["kind"]):
 		BuildMenuOptions.KIND_BUILD:
 			var levels: Array = _registry.towers[StringName(option["tower_id"])]["levels"]
-			_range_circle.show_at(slot.position, float(levels[0]["attack_range"]))
+			# 兵營的等級資料沒有 attack_range 鍵，這是 BuildSystem 分派兩種塔的
+			# 同一個 schema 差異（_apply_shooter_stats / _apply_barracks_stats）。
+			# .get(..., 0.0) 讓兵營回傳 0.0，show_at() 本來就會因此隱藏射程圈——
+			# 兵營本來就沒有射程，不該畫圈。
+			_range_circle.show_at(slot.position, float(levels[0].get("attack_range", 0.0)))
 		BuildMenuOptions.KIND_UPGRADE:
 			var tower := _find_tower_view_owner(slot.occupied_by)
 			if tower == null:
 				return
 			var next_levels: Array = _registry.towers[tower.tower_id]["levels"]
-			_range_circle.show_at(tower.position, float(next_levels[tower.level]["attack_range"]))
+			# 同上：兵營沒有 attack_range 鍵。
+			_range_circle.show_at(tower.position, float(next_levels[tower.level].get("attack_range", 0.0)))
 		_:
 			pass
 

@@ -156,6 +156,15 @@ func _rebuild_grid() -> void:
 ## DamageSystem 的呼叫點因此收斂為兩處：投射物命中、DoT 結算，兩處都在系統層。
 func _tick_towers() -> void:
 	for tower: Tower in world.towers:
+		# 兵營沒有射擊武器：attack_range 恆為 0.0、projectile_speed 恆為 0.0。
+		# 讓它照樣跑這個迴圈，輕則每 tick 白跑一次 UniformGrid.query_radius()
+		# （配置新 Array，牴觸硬規則 #5），重則萬一真的選中目標，會用
+		# projectile_speed == 0.0 發射一顆永遠不動、永遠不歸還池子的投射物。
+		# 未知 kind 的吵鬧責任已經在 BuildSystem._apply_level_stats() 由
+		# push_error + assert(false) 承擔（那種塔根本進不了世界），這裡用
+		# continue 就夠，不必重複 assert。
+		if tower.kind != Tower.KIND_SHOOTER:
+			continue
 		tower.cooldown = maxf(0.0, tower.cooldown - TICK_DELTA)
 		tower.target_id = TargetingSystem.find_first(tower, world.grid, world.enemies_by_id)
 		if tower.target_id == 0 or tower.cooldown > 0.0:
