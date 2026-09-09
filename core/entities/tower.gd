@@ -36,6 +36,10 @@ var on_hit_effects: Array[StringName] = []
 ## 長度固定為該級的兵數，建造與升級時各重設一次，tick 內只寫既有元素——
 ## 硬規則 #5 禁止在戰鬥迴圈中配置新物件。
 var soldier_ids: PackedInt32Array = PackedInt32Array()
+## 用 PackedFloat32Array（單精度）儲存的副作用：倒數會準時在第 30 個 tick
+## 歸零（單精度捨入往下漂）。Soldier.cooldown / Enemy.melee_cooldown 是
+## double，同樣是 1.0 秒的倒數卻要 31 個 tick 才 <= 0.0——同一支分支裡兩個
+## 「1.0 秒」一個準時一個晚一拍，差異純粹來自儲存型別，不是規則不同。
 var respawn_timers: PackedFloat32Array = PackedFloat32Array()
 
 var soldier_hp: float = 0.0

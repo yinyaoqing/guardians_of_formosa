@@ -217,7 +217,11 @@ func _remove_dead_soldiers() -> void:
 			survivors.append(soldier)
 			continue
 		var barracks := _find_tower(soldier.barracks_id)
-		if barracks != null and soldier.slot_index < barracks.soldier_ids.size():
+		# 安全性本來就建立在 tick 順序上（intent 在開頭、死亡清理在結尾），
+		# 這裡再比對一次名額裡的 id 是不是真的還是這個小兵，把隱性依賴
+		# 變成本地可讀的不變式，代價只是一次整數比較。
+		if barracks != null and soldier.slot_index < barracks.soldier_ids.size() \
+				and barracks.soldier_ids[soldier.slot_index] == soldier.id:
 			barracks.soldier_ids[soldier.slot_index] = 0
 			barracks.respawn_timers[soldier.slot_index] = barracks.respawn_time
 		world.release_soldier(soldier)

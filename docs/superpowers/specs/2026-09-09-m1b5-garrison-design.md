@@ -331,7 +331,7 @@ _check_battle_finished
 1. 全套測試通過，且新測試在對應的 production code 被改壞時會紅（逐條驗證過）。
 2. `tests/test_core_purity.gd` 通過——包含新增的 `battle_scene.gd` 佈線守衛。
 3. `godot --headless --path . game/level/battle_scene.tscn --quit-after 3000` 無 `SCRIPT ERROR` / `Invalid` / `Parse Error`。
-4. 人工驗收：蓋一座柵欄，看得到小兵站上路徑、擋下敵人、互砍、其中一個死亡、倒數後重生、脫戰回血；第 4 個敵人從旁邊走過去；賣掉兵營後敵人立刻恢復前進。
+4. 人工驗收：蓋一座柵欄，看得到小兵站上路徑、擋下敵人、互砍、其中一個死亡、倒數後重生、脫戰回血；第 4 個敵人從旁邊走過去；賣掉兵營後敵人立刻恢復前進。小兵在畫面上必須彼此可分辨（不能疊在同一點）。
 
 ---
 

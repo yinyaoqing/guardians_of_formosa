@@ -2,6 +2,12 @@ extends GdUnitTestSuite
 
 ## 釘住 BattleSim._tick() 的步驟順序。
 ## 這些不變式沒有測試守著的話，任何一次重排都會靜默地改變遊戲行為。
+##
+## 本分支新增的兩條順序不變式不在這裡釘：MeleeSystem 必須排在 MovementSystem
+## 之前，釘在 test_melee_system.gd 的 test_a_blocked_enemy_does_not_advance_on_the_tick_it_is_blocked；
+## GarrisonSystem 必須排在 MeleeSystem 之前，釘在 test_garrison_lifecycle.gd 的
+## test_a_blocked_enemy_resumes_when_its_soldier_dies（第一次 advance 之後
+## blocked_by 就非 0，代表補兵與交戰在同一個 tick 內依序發生）。
 
 const FRAME := 1.0 / 30.0
 const PATH_ID := &"main"

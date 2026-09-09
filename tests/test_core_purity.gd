@@ -145,11 +145,11 @@ func test_data_registry_delegates_enemy_construction() -> void:
 ##
 ## 這組守衛全部是純文字比對，不分程式碼與註解。用整檔 count() 的話，有人把
 ## 呼叫那行加 # 註解掉、忘了改回來，守衛照樣是綠的——被註解掉的那行仍然
-## 貢獻一次命中。tests/test_ui_layer.gd 早就是逐行跳過註解的（M1-B3a 的做法），
-## 這裡比照。
+## 貢獻一次命中。tests/test_ui_layer.gd 早就是逐行跳過整行註解的（M1-B3a
+## 的做法），這裡比照——只跳過以 # 開頭的整行，行尾的 # 註解仍會被算進去。
 ##
-## 代價與 test_ui_layer.gd 相同：註解裡提到那個名字也不再被算進去。對「要求
-## 某個呼叫必須存在」的守衛而言這正是要的——註解裡的呼叫不會執行。
+## 代價與 test_ui_layer.gd 相同：整行註解裡提到那個名字也不再被算進去。對
+## 「要求某個呼叫必須存在」的守衛而言這正是要的——註解裡的呼叫不會執行。
 func _count_in_code(source: String, needle: String) -> int:
 	var total := 0
 	for line in source.split("\n"):

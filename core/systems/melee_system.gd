@@ -24,6 +24,10 @@ static func tick(world: WorldState, delta: float) -> void:
 ##
 ## 複雜度是 O(小兵 × 敵人)。M1 的上限約 12 個小兵配 30 隻敵人 = 360 次比較，
 ## 遠低於塔的目標選擇（那個才需要 UniformGrid）。不配置任何物件。
+##
+## 用不上現成的 UniformGrid：崗位比對是一維的（沿路徑的 distance_along），
+## UniformGrid 是二維空間索引，兩者對不上。真要優化，正解是按 path_id 分桶敵人，
+## 不是硬塞進二維網格。
 static func _engage(world: WorldState) -> void:
 	for soldier: Soldier in world.soldiers:
 		if not soldier.alive or soldier.engaged_enemy_id != 0:
@@ -65,7 +69,9 @@ static func _trade_damage(world: WorldState, delta: float) -> void:
 			soldier.cooldown = soldier.attack_interval
 
 		# 敵人照樣還手，即使它剛剛被打死——這一 tick 兩邊同歸於盡是合理結果。
-		# 但小兵若已經死了就不再挨打，否則屍體會被重複結算。
+		# 小兵若已經死了就提早 continue：讓「不打屍體」這條規則在近戰這一層
+		# 就看得見；DamageSystem.apply() 入口也擋死者（if not target.alive:
+		# return 0.0），兩層都在是刻意的。
 		if not soldier.alive:
 			continue
 		enemy.melee_cooldown = maxf(0.0, enemy.melee_cooldown - delta)

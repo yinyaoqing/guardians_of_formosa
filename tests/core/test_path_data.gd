@@ -48,9 +48,9 @@ func test_nearest_distance_at_the_far_end() -> void:
 	var path := _straight_path()
 	assert_float(path.nearest_distance_to(Vector2(500.0, 0.0))).is_equal_approx(100.0, 0.001)
 
-## 這條的存在理由：若實作誤用「第一個距離小於某門檻的取樣點」而非「最近的」，
+## 這條的存在理由：若實作誤用「第一個距離小於某門檻的取樣點」而非「真正最近者」，
 ## 上面兩條仍會通過（起點附近沒有干擾），這條不會。
-func test_nearest_distance_prefers_the_真正最近者_not_the_first_close_one() -> void:
+func test_nearest_distance_prefers_the_actual_nearest_not_the_first_close_one() -> void:
 	var path := _straight_path()
 	# (71, 3) 離 (70,0) 距離 3、離 (80,0) 距離 ~9.5，答案必須是 70
 	assert_float(path.nearest_distance_to(Vector2(71.0, 3.0))).is_equal_approx(70.0, 0.001)

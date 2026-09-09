@@ -99,8 +99,8 @@ static func _upgrade(world: WorldState, intent: GameIntent) -> void:
 	world.gold -= cost
 	# 升級把整批小兵換掉：規格 §2 規則 5，升級即滿血、重生倒數清零。
 	# 先移除再套數值，因為 _apply_barracks_stats 會重建名額陣列。
-	if tower.kind == Tower.KIND_BARRACKS:
-		_remove_soldiers_of(world, tower)
+	# _remove_soldiers_of 內部第一行就會判斷 kind，這裡不必重複判斷一次。
+	_remove_soldiers_of(world, tower)
 	_apply_level_stats(tower, def, tower.level + 1)
 
 static func _sell(world: WorldState, intent: GameIntent) -> void:

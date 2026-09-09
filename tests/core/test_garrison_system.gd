@@ -49,7 +49,10 @@ func test_an_empty_slot_waits_out_its_respawn_timer() -> void:
 		GarrisonSystem.tick(world, TICK)
 	assert_int(world.soldiers.size()).is_equal(0)
 
-	# 第 30 個 tick 剛好走完，同一個 tick 內就補兵
+	# 第 30 個 tick 剛好走完，同一個 tick 內就補兵——這不是「剛好」，是
+	# respawn_timers 用 PackedFloat32Array（單精度）儲存導致的捨入結果
+	# （見 core/entities/tower.gd 的欄位註解）。若有人把它改成 double，
+	# 這裡會晚一個 tick 才補兵，這條測試就會紅。
 	GarrisonSystem.tick(world, TICK)
 	assert_int(world.soldiers.size()).is_equal(1)
 
@@ -74,14 +77,17 @@ func test_the_respawned_soldier_goes_back_to_the_same_slot_index() -> void:
 
 func test_an_idle_soldier_regenerates() -> void:
 	var world := WorldState.new()
-	_barracks(world, 1, 100.0, 12.0, 30.0)
+	# regen 特意不選 30.0：30 × (1/30) 恰好整除成 1.0，會讓「每 tick 回滿一秒的
+	# 量」這種誤用與正確的「每 tick 回 regen × delta」算出一樣的答案，測試就
+	# 失去鑑別力。7.0 讓一個 tick 回 7/30 = 0.2333…，兩種實作的結果會分岔。
+	_barracks(world, 1, 100.0, 12.0, 7.0)
 	GarrisonSystem.tick(world, TICK)
 	var soldier: Soldier = world.soldiers[0]
 	soldier.hp = 40.0
 
-	# 30 每秒 × 一個 tick(1/30 秒) = 恰好 1.0
+	# 7.0 每秒 × 一個 tick(1/30 秒) = 7.0/30.0 = 0.2333...
 	GarrisonSystem.tick(world, TICK)
-	assert_float(soldier.hp).is_equal_approx(41.0, 0.001)
+	assert_float(soldier.hp).is_equal_approx(40.0 + 7.0 / 30.0, 0.0001)
 
 func test_regeneration_stops_at_max_hp() -> void:
 	var world := WorldState.new()
