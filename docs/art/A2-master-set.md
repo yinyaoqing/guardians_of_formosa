@@ -107,3 +107,32 @@ python art/scripts/check_lighting.py --stage flux2
 ```
 
 離開碼 1（18/66 不一致）。此步驟不預期全過，只記錄現況分佈；`map_tile_sandbar` 偏差最大（-0.191、-0.112），其餘多在 ±0.05 內屬邊界值。是否重生成留待後續任務判斷。
+
+---
+
+## 第二批：扁平幾何無五官（2026-09-09）
+
+風格定案後（美術聖經 §1.1 修訂註記）整批重出、人工挑選、過閘門、替換 `game/assets/chapter01/`。
+
+### 挑選
+
+- 工具：`select_masters.py`（帶編號印樣、`--pick id=n --stage s`、`--apply`），選擇記在 `art/manifest/master_set.json`（stage + 檔名 + 日期）。人工挑選透過 Claude Code Artifact 表單（radio 單選，選擇即時存 db）。
+- 四輪：第一輪 20/33；第二輪（13 個補跑 4 張新 seed）+6；第三輪 +6（三個用 `refine.py` 拿「最理想但一處不對」的候選只改一處：標槍位置、弓弦、配劍；四個依回饋改 prompt：一手刀一手盾、藤牌自然藤色與織紋、持盾不露手、通條直立）；第四輪 +1（藤牌兵握刀）。
+- 來源分佈：`stage_flat` 27、`stage_ref`（史料參考圖 + Klein 編輯）2（鐵人軍、大熕船）、`stage_fix`（Klein 針對性修圖）4（鏢手、弓箭手、陳澤未採、藤牌兵）。
+- 兩個反覆的教訓：**否定句無效**（圖示「NO frame」12 張 8 張有底板）；**「一手一物」要寫成左右手各持什麼**，否則模型把盾與刀畫在同一側或漏掉一把。
+
+### 管線
+
+`postprocess.py --stage flat --outline-width 1`（`master_set.json` 優先）。描邊 1px vs 2px 並排實測：扁平風格下 2px 過重，取 1px。量化 RGB + 鐵灰選擇性 + 硃砂暗（A2x §9.3）。
+
+### 三道閘門
+
+| 檢查 | 結果 |
+|---|---|
+| 色票（`postprocess --verify-only`） | 33/33 通過 |
+| 剪影（`silhouette.py --master --cat unit`，門檻 0.93） | 17 個單位，1 對超標：`enemy_musketeer ↔ voc_coyett` 0.933（擦線，與第一批相同） |
+| 光源（`check_lighting.py --master`） | diagonal ≤ 0 的 10/33；扣掉將退役的兩張地圖後，其餘 8 張都在 ±0.09 內。**扁平風格的光是垂直分光線（左亮右暗），diagonal 這個量尺量的是左上對右下，對這個風格不再是對的指標**——horizontal 那欄 33 張裡只有 5 張為負且都在 −0.03 內（地圖除外）。L2 的量尺應改以 horizontal 為主，待改 |
+
+### 進 `game/assets`
+
+33 張替換 `game/assets/chapter01/`，`godot --headless --import` 後全套測試通過。踩到一個坑：`03_processed/` 裡還留著實驗期的 `xp_*` 產出，`cp *.png` 一起帶進去讓 7 個測試失敗——`postprocess --out` 的正式輸出目錄應該只放清單資產，或搬進 `game/assets` 時以清單過濾。

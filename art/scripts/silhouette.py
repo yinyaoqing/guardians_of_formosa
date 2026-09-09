@@ -63,7 +63,12 @@ def main() -> int:
     ap.add_argument("--cat", action="append")
     ap.add_argument("--threshold", type=float, default=0.93)
     ap.add_argument("--stage", help="讀 art_src/01_raw/<id>/stage_<stage>/ 而非資產目錄本身")
+    ap.add_argument("--master", action="store_true", help="只比 master_set.json 挑定的那一張")
     args = ap.parse_args()
+    master = {}
+    if args.master:
+        with open(os.path.join(REPO, "art", "manifest", "master_set.json"), encoding="utf-8") as f:
+            master = json.load(f)["selections"]
 
     with open(MANIFEST, encoding="utf-8") as f:
         assets = [a for a in json.load(f)["assets"] if not args.cat or a["cat"] in args.cat]
@@ -71,6 +76,14 @@ def main() -> int:
     os.makedirs(OUT, exist_ok=True)
     sils: list[tuple[str, Image.Image]] = []
     for a in assets:
+        if args.master:
+            sel = master.get(a["id"])
+            if not sel:
+                continue
+            sil = to_silhouette(os.path.join(RAW, a["id"], f"stage_{sel['stage']}", sel["file"]))
+            sil.save(os.path.join(OUT, f"{a['id']}__{sel['file']}"))
+            sils.append((a["id"], sil))
+            continue
         d = os.path.join(RAW, a["id"], f"stage_{args.stage}") if args.stage else os.path.join(RAW, a["id"])
         if not os.path.isdir(d):
             continue

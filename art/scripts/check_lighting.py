@@ -123,6 +123,7 @@ def main() -> int:
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--stage", default="flux2")
     ap.add_argument("--cat", action="append", default=None)
+    ap.add_argument("--master", action="store_true", help="只量 master_set.json 挑定的那一張（L2 閘門驗出貨的圖）")
     args = ap.parse_args()
     if args.self_test:
         return 1 if self_test() else 0
@@ -136,8 +137,23 @@ def main() -> int:
     if args.cat:
         assets = [a for a in assets if a["cat"] in args.cat]
 
+    master = {}
+    if args.master:
+        with open(os.path.join(repo, "art", "manifest", "master_set.json"), encoding="utf-8") as f:
+            master = json.load(f)["selections"]
+
     rows, wrong = [], []
     for a in assets:
+        if args.master:
+            sel = master.get(a["id"])
+            if not sel:
+                continue
+            path = os.path.join(repo, "art_src", "01_raw", a["id"], f"stage_{sel['stage']}", sel["file"])
+            b = lighting_bias(path)
+            rows.append((a["id"], sel["file"], b))
+            if b["diagonal"] <= 0.0:
+                wrong.append((a["id"], sel["file"], b["diagonal"]))
+            continue
         # source_stage：該資產正確候選釘死的 stage，覆蓋 --stage——與
         # postprocess.py 同一條規則，見 manifest 的 _source_stage_note。
         # 沒有這個覆蓋，--stage flux2 的預設呼叫量測到的是已被拒絕、不再
