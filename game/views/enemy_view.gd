@@ -12,6 +12,9 @@ extends Node2D
 ##     腿繞髖關節擺動、軀幹起伏，相位由**走過的距離**推進——速度變了步頻跟著變，
 ##     不需要任何幀。這是 docs/art/A2x §6 實測後選的戰場動畫路線。
 ## 側面朝右為預設；往左走時整個節點水平翻轉。
+##
+## 受擊與死亡（精緻度規格 L5）：受擊＝整體白閃一下；死亡＝往行進方向倒下並淡出後自毀。
+## 兩者都是程式曲線，不需要任何幀。血量比例由 battle_scene 每 tick 傳入，view 只讀不寫。
 
 var enemy_id: int = 0
 
@@ -29,6 +32,12 @@ var _bob := 0.0          # 像素
 var _stride := 1.0       # 走多少像素算一圈
 var _phase := 0.0        # 0..1
 var _last_drawn := Vector2.ZERO
+var _last_hp_ratio := 1.0
+var _facing := 1.0       # 1 朝右、-1 朝左
+var _dying := false
+
+const FLASH_SECONDS := 0.08
+const DEATH_SECONDS := 0.45
 
 
 func setup(p_enemy_id: int, sprite_path: String, start_position: Vector2, puppet_id: String = "") -> void:
@@ -74,22 +83,46 @@ func _build_puppet(path: String) -> void:
 				_body_rest_y = pivot.y
 
 
-## 每個邏輯 tick 呼叫一次，推進插值的目標點
-func on_tick(new_position: Vector2) -> void:
+## 每個邏輯 tick 呼叫一次，推進插值的目標點；血量下降就閃一下
+func on_tick(new_position: Vector2, hp_ratio: float = 1.0) -> void:
 	_previous_position = _target_position
 	_target_position = new_position
+	if hp_ratio < _last_hp_ratio - 0.001:
+		_flash()
+	_last_hp_ratio = hp_ratio
+
+
+func _flash() -> void:
+	modulate = Color(2.2, 2.2, 2.2)
+	var tw := create_tween()
+	tw.tween_property(self, "modulate", Color.WHITE, FLASH_SECONDS)
+
+
+## 敵人已從模擬移除、且不是走到終點：倒向行進方向、淡出、自毀。
+## 呼叫後不再接受 on_tick／interpolate。
+func play_death() -> void:
+	if _dying:
+		return
+	_dying = true
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(self, "rotation", _facing * PI / 2.0, DEATH_SECONDS).set_ease(Tween.EASE_IN)
+	tw.tween_property(self, "modulate:a", 0.0, DEATH_SECONDS).set_delay(DEATH_SECONDS * 0.4)
+	tw.chain().tween_callback(queue_free)
 
 
 ## 每個渲染幀呼叫一次。alpha 為距離下個 tick 的進度 0.0 ~ 1.0
 func interpolate(alpha: float) -> void:
-	position = _previous_position.lerp(_target_position, alpha)
-	if _body == null:
+	if _dying:
 		return
+	position = _previous_position.lerp(_target_position, alpha)
 	var moved := position - _last_drawn
 	_last_drawn = position
-	_phase = fmod(_phase + moved.length() / _stride, 1.0)
 	if absf(moved.x) > 0.01:
-		scale.x = -1.0 if moved.x < 0.0 else 1.0
+		_facing = -1.0 if moved.x < 0.0 else 1.0
+	if _body == null:
+		return
+	_phase = fmod(_phase + moved.length() / _stride, 1.0)
+	scale.x = _facing
 	_pose(_phase)
 
 

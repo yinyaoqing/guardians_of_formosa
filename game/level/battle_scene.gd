@@ -8,6 +8,9 @@ extends Node2D
 const PATH_SAMPLE_SPACING := 8.0
 const MAIN_PATH_ID := &"main"
 const SPAWN_INTERVAL := 1.5
+## 敵人消失時離路徑終點不到這個距離，視為走到終點（不播死亡）；一個 tick 最多走
+## 65px/s ÷ 30 ≈ 2.2px，取 16px 足夠寬鬆
+const LEAK_EPSILON_PX := 16.0
 const SPAWN_ROSTER: Array[StringName] = [
 	&"zheng_musketeer", &"zheng_rattan", &"zheng_archer", &"zheng_sapper", &"zheng_ironman", &"zheng_chenze",
 ]
@@ -163,12 +166,18 @@ func _sync_views() -> void:
 	for enemy: Enemy in _sim.world.enemies:
 		var view: EnemyView = _enemy_views.get(enemy.id)
 		if view != null:
-			view.on_tick(enemy.position)
+			view.on_tick(enemy.position, enemy.hp / maxf(enemy.max_hp, 1.0))
 
+	# 敵人從模擬消失有兩種原因：被殺、走到終點。模擬不回頭告訴 view 是哪一種，
+	# 但 view 最後的位置會說話——貼著路徑終點就是漏掉的，否則是死的，倒下淡出。
+	var path_end: Vector2 = _sim.world.paths[MAIN_PATH_ID].position_at(INF)
 	for view_id: int in _enemy_views.keys():
 		if not _sim.world.enemies_by_id.has(view_id):
 			var view: EnemyView = _enemy_views[view_id]
-			view.queue_free()
+			if view.position.distance_to(path_end) <= LEAK_EPSILON_PX:
+				view.queue_free()
+			else:
+				view.play_death()
 			_enemy_views.erase(view_id)
 
 	for tower: Tower in _sim.world.towers:
