@@ -63,5 +63,12 @@ func _load_level_dirs(dir_path: String) -> Dictionary:
 		assert(parsed is Dictionary, "JSON 格式錯誤: %s" % meta_path)
 		var meta: Dictionary = parsed
 		assert(meta.has("id"), "關卡 meta 缺少 id 欄位: %s" % meta_path)
+		# 地圖是選配：沒有 map.json 的關卡仍可載入（M0 灰盒關卡就沒有）。
+		# 有的話整份塞進 meta["map"]，由 LevelMap 解析；註冊表不解讀它的欄位。
+		var map_path := dir_path.path_join(sub_dir).path_join("map.json")
+		if FileAccess.file_exists(map_path):
+			var map_parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(map_path))
+			assert(map_parsed is Dictionary, "JSON 格式錯誤: %s" % map_path)
+			meta["map"] = map_parsed
 		result[StringName(meta["id"])] = meta
 	return result

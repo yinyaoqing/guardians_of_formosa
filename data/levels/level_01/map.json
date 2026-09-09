@@ -1,0 +1,14 @@
+{
+  "_doc": "level_01 地圖。tile_px 格邊長；path_waypoints 是路徑折線的格座標（左上為原點），path_width 為路徑寬（格）；water.rect 為 [x0, y0, x1, y1) 半開矩形；tide.low_extra_sand 為退潮時由水變沙的格子；props 的 cell 為擺件腳底所在格，shadow 預設 true；build_slots 為建塔點格。路徑與建塔點的像素座標都由 core/spatial/level_map.gd 算，不要在別處另寫一份。",
+  "tile_px": 32,
+  "cols": 60,
+  "rows": 34,
+  "path_waypoints": [[0, 4], [21, 4], [21, 7], [3, 7], [3, 18], [59, 18]],
+  "path_width": 2,
+  "water": {"rect": [46, 0, 60, 9]},
+  "tide": {"low_extra_sand": [[46, 7], [47, 7], [46, 8], [47, 8], [48, 8], [49, 8]]},
+  "props": [
+    {"id": "prop_settlement", "cell": [40, 12], "shadow": false}
+  ],
+  "build_slots": [[12, 6], [12, 14], [28, 15], [44, 15]]
+}

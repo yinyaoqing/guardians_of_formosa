@@ -111,6 +111,29 @@ func test_every_enemy_puppet_is_well_formed() -> void:
 				"%s 缺少角色 %s 的分件" % [puppet_path, role]
 			).is_true()
 
+## 關卡地圖是路徑、地磚、建塔點、擺件的唯一真相；資料錯了不會在載入時報錯，
+## 只會在關卡裡看到敵人穿過樹、塔蓋在路中間。這裡把它變成測試失敗。
+func test_level_maps_are_valid() -> void:
+	var checked := 0
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+		if not meta.has("map"):
+			continue
+		checked += 1
+		var map := LevelMap.new(meta["map"])
+		var errors: Array[String] = map.validate()
+		assert_array(errors).override_failure_message(
+			"關卡 %s 的 map.json 不合法：%s" % [level_id, "; ".join(errors)]
+		).is_empty()
+		for prop: Dictionary in map.props():
+			var path := "res://game/assets/chapter01/%s.png" % prop["id"]
+			assert_bool(ResourceLoader.exists(path)).override_failure_message(
+				"關卡 %s 的擺件 %s 沒有貼圖：%s" % [level_id, prop["id"], path]
+			).is_true()
+	assert_int(checked).override_failure_message(
+		"沒有任何關卡帶 map.json，守衛形同虛設"
+	).is_greater(0)
+
 	# 塔的三階在美術上是完全不同的東西（火繩槍手／三人排槍／稜堡砲位），
 	# 所以圖在每一階裡，不在頂層。頂層另有 icon 給建塔選單用。
 	for tower_id: StringName in _registry.towers:
