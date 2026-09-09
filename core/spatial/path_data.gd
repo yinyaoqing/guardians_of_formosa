@@ -30,3 +30,17 @@ func position_at(distance: float) -> Vector2:
 	var index := int(exact)
 	var t := exact - float(index)
 	return _points[index].lerp(_points[index + 1], t)
+
+## 路徑上離 point 最近的取樣點所對應的行進距離。
+##
+## 線性掃描全部取樣點。只在建塔的當下呼叫一次，不在 tick 內，所以
+## 幾百次比較完全可以接受，不需要空間索引。
+func nearest_distance_to(point: Vector2) -> float:
+	var best_index := 0
+	var best_squared := INF
+	for i in _points.size():
+		var squared := _points[i].distance_squared_to(point)
+		if squared < best_squared:
+			best_squared = squared
+			best_index = i
+	return float(best_index) * _spacing

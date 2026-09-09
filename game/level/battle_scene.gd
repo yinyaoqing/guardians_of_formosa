@@ -13,6 +13,7 @@ const EnemyViewScript := preload("res://game/views/enemy_view.gd")
 const TowerViewScript := preload("res://game/views/tower_view.gd")
 const ProjectileViewScript := preload("res://game/views/projectile_view.gd")
 const BuildSlotViewScript := preload("res://game/views/build_slot_view.gd")
+const SoldierViewScript := preload("res://game/views/soldier_view.gd")
 
 ## 置換用的投射物貼圖。之後應改為依 Projectile.projectile_id 從資料查表，
 ## 目前銃樓與獵寮共用同一張，寫成常數即可。
@@ -36,6 +37,7 @@ var _enemy_views: Dictionary = {}       ## int -> EnemyView
 var _tower_views: Dictionary = {}       ## int -> TowerView
 var _projectile_views: Dictionary = {}  ## instance_id -> ProjectileView
 var _slot_views: Dictionary = {}        ## slot_id -> BuildSlotView
+var _soldier_views: Dictionary = {}     ## int -> SoldierView
 var _controller := InteractionController.new()
 var _hud: BattleHud = null
 
@@ -169,7 +171,25 @@ func _sync_views() -> void:
 		if target != null:
 			_tower_views[tower.id].aim_at(target.position)
 
+	_sync_soldier_views()
 	_sync_projectile_views()
+
+## 小兵的崗位固定不動，所以沒有插值，只有血量在變。
+func _sync_soldier_views() -> void:
+	for soldier: Soldier in _sim.world.soldiers:
+		var view: SoldierView = _soldier_views.get(soldier.id)
+		if view == null:
+			view = SoldierViewScript.new() as SoldierView
+			view.setup(soldier.id, soldier.position, soldier.slot_index)
+			_view_root.add_child(view)
+			_soldier_views[soldier.id] = view
+		view.on_tick(soldier.hp / maxf(1.0, soldier.max_hp))
+
+	for view_id: int in _soldier_views.keys():
+		if not _sim.world.soldiers_by_id.has(view_id):
+			var view: SoldierView = _soldier_views[view_id]
+			view.queue_free()
+			_soldier_views.erase(view_id)
 
 ## 賣塔之後對應的 view 要跟著消失。塔的數量少，線性搜尋即可。
 func _find_tower_view_owner(view_id: int) -> Tower:
@@ -376,13 +396,18 @@ func _on_menu_option_hovered(option_index: int) -> void:
 	match StringName(option["kind"]):
 		BuildMenuOptions.KIND_BUILD:
 			var levels: Array = _registry.towers[StringName(option["tower_id"])]["levels"]
-			_range_circle.show_at(slot.position, float(levels[0]["attack_range"]))
+			# 兵營的等級資料沒有 attack_range 鍵，這是 BuildSystem 分派兩種塔的
+			# 同一個 schema 差異（_apply_shooter_stats / _apply_barracks_stats）。
+			# .get(..., 0.0) 讓兵營回傳 0.0，show_at() 本來就會因此隱藏射程圈——
+			# 兵營本來就沒有射程，不該畫圈。
+			_range_circle.show_at(slot.position, float(levels[0].get("attack_range", 0.0)))
 		BuildMenuOptions.KIND_UPGRADE:
 			var tower := _find_tower_view_owner(slot.occupied_by)
 			if tower == null:
 				return
 			var next_levels: Array = _registry.towers[tower.tower_id]["levels"]
-			_range_circle.show_at(tower.position, float(next_levels[tower.level]["attack_range"]))
+			# 同上：兵營沒有 attack_range 鍵。
+			_range_circle.show_at(tower.position, float(next_levels[tower.level].get("attack_range", 0.0)))
 		_:
 			pass
 

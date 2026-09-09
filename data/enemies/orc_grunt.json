@@ -6,6 +6,8 @@
   "armor": 0.2,
   "magic_resist": 0.0,
   "bounty": 6,
+  "melee_damage": 12.0,
+  "melee_interval": 1.0,
   "sprite": "res://game/assets/placeholder_enemy.png",
   "frame_count": 8
 }

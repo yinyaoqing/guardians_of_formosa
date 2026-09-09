@@ -4,6 +4,13 @@ extends RefCounted
 ## 塔的邏輯狀態。純資料，行為由 systems/ 負責。
 ## 特別注意：射程欄位叫 attack_range 而非 range——range 是 GDScript 內建函式。
 
+## 塔的種類。用顯式欄位而非「兵營把 damage 填 0」——後者要靠讀者推理，
+## 且 damage 為 0 的射擊塔是合法的資料錯誤，兩者就分不出來。
+const KIND_SHOOTER := &"shooter"
+const KIND_BARRACKS := &"barracks"
+
+var kind: StringName = KIND_SHOOTER
+
 var id: int = 0
 var tower_id: StringName = &""
 var position: Vector2 = Vector2.ZERO
@@ -22,3 +29,28 @@ var target_id: int = 0            ## 當前鎖定的敵人 id，0 表示無目�
 var projectile_speed: float = 0.0
 var splash_radius: float = 0.0          ## 0 表示單體
 var on_hit_effects: Array[StringName] = []
+
+## ---- 以下僅 kind == KIND_BARRACKS 時有意義 ----
+
+## 每個名額目前的小兵 id，0 表示空著；與 respawn_timers 同索引。
+## 長度固定為該級的兵數，建造與升級時各重設一次，tick 內只寫既有元素——
+## 硬規則 #5 禁止在戰鬥迴圈中配置新物件。
+var soldier_ids: PackedInt32Array = PackedInt32Array()
+## 用 PackedFloat32Array（單精度）儲存的副作用：倒數會準時在第 30 個 tick
+## 歸零（單精度捨入往下漂）。Soldier.cooldown / Enemy.melee_cooldown 是
+## double，同樣是 1.0 秒的倒數卻要 31 個 tick 才 <= 0.0——同一支分支裡兩個
+## 「1.0 秒」一個準時一個晚一拍，差異純粹來自儲存型別，不是規則不同。
+var respawn_timers: PackedFloat32Array = PackedFloat32Array()
+
+var soldier_hp: float = 0.0
+var soldier_damage: float = 0.0
+var soldier_attack_interval: float = 1.0
+var soldier_armor: float = 0.0
+var respawn_time: float = 0.0
+var regen_per_second: float = 0.0
+
+## 崗位。建造當下算一次，之後不再變動——連潮汐開出新路徑時也不變，
+## 理由與後續處理見設計規格 §5.3。
+var post_path_id: StringName = &""
+var post_distance: float = 0.0
+var post_position: Vector2 = Vector2.ZERO

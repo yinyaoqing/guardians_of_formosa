@@ -93,6 +93,12 @@ func _tick() -> void:
 	_apply_pending_intents()
 	WaveSystem.tick(world, TICK_DELTA)
 	world.status_system.tick(world.enemies, TICK_DELTA)
+	# GarrisonSystem 在 MeleeSystem 之前：重生出來的小兵應該在同一個 tick
+	# 就能接戰，而不是站著發呆一拍。
+	GarrisonSystem.tick(world, TICK_DELTA)
+	# MeleeSystem 必須在 MovementSystem 之前：否則剛被擋下的敵人會在本 tick
+	# 多走一步，4 倍速下每個 tick 都發生，玩家看得到敵人「陷進」小兵裡。
+	MeleeSystem.tick(world, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
 	_rebuild_grid()
@@ -150,6 +156,15 @@ func _rebuild_grid() -> void:
 ## DamageSystem 的呼叫點因此收斂為兩處：投射物命中、DoT 結算，兩處都在系統層。
 func _tick_towers() -> void:
 	for tower: Tower in world.towers:
+		# 兵營沒有射擊武器：attack_range 恆為 0.0、projectile_speed 恆為 0.0。
+		# 讓它照樣跑這個迴圈，輕則每 tick 白跑一次 UniformGrid.query_radius()
+		# （配置新 Array，牴觸硬規則 #5），重則萬一真的選中目標，會用
+		# projectile_speed == 0.0 發射一顆永遠不動、永遠不歸還池子的投射物。
+		# 未知 kind 的吵鬧責任已經在 BuildSystem._apply_level_stats() 由
+		# push_error + assert(false) 承擔（那種塔根本進不了世界），這裡用
+		# continue 就夠，不必重複 assert。
+		if tower.kind != Tower.KIND_SHOOTER:
+			continue
 		tower.cooldown = maxf(0.0, tower.cooldown - TICK_DELTA)
 		tower.target_id = TargetingSystem.find_first(tower, world.grid, world.enemies_by_id)
 		if tower.target_id == 0 or tower.cooldown > 0.0:
@@ -166,6 +181,9 @@ func _tick_towers() -> void:
 ## 死亡與洩漏的敵人移出集合，並在此處統一發放賞金。
 ## 傷害來源不只一處（塔、投射物、DoT），賞金邏輯若跟著複製會失去單一事實來源；
 ## 這裡本來就走訪所有死亡的敵人，且 leaked 旗標剛好能區分「被擊殺」與「走到終點」。
+##
+## 敵人這一段要先跑（順便解開它綁住的小兵），再處理小兵那一段——漏掉任一
+## 方向的解綁，畫面上都會看起來像另一種 bug，而不是「清理漏了一步」。
 func _remove_dead() -> void:
 	var survivors: Array[Enemy] = []
 	for enemy: Enemy in world.enemies:
@@ -174,12 +192,46 @@ func _remove_dead() -> void:
 			continue
 		if not enemy.leaked:
 			world.gold += enemy.bounty
+		# 攔住它的小兵要放開，否則那個小兵會一直「在跟一具屍體交戰」——
+		# 它不會接下一個敵人，也不會回血。
+		var blocker: Soldier = world.soldiers_by_id.get(enemy.blocked_by)
+		if blocker != null and blocker.engaged_enemy_id == enemy.id:
+			blocker.engaged_enemy_id = 0
+		enemy.blocked_by = 0
 		# 效果實例的歸還交給 StatusSystem——它是效果池的唯一擁有者。
 		# 若這裡自己抓 world.effect_pool 來釋放，一旦有人用不同的池建構
 		# StatusSystem（測試裡每一個都是這樣建的），兩邊帳目就會分家。
 		world.status_system.release_all(enemy)
 		world.enemies_by_id.erase(enemy.id)
 	world.enemies = survivors
+
+	_remove_dead_soldiers()
+
+## 小兵離開世界的唯一地點。三件事必須一起做，漏任何一件都會留下幽靈狀態：
+## 解開被它攔住的敵人（由 world.release_soldier() 負責）、把名額空出來並
+## 起算重生倒數（死亡獨有，賣塔／升級不做這件事）、歸還到物件池。
+func _remove_dead_soldiers() -> void:
+	var survivors: Array[Soldier] = []
+	for soldier: Soldier in world.soldiers:
+		if soldier.alive:
+			survivors.append(soldier)
+			continue
+		var barracks := _find_tower(soldier.barracks_id)
+		# 安全性本來就建立在 tick 順序上（intent 在開頭、死亡清理在結尾），
+		# 這裡再比對一次名額裡的 id 是不是真的還是這個小兵，把隱性依賴
+		# 變成本地可讀的不變式，代價只是一次整數比較。
+		if barracks != null and soldier.slot_index < barracks.soldier_ids.size() \
+				and barracks.soldier_ids[soldier.slot_index] == soldier.id:
+			barracks.soldier_ids[soldier.slot_index] = 0
+			barracks.respawn_timers[soldier.slot_index] = barracks.respawn_time
+		world.release_soldier(soldier)
+	world.soldiers = survivors
+
+func _find_tower(tower_id: int) -> Tower:
+	for tower: Tower in world.towers:
+		if tower.id == tower_id:
+			return tower
+	return null
 
 ## 通關判定。排在移除死亡之後——「場上沒有活著的敵人」要在死亡結算完才問得準，
 ## 否則最後一隻剛死的那一 tick 會錯答成未完成，而畫面上完全看不出差別。
