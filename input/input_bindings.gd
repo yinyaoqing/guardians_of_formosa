@@ -26,6 +26,7 @@ static func install() -> void:
 	_bind_key(&"gof_upgrade", KEY_U)
 	_bind_key(&"gof_toggle_pause", KEY_SPACE)
 	_bind_key(&"gof_cycle_speed", KEY_F)
+	_bind_key(&"gof_call_wave", KEY_N)
 	for i in range(1, TOWER_CHOICE_COUNT + 1):
 		_bind_key(StringName("gof_choose_tower_%d" % i), (KEY_0 + i) as Key)
 	_release_space_from_builtin_ui()

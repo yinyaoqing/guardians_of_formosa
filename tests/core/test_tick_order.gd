@@ -13,7 +13,7 @@ func _make_world() -> WorldState:
 	])
 	world.paths[PATH_ID] = PathData.new(points, 200.0)
 	world.gold = 0
-	world.lives = 20
+	world.civilians_remaining = 20
 	return world
 
 func _add_enemy(world: WorldState, speed: float) -> Enemy:
@@ -69,7 +69,7 @@ func test_leaked_enemy_awards_no_bounty() -> void:
 	assert_int(world.gold).override_failure_message(
 		"走到終點的敵人不該給玩家賞金"
 	).is_equal(0)
-	assert_int(world.lives).is_equal(19)
+	assert_int(world.civilians_remaining).is_equal(19)
 
 func test_effects_on_a_killed_enemy_are_returned_to_the_pool() -> void:
 	var world := _make_world()
@@ -350,3 +350,161 @@ func test_pause_drained_mid_catchup_stops_the_loop_immediately() -> void:
 		"若這裡跑出的 tick 數不是 4，代表 _accumulator 在暫停跳出的那一刻被清空或改動了，" +
 		"暫停期間積欠的模擬時間就這樣憑空消失，戰鬥時間軸會對不上。"
 	).is_equal(4)
+
+func test_a_leaked_enemy_costs_one_civilian() -> void:
+	var world := _make_world()
+	world.civilians_remaining = 3
+	var enemy := _add_enemy(world, 100000.0)   # 一 tick 就走完整條路
+	var sim := BattleSim.new(world)
+
+	sim.advance(FRAME)
+
+	assert_bool(enemy.leaked).is_true()
+	assert_int(world.civilians_remaining).override_failure_message(
+		"漏過去一隻敵人，就少救一個平民"
+	).is_equal(2)
+
+func test_civilians_never_go_below_zero() -> void:
+	# 歸零不是失敗，只是一個都沒救到。玩家會繼續打完剩下的波次，
+	# 期間漏掉的敵人不該讓計數變成負數——結算畫面會印出負的人數。
+	var world := _make_world()
+	world.civilians_remaining = 1
+	_add_enemy(world, 100000.0)
+	_add_enemy(world, 100000.0)
+	_add_enemy(world, 100000.0)
+	var sim := BattleSim.new(world)
+
+	sim.advance(FRAME)
+
+	assert_int(world.civilians_remaining).override_failure_message(
+		"三隻漏過去但只剩一個平民，應該夾在 0 而不是變成 -2"
+	).is_equal(0)
+
+## 一波、一隻、立刻生的世界，用來驗通關判定
+func _make_one_enemy_wave_world() -> WorldState:
+	var world := _make_world()
+	world.enemy_defs = {
+		&"orc_grunt": {
+			"id": "orc_grunt", "name_key": "enemy.orc_grunt.name",
+			"hp": 120.0, "speed": 0.0, "armor": 0.0, "magic_resist": 0.0,
+			"bounty": 6, "sprite": "res://game/assets/placeholder_enemy.png",
+			"frame_count": 8,
+		},
+	}
+	world.waves = [
+		{"delay": 0.0, "groups": [
+			{"enemy_id": "orc_grunt", "count": 1, "interval": 1.0, "path_id": "main", "start_delay": 0.0},
+		]},
+	]
+	world.reset_wave_state()
+	return world
+
+## WaveSystem 的第一個 tick 只把倒數歸零、把該波標記成 spawning（_start_wave），
+## 實際生成要等下一個 tick 的 _tick_spawning 才發生——這條 2-tick 節奏在
+## test_wave_system.gd（test_a_sub_tick_interval_spawns_several_in_one_tick）
+## 就已經釘住，不是本任務要改的行為。所以這裡也要跑滿 2 個 tick，
+## 那隻唯一的敵人才會真的在 world.enemies 裡。
+func _advance_until_the_one_enemy_spawns(sim: BattleSim) -> void:
+	sim.advance(FRAME)
+	sim.advance(FRAME)
+
+func test_waves_advance_inside_the_tick() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+
+	_advance_until_the_one_enemy_spawns(sim)
+
+	assert_array(world.enemies).override_failure_message(
+		"波次要在 tick 裡推進；還留在場景層的話這條會是空的"
+	).has_size(1)
+
+func test_the_battle_is_not_finished_while_an_enemy_is_alive() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+
+	assert_bool(world.battle_finished).override_failure_message(
+		"全部生成完但場上還有活著的敵人，還沒通關"
+	).is_false()
+
+func test_the_battle_finishes_on_the_very_tick_the_last_enemy_dies() -> void:
+	# 這條是本任務最重要的一條。一個在 _remove_dead() 之前判定的實作會通過
+	# 大部分測試——多數 tick 裡最後一隻敵人早就死了。這裡刻意讓牠「這一 tick
+	# 才剛被打死」：判定若排在移除死亡之前，這一 tick 就會錯答成未完成。
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+	var enemy: Enemy = world.enemies[0]
+
+	# 直接把牠打死，模擬「這一 tick 傷害剛好結算完」
+	enemy.hp = 0.0
+	enemy.alive = false
+	sim.advance(FRAME)
+
+	assert_array(world.enemies).has_size(0)
+	assert_bool(world.battle_finished).override_failure_message(
+		"最後一隻在這一 tick 被移除，通關判定必須在同一 tick 成立"
+	).is_true()
+
+func test_a_finished_battle_stops_advancing() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+	world.enemies[0].alive = false
+	sim.advance(FRAME)
+	assert_bool(world.battle_finished).is_true()
+
+	var ticks_before := sim.tick_count
+	var ticks := sim.advance(FRAME * 10.0)
+
+	assert_int(ticks).override_failure_message(
+		"通關後 advance() 必須回傳 0——模擬自己停住，不需要 UI 去暫停它"
+	).is_equal(0)
+	assert_int(sim.tick_count).override_failure_message(
+		"通關後 tick 不該再前進"
+	).is_equal(ticks_before)
+
+## 與 test_pause_drained_mid_catchup_stops_the_loop_immediately() 同一個道理，
+## 換成 battle_finished 這個跳出條件：一次補跑欠 5 個 tick，若唯一的敵人在
+## 第 2 個 tick 才漏過終點（battle_finished 因此在第 2 個 tick 結尾成立），
+## 其餘 3 個 tick 不該再跑——不然通關那一刻之後敵人、投射物、金幣仍會照跑，
+## 只是「碰巧」在下一幀才真的停下來，跟 ui/result_panel.gd 依賴的
+## 「world.battle_finished 成立時模擬已經自己停了」這個假設矛盾。
+func test_battle_finished_mid_catchup_stops_the_loop_immediately() -> void:
+	var world := _make_one_enemy_wave_world()
+	var sim := BattleSim.new(world)
+	_advance_until_the_one_enemy_spawns(sim)
+	var enemy: Enemy = world.enemies[0]
+	# 路徑總長 600px。每 tick 走 400px：第 1 個 tick 到 400（未漏），
+	# 第 2 個 tick 累積到 800（觸發漏過終點）——刻意不讓它在第 1 個 tick 就結束，
+	# 否則跟「補跑迴圈根本沒機會多跑」的情境測不出差別。
+	enemy.base_speed = 12000.0
+	enemy.reset_derived_stats()
+
+	var ticks := sim.advance(FRAME * 5.0)   # 一次欠 5 個 tick
+
+	assert_int(ticks).override_failure_message(
+		"迴圈條件必須重讀 battle_finished：欠 5 個 tick 時，唯一的敵人在第 2 個 tick 漏過終點，" +
+		"其餘 3 個 tick 完全不該跑"
+	).is_equal(2)
+	assert_bool(world.battle_finished).override_failure_message(
+		"battle_finished 必須在敵人漏過終點、場上不再有活著敵人的那個 tick 就成立"
+	).is_true()
+
+func test_a_call_next_wave_intent_starts_the_wave_and_pays() -> void:
+	var world := _make_one_enemy_wave_world()
+	world.waves[0]["delay"] = 5.0
+	world.call_bonus_per_second = 2
+	world.reset_wave_state()
+	world.gold = 0
+	var sim := BattleSim.new(world)
+
+	world.queue_intent(GameIntent.call_next_wave())
+	sim.advance(FRAME)
+
+	assert_int(world.gold).override_failure_message(
+		"意圖必須真的走到 WaveSystem——倒數剩 5 秒、每秒 2，應該入帳 10"
+	).is_equal(10)
+	assert_array(world.enemies).override_failure_message(
+		"呼叫之後那一波要立刻開始生"
+	).has_size(1)

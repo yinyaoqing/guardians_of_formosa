@@ -13,7 +13,7 @@ func _make_world() -> WorldState:
 	])
 	world.paths[PATH_ID] = PathData.new(points, 100.0)
 	world.gold = 0
-	world.lives = 20
+	world.civilians_remaining = 20
 	return world
 
 func _add_enemy(world: WorldState, hp: float, speed: float, bounty: int) -> Enemy:
@@ -65,19 +65,19 @@ func test_killing_enemy_awards_bounty_once() -> void:
 	_run(sim, 3.0)
 	assert_int(world.gold).is_equal(7)
 
-func test_enemy_reaching_end_costs_a_life() -> void:
+func test_enemy_reaching_end_costs_a_civilian() -> void:
 	var world := _make_world()
 	_add_enemy(world, 1000.0, 400.0, 5)
 	var sim := BattleSim.new(world)
 	_run(sim, 2.0)
-	assert_int(world.lives).is_equal(19)
+	assert_int(world.civilians_remaining).is_equal(19)
 
-func test_leaked_enemy_only_costs_one_life() -> void:
+func test_leaked_enemy_only_costs_one_civilian() -> void:
 	var world := _make_world()
 	_add_enemy(world, 1000.0, 400.0, 5)
 	var sim := BattleSim.new(world)
 	_run(sim, 5.0)
-	assert_int(world.lives).is_equal(19)
+	assert_int(world.civilians_remaining).is_equal(19)
 
 func test_tower_out_of_range_does_not_damage() -> void:
 	var world := _make_world()
@@ -145,7 +145,7 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	var world := WorldState.new()
 	world.paths[PATH_ID] = _bake_demo_path()
 	world.gold = 0
-	world.lives = 20
+	world.civilians_remaining = 20
 
 	var enemy := registry.make_enemy(&"orc_grunt", PATH_ID)
 	enemy.position = world.paths[PATH_ID].position_at(0.0)
@@ -169,7 +169,7 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	world.add_tower(tower)
 
 	var starting_gold := world.gold
-	var starting_lives := world.lives
+	var starting_civilians := world.civilians_remaining
 	var bounty := enemy.bounty
 
 	var sim := BattleSim.new(world)
@@ -187,7 +187,7 @@ func test_shipped_data_lets_one_tower_kill_one_enemy() -> void:
 	).is_false()
 	assert_bool(enemy.alive).is_false()
 	assert_int(world.gold).is_equal(starting_gold + bounty)
-	assert_int(world.lives).is_equal(starting_lives)
+	assert_int(world.civilians_remaining).is_equal(starting_civilians)
 	assert_float(tower.projectile_speed).override_failure_message(
 		"Tower.projectile_speed 沒有從關卡資料複製過去——改 data/towers/musket_tower.json 的 projectile_speed 不會有任何效果"
 	).is_equal_approx(float(level_def["projectile_speed"]), 0.001)
@@ -275,12 +275,28 @@ func test_configure_for_level_wires_everything_the_world_needs() -> void:
 	assert_int(world.tower_defs.size()).override_failure_message(
 		"未注入塔的定義，建塔會找不到資料"
 	).is_greater(0)
+	assert_int(world.enemy_defs.size()).override_failure_message(
+		"未注入敵人定義，波次系統會生不出任何敵人——而且是靜默的，" +
+		"因為 WaveSystem 對找不到的定義只會 push_error 然後跳過那一隻"
+	).is_greater(0)
 	assert_int(world.available_towers.size()).override_failure_message(
 		"未注入本關可用塔種，所有建造都會被拒絕"
 	).is_equal(meta["available_towers"].size())
 	assert_float(world.sell_refund_ratio).is_equal_approx(meta["sell_refund_ratio"], 0.001)
 	assert_int(world.gold).is_equal(int(meta["starting_gold"]))
-	assert_int(world.lives).is_equal(int(meta["starting_lives"]))
+	assert_int(world.civilians_remaining).is_equal(int(meta["starting_civilians"]))
+	assert_int(world.starting_civilians).override_failure_message(
+		"未注入 starting_civilians，結算面板的「救到 N / M 人」就沒有分母 M。
+" +
+		"（星等本身不讀它——那讀的是 civilians_remaining 與 star_civilian_threshold。）
+" +
+		"注意這三條斷言在 configure_for_level 之後都等於同一個 meta 值，所以互換兩個
+" +
+		"欄位的 bug 三條都攔不到；要攔那個得等它們在遊戲中真的分開之後。"
+	).is_equal(int(meta["starting_civilians"]))
+	assert_int(world.star_civilian_threshold).override_failure_message(
+		"未注入 star_civilian_threshold，ResultSystem.star_count() 沒有門檻可比，第二顆星永遠拿不到"
+	).is_equal(int(meta["star_civilian_threshold"]))
 
 ## Fix 5 的浸泡測試:池的斷言到目前為止都只涵蓋單一物件、單一 tick,
 ## 真正的洩漏只會在一整場戰鬥的規模下才會現形。這裡連續生成數十隻敵人、
@@ -288,7 +304,7 @@ func test_configure_for_level_wires_everything_the_world_needs() -> void:
 ## 驗證投射物池與效果池都確實回滿。
 func test_pools_return_to_full_capacity_after_a_long_battle() -> void:
 	var world := _make_world()
-	var starting_lives := world.lives
+	var starting_civilians := world.civilians_remaining
 	world.effect_defs[&"chill"] = {"id": "chill", "kind": "slow", "magnitude": 0.3, "duration": 1.0}
 
 	var tower := _add_tower(world, Vector2(150, 0), 5.0, 0.2, 600.0)
@@ -322,7 +338,7 @@ func test_pools_return_to_full_capacity_after_a_long_battle() -> void:
 	assert_int(world.gold).override_failure_message(
 		"浸泡測試無意義,除非戰鬥實際擊殺並支付賞金——空戰場的池結果會自動滿足池滿檢驗"
 	).is_greater(0)
-	assert_bool(world.lives < starting_lives).override_failure_message(
+	assert_bool(world.civilians_remaining < starting_civilians).override_failure_message(
 		"浸泡測試無意義,除非戰鬥實際讓敵人洩漏到路徑終點——空戰場的池結果會自動滿足池滿檢驗"
 	).is_true()
 

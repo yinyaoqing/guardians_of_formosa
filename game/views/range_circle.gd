@@ -17,6 +17,10 @@ var _radius: float = 0.0
 ## 專案裡的其他 view 都是 new() → setup() → add_child()，若這裡也照那個順序，
 ## 無條件的 visible = false 會把先呼叫的 show_at 蓋掉，而且畫面上不會有任何線索。
 func _ready() -> void:
+	# Views 開了 y_sort，所有子節點依 y 決定先後。射程圈的 y 是塔的 y，
+	# 所以它會蓋住畫面上方的塔——那不是深度關係，是提示線該永遠在底下。
+	# y-sort 只在同一個 z_index 內排序，壓到 -1 就永遠先畫。
+	z_index = -1
 	if _radius <= 0.0:
 		visible = false
 

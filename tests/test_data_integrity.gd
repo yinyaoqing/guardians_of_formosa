@@ -311,8 +311,8 @@ func test_at_least_one_level_is_loaded() -> void:
 
 func test_every_level_has_required_fields() -> void:
 	var required := [
-		"id", "name_key", "starting_gold", "starting_lives",
-		"sell_refund_ratio", "available_towers",
+		"id", "name_key", "starting_gold", "starting_civilians",
+		"star_civilian_threshold", "sell_refund_ratio", "available_towers",
 	]
 	for level_id: StringName in _registry.levels:
 		var meta: Dictionary = _registry.levels[level_id]
@@ -328,9 +328,22 @@ func test_every_level_has_sane_starting_resources() -> void:
 		assert_float(meta["starting_gold"]).override_failure_message(
 			"關卡 %s 的起始金幣必須為正" % level_id
 		).is_greater(0.0)
-		assert_float(meta["starting_lives"]).override_failure_message(
-			"關卡 %s 的起始生命必須為正" % level_id
+		assert_float(meta["starting_civilians"]).override_failure_message(
+			"關卡 %s 的待撤離平民數必須為正" % level_id
 		).is_greater(0.0)
+
+func test_star_civilian_threshold_is_reachable() -> void:
+	# 門檻是「救到多少人給星」，必須落在 (0, starting_civilians] 之間——
+	# 大於起始平民數的門檻永遠拿不到星，關卡設計就出錯了。
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+		var starting_civilians: float = meta["starting_civilians"]
+		assert_float(meta["star_civilian_threshold"]).override_failure_message(
+			"關卡 %s 的 star_civilian_threshold 必須為正" % level_id
+		).is_greater(0.0)
+		assert_bool(float(meta["star_civilian_threshold"]) <= starting_civilians).override_failure_message(
+			"關卡 %s 的 star_civilian_threshold 超過 starting_civilians，星等永遠拿不到" % level_id
+		).is_true()
 
 func test_sell_refund_ratio_is_within_zero_to_one() -> void:
 	# 大於 1 等於賣塔賺錢，玩家可以無限套利
@@ -364,3 +377,67 @@ func test_level_directory_name_matches_its_id() -> void:
 	assert_int(_registry.levels.size()).override_failure_message(
 		"關卡目錄數與註冊表大小不符，表示有兩個關卡宣告了同一個 id 而互相覆蓋"
 	).is_equal(count)
+
+func test_every_wave_group_references_real_data() -> void:
+	var found_any := false
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+
+		assert_bool(meta.has("waves")).override_failure_message(
+			"關卡 %s 沒有 waves——沒有波次就沒有一局" % level_id
+		).is_true()
+		var waves: Array = meta["waves"]
+		assert_int(waves.size()).override_failure_message(
+			"關卡 %s 的波次是空的" % level_id
+		).is_greater(0)
+
+		for i in waves.size():
+			var wave: Dictionary = waves[i]
+			# delay 被 WaveSystem 與 WorldState 直接索引（缺漏是原始的 KeyError，
+			# 不是可控的錯誤訊息）；漏了 delay 要到那一波真的要開始時才會炸，
+			# 負的 delay 更陰險——完全不炸，只是讓那一波緊接著前一波立刻開始，
+			# 沒有任何倒數,原因無從追查。
+			# 零本身是合法值、不在檢查範圍內——第一波「立刻開始，不等待」正是
+			# 靠 delay == 0 表達的（見 _make_one_enemy_wave_world 等測試世界），
+			# 拒絕零會連這個正常用法都擋下來；只有負數才是純粹的資料錯誤。
+			assert_bool(wave.has("delay")).override_failure_message(
+				"關卡 %s 第 %d 波缺少 delay，WaveSystem 與 WorldState 都直接索引這個欄位，" % [level_id, i + 1] +
+				"缺漏要到那一波真的該開始時才會噴出原始的 KeyError"
+			).is_true()
+			if wave.has("delay"):
+				assert_bool(float(wave["delay"]) >= 0.0).override_failure_message(
+					"關卡 %s 第 %d 波的 delay 是負數。負的 delay 不會有任何錯誤，" % [level_id, i + 1] +
+					"只會讓那一波緊接著前一波生完就立刻開始，沒有倒數，原因無從追查"
+				).is_true()
+
+			var groups: Array = wave["groups"]
+			assert_int(groups.size()).override_failure_message(
+				"關卡 %s 第 %d 波沒有任何群組" % [level_id, i + 1]
+			).is_greater(0)
+
+			for group: Dictionary in groups:
+				found_any = true
+				var enemy_id := StringName(group["enemy_id"])
+				assert_bool(_registry.enemies.has(enemy_id)).override_failure_message(
+					"關卡 %s 第 %d 波引用了不存在的敵人 %s。打錯字要到那一波真的生成時才會噴錯。" % [level_id, i + 1, enemy_id]
+				).is_true()
+				assert_int(int(group["count"])).override_failure_message(
+					"關卡 %s 第 %d 波的 count 必須為正" % [level_id, i + 1]
+				).is_greater(0)
+				assert_float(float(group["interval"])).override_failure_message(
+					"關卡 %s 第 %d 波的 interval 必須為正，否則一個 tick 會把整波生完" % [level_id, i + 1]
+				).is_greater(0.0)
+
+	assert_bool(found_any).override_failure_message(
+		"一個波次群組都沒掃到，守衛形同虛設"
+	).is_true()
+
+func test_the_call_bonus_rate_is_present_and_sane() -> void:
+	for level_id: StringName in _registry.levels:
+		var meta: Dictionary = _registry.levels[level_id]
+		assert_bool(meta.has("call_bonus_per_second")).override_failure_message(
+			"關卡 %s 缺少 call_bonus_per_second，提前呼叫會永遠給 0 獎勵" % level_id
+		).is_true()
+		assert_int(int(meta["call_bonus_per_second"])).override_failure_message(
+			"關卡 %s 的提前呼叫獎勵必須為正，否則那個操作沒有意義" % level_id
+		).is_greater(0)

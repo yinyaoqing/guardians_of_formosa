@@ -29,6 +29,10 @@ func _init(p_world: WorldState = null) -> void:
 ## 推進模擬。frame_delta 為渲染幀的實際經過秒數。
 ## 回傳本幀實際執行的 tick 數。
 func advance(frame_delta: float) -> int:
+	# 通關之後模擬自己停住。讓 UI 去寫 paused 會是第二條改變模擬狀態的路，
+	# 而 B2 與 B3a 花了整整兩個里程碑確保只有一條。
+	if world.battle_finished:
+		return 0
 	if paused:
 		# 排空佇列不受暫停阻擋：建造與賣出正是玩家暫停下來規劃時該做的事，
 		# 佇列若在暫停時只進不出，恢復的那一刻就會一次套用整個積壓的佇列。
@@ -43,7 +47,14 @@ func advance(frame_delta: float) -> int:
 	# 在按下的那個瞬間生效，而不是拖到下一次 advance() 呼叫。
 	# 因暫停而提前跳出時 _accumulator 保留剩下欠的整數個 tick 份量——
 	# 這些時間不是被丟棄，而是留到解除暫停後補跑，戰鬥時間軸不會憑空消失。
-	while _accumulator >= TICK_DELTA and not paused and ticks < MAX_TICKS_PER_FRAME:
+	# world.battle_finished 跟 paused 一樣要在迴圈條件裡重讀，理由對稱：
+	# 補跑迴圈裡任何一個 _tick() 都可能在 _check_battle_finished() 讓它翻成
+	# true（例如這一幀積欠 5 個 tick、最後一隻敵人在第 2 個 tick 就死了）。
+	# 一旦發生就立刻停止，不把本幀還積欠的其餘 tick 跑完——不然通關那一刻
+	# 之後的 tick 仍會照跑，敵人、投射物、金幣都還在動，只是「碰巧」在下一幀
+	# 才真的停下來。ui/result_panel.gd 的假設是「world.battle_finished 成立時
+	# 模擬已經自己停了」，這裡若不擋，該假設只在幀與幀之間成立，幀內仍會失守。
+	while _accumulator >= TICK_DELTA and not paused and not world.battle_finished and ticks < MAX_TICKS_PER_FRAME:
 		_accumulator -= TICK_DELTA
 		_tick()
 		ticks += 1
@@ -61,6 +72,14 @@ func advance(frame_delta: float) -> int:
 	# 因此必然是 1，遠小於 MAX_TICKS_PER_FRAME，兩個跳出原因不會同時成立。
 	# 這個不變式一旦被打破（例如未來波次腳本、boss 自動暫停等「tick 內
 	# 產生 intent」的功能）就必須重新檢查這裡的假設。
+	#
+	# battle_finished 提前跳出同樣不會誤觸這個丟棄分支，但理由更簡單：
+	# battle_finished 只可能在補跑迴圈裡的某個 _tick() 結尾被設成 true
+	# （_check_battle_finished()），不可能發生在恰好第 MAX_TICKS_PER_FRAME
+	# 個 iteration——若真的撞上這個邊界，那就跟正常跑滿上限沒有差別，丟棄
+	# 也無妨。無論丟不丟，battle_finished 提前跳出之後 _accumulator 剩下什麼
+	# 都不再重要：advance() 開頭那個 `if world.battle_finished: return 0`
+	# 會讓後續每一次呼叫都直接短路，_accumulator 再也不會被讀取或使用。
 	if ticks == MAX_TICKS_PER_FRAME and _accumulator > TICK_DELTA:
 		_accumulator = 0.0
 	return ticks
@@ -72,6 +91,7 @@ func tick_progress() -> float:
 func _tick() -> void:
 	tick_count += 1
 	_apply_pending_intents()
+	WaveSystem.tick(world, TICK_DELTA)
 	world.status_system.tick(world.enemies, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
@@ -79,6 +99,7 @@ func _tick() -> void:
 	world.projectile_system.tick(TICK_DELTA)
 	_tick_towers()
 	_remove_dead()
+	_check_battle_finished()
 
 ## tick 的第一步。輸入發生在渲染幀上，模擬跑固定步長，兩者不對齊；
 ## 排隊到 tick 內套用，讓所有改變世界的事情都發生在明確的位置。
@@ -100,6 +121,8 @@ func _apply_pending_intents() -> void:
 				paused = not paused
 			GameIntent.KIND_CYCLE_SPEED:
 				_cycle_speed()
+			GameIntent.KIND_CALL_NEXT_WAVE:
+				WaveSystem.call_next_wave(world)
 			_:
 				BuildSystem.apply(world, intent)
 	world.pending_intents.clear()
@@ -110,12 +133,12 @@ func _cycle_speed() -> void:
 	var current := SPEED_STEPS.find(speed_multiplier)
 	speed_multiplier = SPEED_STEPS[(current + 1) % SPEED_STEPS.size()]
 
-## 走到終點的敵人扣玩家一條命，並立刻移出戰場（避免重複扣血）
+## 走到終點的敵人少救一個平民，並立刻移出戰場（避免重複扣人數）
 func _collect_leaked() -> void:
 	for enemy: Enemy in world.enemies:
 		if enemy.leaked and enemy.alive:
 			enemy.alive = false
-			world.lives -= 1
+			world.civilians_remaining = maxi(0, world.civilians_remaining - 1)
 
 func _rebuild_grid() -> void:
 	world.grid.clear()
@@ -157,3 +180,19 @@ func _remove_dead() -> void:
 		world.status_system.release_all(enemy)
 		world.enemies_by_id.erase(enemy.id)
 	world.enemies = survivors
+
+## 通關判定。排在移除死亡之後——「場上沒有活著的敵人」要在死亡結算完才問得準，
+## 否則最後一隻剛死的那一 tick 會錯答成未完成，而畫面上完全看不出差別。
+func _check_battle_finished() -> void:
+	if world.battle_finished:
+		return
+	# 沒有波次資料就沒有「全部生成完畢」可言——WaveSystem.all_spawned() 對
+	# 空的 waves 會空真地回傳 true（0 波裡的 0 波都生完了），沒設 waves 的
+	# 世界因此不該被判定通關；真正的關卡一定經由 configure_for_level 灌入至少一波。
+	if world.waves.is_empty():
+		return
+	if not WaveSystem.all_spawned(world):
+		return
+	if not world.enemies.is_empty():
+		return
+	world.battle_finished = true

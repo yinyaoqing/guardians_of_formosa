@@ -18,6 +18,7 @@ const KIND_UPGRADE := &"upgrade"
 ## 「玩家按了切換」而不是「速度變成 2」。
 const KIND_TOGGLE_PAUSE := &"toggle_pause"
 const KIND_CYCLE_SPEED := &"cycle_speed"
+const KIND_CALL_NEXT_WAVE := &"call_next_wave"
 
 var kind: StringName = &""
 var slot_id: int = 0            ## KIND_BUILD 用
@@ -51,4 +52,9 @@ static func toggle_pause() -> GameIntent:
 static func cycle_speed() -> GameIntent:
 	var intent := GameIntent.new()
 	intent.kind = KIND_CYCLE_SPEED
+	return intent
+
+static func call_next_wave() -> GameIntent:
+	var intent := GameIntent.new()
+	intent.kind = KIND_CALL_NEXT_WAVE
 	return intent

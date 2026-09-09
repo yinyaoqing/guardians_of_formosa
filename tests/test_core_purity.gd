@@ -99,6 +99,45 @@ func test_battle_scene_wires_up_the_hud() -> void:
 		"倍速鈕會正常顯示、正常可點，點下去卻毫無反應，同上一條，鍵盤仍然管用，\n" +
 		"讀不出這是接線漏掉而不是設計如此。"
 	).is_true()
+	assert_bool(source.contains("call_wave_pressed.connect")).override_failure_message(
+		"battle_scene.gd 沒有接上 _hud.call_wave_pressed。\n" +
+		"呼叫下一波的按鈕會正常顯示、正常可點，點下去卻毫無反應，同上兩條，\n" +
+		"鍵盤的 N 鍵仍然管用，讀不出這是接線漏掉而不是設計如此。"
+	).is_true()
+
+## 通關的收尾同樣是「靜默漏接」會出事的地方：少了 restart_pressed 的連線，
+## 「再來一次」鈕看起來完好、按下去卻沒有任何反應；少了 _update_result_panel()
+## 的呼叫，通關那一刻直接卡死——每隻敵人、投射物與 Label 全部凍結，沒有任何
+## 面板出現，玩家會以為遊戲當掉，而不是少了一步收尾。headless 測試套件不執行
+## 場景腳本，兩者都只有原始碼文本檢查抓得到。
+func test_battle_scene_wires_up_the_result_panel() -> void:
+	var battle_scene_path := "res://game/level/battle_scene.gd"
+	var source := FileAccess.get_file_as_string(battle_scene_path)
+	assert_bool(source.contains("restart_pressed.connect")).override_failure_message(
+		"battle_scene.gd 沒有接上 _result_panel.restart_pressed。\n" +
+		"結算面板的「再來一次」鈕會正常顯示、正常可點，點下去卻毫無反應——\n" +
+		"玩家只能手動重開關卡，而畫面上看不出任何異狀。"
+	).is_true()
+	# 不能用 contains("_update_result_panel()")：函式定義那一行
+	# `func _update_result_panel() -> void:` 本身就含有這個子字串，
+	# 只要函式還存在，這個判斷永遠是 true，抓不到「定義了卻沒被呼叫」。
+	# 呼叫端是無接收者的自呼叫，寫法與定義那行的尾巴完全相同，唯一能分辨
+	# 兩者的辦法是數出現次數：只有定義，代表沒人呼叫；定義 + 呼叫，至少兩次。
+	assert_int(source.count("_update_result_panel()")).override_failure_message(
+		"battle_scene.gd 的 _process() 沒有呼叫 _update_result_panel()（只找到函式定義本身）。\n" +
+		"通關那一刻會直接卡死：advance() 回傳 0 後，每隻敵人、投射物與 Label 全部凍結，\n" +
+		"卻沒有任何結算面板出現——玩家會以為遊戲當掉，而不是少了收尾的一步。"
+	).is_greater(1)
+
+## 造敵人的邏輯只能有一份。DataRegistry 若自己重新展開欄位，兩條路就會漂移，
+## 而 headless 測試不會發現——兩邊各自都「正確」，只是不一致。
+## 與本檔其他守衛同樣是原始碼文字檢查，因為沒有其他手段看得到「有沒有委派」。
+func test_data_registry_delegates_enemy_construction() -> void:
+	var source := FileAccess.get_file_as_string("res://core/data/data_registry.gd")
+	assert_bool(source.contains("EnemyFactory.from_def")).override_failure_message(
+		"DataRegistry.make_enemy 必須委派給 EnemyFactory.from_def。\n" +
+		"自己展開欄位的話，它與 WaveSystem 生出來的敵人會靜默漂移。"
+	).is_true()
 
 func _collect_gd_files(root: String) -> Array[String]:
 	var found: Array[String] = []
@@ -111,3 +150,24 @@ func _collect_gd_files(root: String) -> Array[String]:
 	for sub_dir in dir.get_directories():
 		found.append_array(_collect_gd_files(root.path_join(sub_dir)))
 	return found
+
+## HUD 的按鈕走 GUI 事件階段，不經過 _unhandled_input，所以那裡的通關檢查擋不到
+## 它們——三個 _on_hud_* 各自要再擋一次。漏掉的話通關後暫停與倍速仍可按，每按一下
+## 就往永遠不會被排空的佇列塞一筆意圖，而畫面上完全看不出來。
+func test_battle_scene_gates_hud_buttons_after_the_battle_ends() -> void:
+	var source := FileAccess.get_file_as_string("res://game/level/battle_scene.gd")
+	# 不能用 contains("_hud_input_accepted")：`func _hud_input_accepted() -> bool:`
+	# 這行自己就含有它，只要函式定義著就永遠是 true——三個 handler 少呼叫任何一個
+	# 都抓不到，而那正是這條守衛存在的理由。改數守衛那一行，數字就是 HUD 按鈕數；
+	# 之後多加一顆按鈕，這裡會逼人回來看一次。
+	assert_int(source.count("if not _hud_input_accepted():")).override_failure_message(
+		"battle_scene 的 HUD 按鈕處理器必須在通關後拒收。
+" +
+		"advance() 通關後回傳 0，_apply_pending_intents() 不再執行，所以排進去的意圖
+" +
+		"永遠不會被清掉——pending_intents 每按一下長一筆，had_intents 從此恆真。
+" +
+		"headless 測試套件不執行場景腳本，沒有其他測試抓得到。
+" +
+		"目前有三顆 HUD 按鈕（暫停、倍速、呼叫下一波），三個都要擋。"
+	).is_equal(3)

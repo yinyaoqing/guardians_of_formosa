@@ -1,6 +1,6 @@
 keys,zh_TW,en
-hud.gold_format,金幣 %d,Gold %d
-hud.lives_format,生命 %d,Lives %d
+hud.gold_format,銀 %d,Silver %d
+hud.civilians_format,平民 %d,Civilians %d
 hud.speed_format,%d 倍速,%dx
 hud.pause,暫停,Pause
 hud.resume,繼續,Resume
@@ -14,3 +14,12 @@ status.stun_shock.name,暈眩,Stun
 status.sunder.name,破甲,Sunder
 menu.upgrade_format,升級 %d,Upgrade %d
 menu.sell_format,賣出 +%d,Sell +%d
+hud.wave_format,第 %d / %d 波,Wave %d / %d
+hud.countdown_format,%d 秒,%ds
+hud.wave_incoming,進行中,Incoming
+hud.waves_cleared,敵襲已退,All Clear
+hud.call_wave,呼叫,Call
+result.title,撐過來了,You Held
+result.waves_format,撐過 %d 波,Survived %d waves
+result.saved_format,救到 %d / %d 人,Saved %d / %d
+result.restart,再來一次,Play Again

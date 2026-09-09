@@ -11,6 +11,7 @@ extends GdUnitTestSuite
 const UI_ROOT := "res://ui"
 const HUD_SCENE := "res://ui/battle_hud.tscn"
 const BUILD_MENU_SCENE := "res://ui/build_menu.tscn"
+const RESULT_PANEL_SCENE := "res://ui/result_panel.tscn"
 
 ## 出現這些字串即代表 ui/ 繞過了 signal，自己動手做事。
 ## core/systems/ 底下每一個系統類別都要列進來——只列 BuildSystem 漏掉了
@@ -21,8 +22,10 @@ const FORBIDDEN_PATTERNS := [
 	"DamageSystem",
 	"MovementSystem",
 	"ProjectileSystem",
+	"ResultSystem",
 	"StatusSystem",
 	"TargetingSystem",
+	"WaveSystem",
 	"queue_intent(",
 	"pending_intents",
 	"InputAction",
@@ -72,9 +75,12 @@ const NODE_EXPECTATIONS := {
 	"Root": {"type": "MarginContainer", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top": {"type": "HBoxContainer", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/GoldLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
-	"Root/Top/LivesLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
+	"Root/Top/CiviliansLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/SpacerLeft": {"type": "Control", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/LevelNameLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
+	"Root/Top/WaveLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
+	"Root/Top/CountdownLabel": {"type": "Label", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
+	"Root/Top/CallWaveButton": {"type": "Button", "mouse_filter": Control.MOUSE_FILTER_STOP},
 	"Root/Top/SpacerRight": {"type": "Control", "mouse_filter": Control.MOUSE_FILTER_IGNORE},
 	"Root/Top/PauseButton": {"type": "Button", "mouse_filter": Control.MOUSE_FILTER_STOP},
 	"Root/Top/SpeedButton": {"type": "Button", "mouse_filter": Control.MOUSE_FILTER_STOP},
@@ -168,10 +174,12 @@ func test_the_hud_scene_loads_and_has_every_expected_node() -> void:
 			).is_equal(expected_filter)
 	hud.free()
 
-func test_the_hud_exposes_both_signals() -> void:
+## 名字原本是 test_the_hud_exposes_both_signals，只驗兩個。這個里程碑加了
+## call_wave_pressed，兩個手足都被驗過，它沒有——所以擴大覆蓋並跟著改名。
+func test_the_hud_exposes_all_three_signals() -> void:
 	var packed: PackedScene = load(HUD_SCENE)
 	var hud := packed.instantiate()
-	for signal_name: String in ["pause_pressed", "speed_pressed"]:
+	for signal_name: String in ["pause_pressed", "speed_pressed", "call_wave_pressed"]:
 		assert_bool(hud.has_signal(signal_name)).override_failure_message(
 			"HUD 少了 signal %s，battle_scene 接不上" % signal_name
 		).is_true()
@@ -188,6 +196,50 @@ func test_the_build_menu_scene_loads_and_exposes_its_signals() -> void:
 			"選單少了 signal %s，battle_scene 接不上" % signal_name
 		).is_true()
 	menu.free()
+
+## 結算面板是另一個手寫 .tscn，跟 HUD 一樣的煙霧測試理由：五個 @onready 都是
+## 嚴格型別，路徑或型別錯一個，_ready() 之前就直接報錯中止——visible = false
+## 永遠不會執行（整場戰鬥從第一幀就疊著一片空板子），restart_pressed 也永遠
+## 不會被連上（「再來一次」變成死按鈕）。headless 套件不執行場景腳本，
+## 只有這裡的載入 + 型別檢查抓得到。
+const RESULT_PANEL_NODE_EXPECTATIONS := {
+	"Root/Box/TitleLabel": "Label",
+	"Root/Box/StarsLabel": "Label",
+	"Root/Box/WavesLabel": "Label",
+	"Root/Box/SavedLabel": "Label",
+	"Root/Box/RestartButton": "Button",
+}
+
+func test_the_result_panel_scene_loads_and_has_every_expected_node() -> void:
+	var packed: PackedScene = load(RESULT_PANEL_SCENE)
+	assert_bool(packed != null).override_failure_message(
+		"載入不了 %s；.tscn 是手寫的，格式錯誤只會在這裡或人工驗收現形" % RESULT_PANEL_SCENE
+	).is_true()
+
+	var panel := packed.instantiate()
+	for node_path: String in RESULT_PANEL_NODE_EXPECTATIONS.keys():
+		var expected_type: String = RESULT_PANEL_NODE_EXPECTATIONS[node_path]
+		assert_bool(panel.has_node(node_path)).override_failure_message(
+			"結算面板缺少節點 %s。腳本的 @onready 依這個路徑取節點，路徑錯了就是執行期 null。" % node_path
+		).is_true()
+		if not panel.has_node(node_path):
+			continue
+
+		var node: Node = panel.get_node(node_path)
+		assert_str(node.get_class()).override_failure_message(
+			"結算面板節點 %s 型別是 %s，預期是 %s。@onready 型別標註對不上時，\n" % [node_path, node.get_class(), expected_type] +
+			"會在 _ready() 之前直接報錯中止——visible = false 不會執行，畫面從第一幀就疊著一片空板子，\n" +
+			"restart_pressed 也不會被連上，「再來一次」變成死按鈕。"
+		).is_equal(expected_type)
+	panel.free()
+
+func test_the_result_panel_exposes_restart_pressed() -> void:
+	var packed: PackedScene = load(RESULT_PANEL_SCENE)
+	var panel := packed.instantiate()
+	assert_bool(panel.has_signal("restart_pressed")).override_failure_message(
+		"結算面板少了 signal restart_pressed，battle_scene 接不上，「再來一次」形同裝飾"
+	).is_true()
+	panel.free()
 
 ## show_options 的結構與 signal 行為。幾何（角度、座標）不驗——那是人工驗收的
 ## 範圍——但按鈕數量、索引有沒有對上按下去的按鈕、以及「換一批選項後舊按鈕
