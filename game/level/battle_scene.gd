@@ -85,6 +85,9 @@ func _ready() -> void:
 	_bake_build_slots(world)
 	InputBindings.install()
 
+	# 紙紋 pass 與 HUD 同在 CanvasLayer 1，靠加入順序決定上下：這行必須在 HUD 之前。
+	PaperOverlay.attach(self)
+
 	_hud = BattleHudScene.instantiate() as BattleHud
 	add_child(_hud)
 	_hud.setup(world, _sim, StringName(_registry.levels[LEVEL_ID]["name_key"]))
