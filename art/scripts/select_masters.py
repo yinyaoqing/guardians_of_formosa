@@ -57,8 +57,11 @@ def save_master(data: dict) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+_manifest_path = MANIFEST
+
+
 def _assets() -> list[dict]:
-    with open(MANIFEST, encoding="utf-8") as f:
+    with open(_manifest_path, encoding="utf-8") as f:
         return json.load(f)["assets"]
 
 
@@ -155,7 +158,10 @@ def main() -> int:
     ap.add_argument("--pick", action="append", default=[], help="格式 asset_id=編號")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--status", action="store_true")
+    ap.add_argument("--manifest", default=MANIFEST, help="資產清單（預設 chapter01_assets；肖像用 chapter01_portraits）")
     args = ap.parse_args()
+    global _manifest_path
+    _manifest_path = args.manifest
 
     if args.sheets:
         return build_sheets(args.stage, args.only)

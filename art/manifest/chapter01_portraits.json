@@ -1,0 +1,77 @@
+{
+  "_doc": "第一章對話肖像清單（roadmap §5.1）。與 chapter01_assets.json 共用風格（扁平幾何無五官，美術聖經 §1.1 2026-09-09 修訂）與色票；framing 為胸像。資產 id 前綴 portrait_，尺寸上限見 data/art_limits.json。無五官一視同仁——殖民者也沒有臉（美術聖經 §0）。用法：python art/scripts/generate_batch.py --manifest art/manifest/chapter01_portraits.json --stage flat --batch 2；挑選：select_masters.py 目前只讀 chapter01_assets.json，肖像用 --manifest 支援待補。",
+  "shared": {
+    "style": "STYLE: minimalist flat geometric vector illustration. Every shape is a clean flat polygon or smooth cut-out with hard edges; forms are built from a few large flat facets with a single straight split between the lit side (upper left) and a shaded side one step darker. Two or three flat tones per object, no outlines, no gradients, no texture, no brush strokes, no highlights. Bold readable silhouette, poster-flat.",
+    "palette": "PALETTE: terracotta #B5442E, deep ochre #8C3A22, banyan green #2F5B3A, ink green #1E4029, jade #5C8A4A, sand #C9A96B, sun-bleached sand #D9C08E, oyster-lime white #E8DCC6, indigo #2C5470, tidal teal #3E7A94, gamboge #E0A93B, cinnabar #A8332B, burnt umber linework #3A2A22.",
+    "negative_base": "eyes, pupils, mouth, teeth, nose, eyebrows, facial features, realistic face, outline, gradient, texture, shading, photorealism, 3D render"
+  },
+  "style_by_cat": {
+    "portrait": "The face is ONE smooth featureless flat shape with no eyes, no mouth, no nose, no eyebrows drawn — the only detail on the face is the vertical light/dark split. Hair, beard, hat, helmet and collar are flat faceted shapes. Hands are simple mitten shapes."
+  },
+  "framing": {
+    "portrait": "bust portrait of a single character, head and shoulders, facing the viewer straight on, perfectly symmetrical, centered and filling the frame, isolated on a plain flat dark slate background."
+  },
+  "proportions": {
+    "portrait": ""
+  },
+  "size": {
+    "portrait": [
+      768,
+      768
+    ]
+  },
+  "negatives": {
+    "zheng": "queue hairstyle, braid, shaved forehead, Qing dynasty uniform, Qing green standard army, samurai armor, ashigaru, japanese, boots, shoes, generic oriental warrior",
+    "voc": "full plate armor, cuirassier, morion helmet, breastplate, matching uniform, winter wool coat, musketeer tabard, european castle, cold climate",
+    "siraya": "feather headdress, native american, war paint, tribal mask, Polynesian tattoo, generic tribal, Atayal pattern, Paiwan pattern, headhunter",
+    "han": "Qing dynasty, queue hairstyle, kung fu movie, wuxia, silk robe, mandarin official",
+    "none": ""
+  },
+  "negatives_by_cat": {
+    "portrait": "full body, multiple people, landscape"
+  },
+  "assets": [
+    {
+      "id": "portrait_coyett",
+      "cat": "portrait",
+      "fac": "voc",
+      "name": "肖像：揆一",
+      "subject": "Frederick Coyett, governor of Dutch Formosa in 1661. Shoulder-length wavy hair and a pointed beard, a black coat with a wide flat white collar forming a square shoulder line. Fair skin tone."
+    },
+    {
+      "id": "portrait_chenze",
+      "cat": "portrait",
+      "fac": "zheng",
+      "name": "肖像：陳澤",
+      "subject": "Chen Ze, a Ming loyalist general of Koxinga's army. A Ming helmet with a tall plume, vermillion mountain-pattern lamellar armour with bronze-gold trim at the shoulders, a short dark beard. Medium warm skin tone."
+    },
+    {
+      "id": "portrait_elder",
+      "cat": "portrait",
+      "fac": "siraya",
+      "name": "肖像：西拉雅頭目",
+      "subject": "a Siraya village elder of 17th-century Formosa. Hair tied up in a knot, NO hat, a shell ear ornament, bare shoulders with a deerskin wrap, holding upright beside the head a rattan staff of office with a silver head. Deep brown skin tone."
+    },
+    {
+      "id": "portrait_slave",
+      "cat": "portrait",
+      "fac": "voc",
+      "name": "肖像：VOC 奴工",
+      "subject": "an enslaved labourer in the Dutch fort of Formosa, of South Indian or Southeast Asian origin. Short cropped hair, bare shoulders, a plain cloth wrap, a heavy sack strap across one shoulder. Very dark skin tone."
+    },
+    {
+      "id": "portrait_hunter",
+      "cat": "portrait",
+      "fac": "siraya",
+      "name": "肖像：新港社鏢手",
+      "subject": "a young Siraya hunter of 17th-century Formosa. Hair tied up in a knot, a shell ear ornament, bare shoulders, a gamboge yellow woven band on the upper arm, the shaft of a long bamboo javelin resting against one shoulder. Deep brown skin tone."
+    },
+    {
+      "id": "portrait_civilian",
+      "cat": "portrait",
+      "fac": "han",
+      "name": "肖像：大員街民",
+      "subject": "a Han Chinese settler woman of Tayouan town, 1661. Hair in a low bun with a plain cloth headwrap, an indigo blue short jacket with a cloth-knot fastening, a bundle strap over one shoulder. Medium warm skin tone."
+    }
+  ]
+}
