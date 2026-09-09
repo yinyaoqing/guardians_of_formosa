@@ -1,0 +1,12 @@
+{
+  "id": "fence_tower",
+  "name_key": "tower.fence_tower.name",
+  "kind": "barracks",
+  "damage_type": "physical",
+  "icon": "res://game/assets/chapter01/icon_tower_fence.png",
+  "levels": [
+    {"cost": 60,  "soldier_count": 2, "soldier_hp": 90.0,  "soldier_damage": 6.0,  "soldier_attack_interval": 1.0, "soldier_armor": 0.10, "respawn_time": 12.0, "regen_per_second": 4.0, "sprite": "res://game/assets/chapter01/tower_fence_t1.png"},
+    {"cost": 110, "soldier_count": 3, "soldier_hp": 150.0, "soldier_damage": 10.0, "soldier_attack_interval": 0.9, "soldier_armor": 0.20, "respawn_time": 11.0, "regen_per_second": 6.0, "sprite": "res://game/assets/chapter01/tower_fence_t2.png"},
+    {"cost": 190, "soldier_count": 3, "soldier_hp": 240.0, "soldier_damage": 15.0, "soldier_attack_interval": 0.8, "soldier_armor": 0.35, "respawn_time": 10.0, "regen_per_second": 9.0, "sprite": "res://game/assets/chapter01/tower_fence_t3.png"}
+  ]
+}

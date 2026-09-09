@@ -39,8 +39,16 @@ func test_every_enemy_has_sane_numbers() -> void:
 			"敵人 %s 的 bounty 不可為負" % enemy_id
 		).is_true()
 
+## 每一級都要有的欄位。兩種塔的等級資料鍵完全不同，所以分開列——
+## 合成一份「聯集」會讓兩邊都檢查不到自己真正缺的東西，
+## 合成一份「交集」則只剩 cost，等於什麼都沒守。
+const SHOOTER_LEVEL_FIELDS := ["cost", "damage", "attack_range", "fire_interval"]
+const BARRACKS_LEVEL_FIELDS := [
+	"cost", "soldier_count", "soldier_hp", "soldier_damage",
+	"soldier_attack_interval", "respawn_time", "regen_per_second"
+]
+
 func test_every_tower_level_has_required_fields() -> void:
-	var required := ["cost", "damage", "attack_range", "fire_interval"]
 	for tower_id: StringName in _registry.towers:
 		var def: Dictionary = _registry.towers[tower_id]
 		assert_bool(def.has("levels")).is_true()
@@ -48,6 +56,17 @@ func test_every_tower_level_has_required_fields() -> void:
 		assert_int(levels.size()).override_failure_message(
 			"塔 %s 的 levels 陣列是空的，無法建造" % tower_id
 		).is_greater(0)
+
+		var kind := StringName(def.get("kind", Tower.KIND_SHOOTER))
+		var required: Array = SHOOTER_LEVEL_FIELDS
+		if kind == Tower.KIND_BARRACKS:
+			required = BARRACKS_LEVEL_FIELDS
+		assert_bool(kind == Tower.KIND_SHOOTER or kind == Tower.KIND_BARRACKS).override_failure_message(
+			"塔 %s 的 kind '%s' 不是已知種類。未知的 kind 會讓這條檢查靜靜地
+" % [tower_id, kind] +
+			"退回射擊塔的欄位清單，於是真正該檢查的東西一項都沒檢查到。"
+		).is_true()
+
 		for level_def: Dictionary in levels:
 			for field: String in required:
 				assert_bool(level_def.has(field)).override_failure_message(
@@ -274,14 +293,31 @@ func test_every_effect_kind_has_at_least_one_definition() -> void:
 			"如果之後要刻意拿掉某個 kind，請刻意更新這個測試，而不是讓它默默地讓其他用 kind 過濾的測試（例如減速的 magnitude 範圍檢查）失去覆蓋、無害地通過。"
 		).is_true()
 
+## 只有射擊塔有投射物。回傳空陣列讓呼叫端跳過兵營，而不是在每條測試裡
+## 各寫一次 kind 判斷——三份判斷遲早會有一份忘記跟上新的塔種。
+##
+## 刻意不用「level_def.has(field) 才檢查」那種寫法：那會讓射擊塔真的漏掉
+## 欄位時也一起被放過，守衛等於自廢。
+func _shooter_levels(tower_id: StringName) -> Array:
+	var def: Dictionary = _registry.towers[tower_id]
+	if StringName(def.get("kind", Tower.KIND_SHOOTER)) != Tower.KIND_SHOOTER:
+		return []
+	return def["levels"]
+
 func test_every_tower_level_declares_projectile_fields() -> void:
 	var required := ["projectile_speed", "splash_radius", "on_hit_effects"]
+	var checked := 0
 	for tower_id: StringName in _registry.towers:
-		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+		for level_def: Dictionary in _shooter_levels(tower_id):
+			checked += 1
 			for field: String in required:
 				assert_bool(level_def.has(field)).override_failure_message(
 					"塔 %s 的某個等級缺少投射物欄位 %s" % [tower_id, field]
 				).is_true()
+	assert_int(checked).override_failure_message(
+		"一個射擊塔的等級都沒檢查到。這條守衛已經形同虛設——\n" +
+		"要嘛資料裡沒有射擊塔了，要嘛 _shooter_levels() 的 kind 判斷壞了。"
+	).is_greater(0)
 
 func test_projectiles_outrun_every_enemy() -> void:
 	# 命中保證的前提：投射物速度必須高於所有敵人，否則追不上。
@@ -292,19 +328,31 @@ func test_projectiles_outrun_every_enemy() -> void:
 	var fastest_enemy := 0.0
 	for enemy_id: StringName in _registry.enemies:
 		fastest_enemy = maxf(fastest_enemy, _registry.enemies[enemy_id]["speed"])
+	var checked := 0
 	for tower_id: StringName in _registry.towers:
-		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+		for level_def: Dictionary in _shooter_levels(tower_id):
+			checked += 1
 			assert_float(level_def["projectile_speed"]).override_failure_message(
 				"塔 %s 的投射物速度必須高於最快的敵人（%.1f），否則永遠追不上" % [tower_id, fastest_enemy]
 			).is_greater(fastest_enemy)
+	assert_int(checked).override_failure_message(
+		"一個射擊塔的等級都沒檢查到。這條守衛已經形同虛設——\n" +
+		"要嘛資料裡沒有射擊塔了，要嘛 _shooter_levels() 的 kind 判斷壞了。"
+	).is_greater(0)
 
 func test_tower_on_hit_effects_reference_existing_effects() -> void:
+	var checked := 0
 	for tower_id: StringName in _registry.towers:
-		for level_def: Dictionary in _registry.towers[tower_id]["levels"]:
+		for level_def: Dictionary in _shooter_levels(tower_id):
+			checked += 1
 			for effect_id in level_def["on_hit_effects"]:
 				assert_bool(_registry.status_effects.has(StringName(effect_id))).override_failure_message(
 					"塔 %s 引用了不存在的狀態效果 %s" % [tower_id, effect_id]
 				).is_true()
+	assert_int(checked).override_failure_message(
+		"一個射擊塔的等級都沒檢查到。這條守衛已經形同虛設——\n" +
+		"要嘛資料裡沒有射擊塔了，要嘛 _shooter_levels() 的 kind 判斷壞了。"
+	).is_greater(0)
 
 func test_at_least_one_level_is_loaded() -> void:
 	assert_int(_registry.levels.size()).is_greater(0)
