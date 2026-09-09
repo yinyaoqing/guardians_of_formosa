@@ -165,6 +165,26 @@
       "stage": "fix",
       "file": "enemy_rattan_fix_00003_.png",
       "picked_at": "2026-09-09"
+    },
+    "prop_banyan": {
+      "stage": "flat",
+      "file": "prop_banyan_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "prop_bamboo": {
+      "stage": "flat",
+      "file": "prop_bamboo_flat_00003_.png",
+      "picked_at": "2026-09-09"
+    },
+    "prop_rock": {
+      "stage": "flat",
+      "file": "prop_rock_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "prop_pandanus": {
+      "stage": "flat",
+      "file": "prop_pandanus_flat_00002_.png",
+      "picked_at": "2026-09-09"
     }
   }
 }

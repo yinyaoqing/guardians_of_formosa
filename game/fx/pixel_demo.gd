@@ -93,7 +93,7 @@ func _is_water(c: Vector2i) -> bool:
 
 
 func _build_map() -> void:
-	var tex := _tex("xp_tiles.png")
+	var tex := _tex("tiles.png")
 	if tex == null:
 		return
 	var src := TileSetAtlasSource.new()
@@ -187,7 +187,7 @@ func _unit(name: String, cell: Vector2) -> void:
 
 func _shadow(pos: Vector2, width: float) -> void:
 	# 精緻度規格 L1：接觸陰影是共用的橢圓貼圖，不烘進資產
-	var tex := _tex("xp_shadow_ellipse.png")
+	var tex := _tex("shadow_ellipse.png")
 	if tex == null:
 		return
 	var s := Sprite2D.new()

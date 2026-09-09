@@ -320,6 +320,38 @@
       "marker_text": "FACTION MARK: one large unmistakable patch of bright gamboge yellow #E0A93B — the single most saturated element in the whole image, clearly visible even at 128 pixels."
     },
     {
+      "id": "prop_banyan",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件：榕樹",
+      "subject": "a single banyan tree of tropical Formosa, a broad dense rounded canopy of deep green built from a few large flat facets, a short thick terracotta-brown trunk with two or three hanging aerial roots, the canopy clearly wider than the trunk.",
+      "_silhouette_intent": "寬圓冠 + 短粗幹；重複擺放用，冠要圓、輪廓要單純"
+    },
+    {
+      "id": "prop_bamboo",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件：竹叢",
+      "subject": "a clump of five or six tall bamboo stalks in flat jade green with darker joint bands, leaning slightly apart at the top with a few simple leaf shapes, growing from a single point at the base.",
+      "_silhouette_intent": "細高、多桿、頂部散開"
+    },
+    {
+      "id": "prop_rock",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件：礁石",
+      "subject": "a low rounded coastal boulder of the Taijiang lagoon in flat sand and light grey-brown facets with a darker underside, a little dry grass at its base.",
+      "_silhouette_intent": "低矮圓塊，比人矮"
+    },
+    {
+      "id": "prop_pandanus",
+      "cat": "prop",
+      "fac": "none",
+      "name": "擺件：林投",
+      "subject": "a single pandanus (screw pine) of the Taiwan coast: a short stilt-rooted trunk and a crown of long stiff spiky blade-like leaves radiating outward in flat jade and deep green facets.",
+      "_silhouette_intent": "放射狀尖葉冠，與榕樹的圓冠拉開"
+    },
+    {
       "id": "icon_silver",
       "cat": "icon",
       "fac": "none",

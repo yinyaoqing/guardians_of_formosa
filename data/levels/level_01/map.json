@@ -8,7 +8,14 @@
   "water": {"rect": [46, 0, 60, 9]},
   "tide": {"low_extra_sand": [[46, 7], [47, 7], [46, 8], [47, 8], [48, 8], [49, 8]]},
   "props": [
-    {"id": "prop_settlement", "cell": [40, 12], "shadow": false}
+    {"id": "prop_settlement", "cell": [40, 12], "shadow": false},
+    {"id": "prop_banyan", "cell": [5, 1]}, {"id": "prop_banyan", "cell": [30, 1]},
+    {"id": "prop_banyan", "cell": [8, 24]}, {"id": "prop_banyan", "cell": [26, 26]},
+    {"id": "prop_banyan", "cell": [50, 28]}, {"id": "prop_banyan", "cell": [36, 9]},
+    {"id": "prop_bamboo", "cell": [15, 12]}, {"id": "prop_bamboo", "cell": [52, 13]},
+    {"id": "prop_bamboo", "cell": [2, 30]},
+    {"id": "prop_rock", "cell": [44, 10]}, {"id": "prop_rock", "cell": [55, 11]},
+    {"id": "prop_pandanus", "cell": [48, 12]}, {"id": "prop_pandanus", "cell": [58, 26]}
   ],
   "build_slots": [[12, 7], [12, 14], [28, 15], [44, 15]]
 }
