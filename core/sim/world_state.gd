@@ -52,6 +52,14 @@ var enemies_by_id: Dictionary = {}  ## int -> Enemy
 var build_slots: Array[BuildSlot] = []
 var build_slots_by_id: Dictionary = {}   ## int -> BuildSlot
 
+var soldiers: Array[Soldier] = []
+var soldiers_by_id: Dictionary = {}      ## int -> Soldier
+
+## 兵營小兵的實例池。M1 的建塔點是個位數，全部蓋滿兵營也只有十餘個小兵，
+## 32 留了倍數餘裕。
+const SOLDIER_POOL_CAPACITY := 32
+var soldier_pool := ObjectPool.new(func() -> Soldier: return Soldier.new(), SOLDIER_POOL_CAPACITY)
+
 ## 待處理的玩家意圖。BattleSim 於 tick 第一步排空並套用。
 var pending_intents: Array[GameIntent] = []
 
@@ -115,11 +123,18 @@ func add_build_slot(slot: BuildSlot) -> void:
 	build_slots.append(slot)
 	build_slots_by_id[slot.id] = slot
 
+func add_soldier(soldier: Soldier) -> void:
+	if soldier.id == 0:
+		soldier.id = next_id()
+	soldiers.append(soldier)
+	soldiers_by_id[soldier.id] = soldier
+
 func queue_intent(intent: GameIntent) -> void:
 	pending_intents.append(intent)
 
-## 配發一個全新的實體 id。敵人、塔、投射物共用同一個遞增計數器，
-## 確保 id 在型別之間也不重複。
+## 配發一個全新的實體 id。敵人、塔、建塔點、小兵、投射物共用同一個遞增計數器，
+## 確保 id 在型別之間也不重複——Enemy.blocked_by 存的是小兵 id，
+## 而 BuildSystem 靠這個性質分辨「呼叫端把 slot id 當成 tower id 傳了進來」。
 func next_id() -> int:
 	var id := _next_entity_id
 	_next_entity_id += 1
