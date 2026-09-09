@@ -130,6 +130,36 @@
       "stage": "flat",
       "file": "map_tile_sandbar_flat_00002_.png",
       "picked_at": "2026-09-09"
+    },
+    "tower_hunter_t1": {
+      "stage": "fix",
+      "file": "tower_hunter_t1_fix_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "enemy_archer": {
+      "stage": "fix",
+      "file": "enemy_archer_fix_00004_.png",
+      "picked_at": "2026-09-09"
+    },
+    "tower_fence_t2": {
+      "stage": "flat",
+      "file": "tower_fence_t2_flat_00004_.png",
+      "picked_at": "2026-09-09"
+    },
+    "tower_fence_t3": {
+      "stage": "flat",
+      "file": "tower_fence_t3_flat_00001_.png",
+      "picked_at": "2026-09-09"
+    },
+    "boss_chenze": {
+      "stage": "flat",
+      "file": "boss_chenze_flat_00004_.png",
+      "picked_at": "2026-09-09"
+    },
+    "voc_gunner": {
+      "stage": "flat",
+      "file": "voc_gunner_flat_00001_.png",
+      "picked_at": "2026-09-09"
     }
   }
 }
