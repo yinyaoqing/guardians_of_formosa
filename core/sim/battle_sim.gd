@@ -93,6 +93,9 @@ func _tick() -> void:
 	_apply_pending_intents()
 	WaveSystem.tick(world, TICK_DELTA)
 	world.status_system.tick(world.enemies, TICK_DELTA)
+	# GarrisonSystem 在 MeleeSystem 之前：重生出來的小兵應該在同一個 tick
+	# 就能接戰，而不是站著發呆一拍。
+	GarrisonSystem.tick(world, TICK_DELTA)
 	MovementSystem.tick(world.enemies, world.paths, TICK_DELTA)
 	_collect_leaked()
 	_rebuild_grid()
