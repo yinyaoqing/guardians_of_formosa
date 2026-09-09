@@ -160,6 +160,11 @@
       "stage": "flat",
       "file": "voc_gunner_flat_00001_.png",
       "picked_at": "2026-09-09"
+    },
+    "enemy_rattan": {
+      "stage": "fix",
+      "file": "enemy_rattan_fix_00003_.png",
+      "picked_at": "2026-09-09"
     }
   }
 }
