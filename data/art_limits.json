@@ -11,7 +11,8 @@
     "map_": 2048,
     "prop_settlement": 192,
     "enemy_warjunk": 192,
-    "portrait_": 256
+    "portrait_": 256,
+    "cs_": 1024
   },
   "_default_max_size": 128,
   "_default_reason": "美術聖經 §5.1「敵人／士兵貼圖 ≤ 128×128」。enemy_/boss_/civilian_/voc_/siraya_ 等前綴皆屬此類。",
@@ -22,5 +23,6 @@
     "placeholder_"
   ],
   "_override_doc": "前綴分類是啟發式的：資產 id 的前綴照「屬於哪座塔／哪個陣營」分，不見得等於美術類別。不相符時補一條更長的前綴即可——最長前綴優先的規則會處理。prop_settlement 在資產清單裡的類別是 building（§5.1 塔含底座 ≤192）；enemy_warjunk 是船艦不是士兵，縮到 128 讀不出中式硬帆的扇形剪影（章節規格 §3.2）。",
-  "_portrait_reason": "對話肖像顯示在對話卡上，不在戰場，允許 256——仍要記入 M2 記憶體量測。2026-09-10 加。"
+  "_portrait_reason": "對話肖像顯示在對話卡上，不在戰場，允許 256——仍要記入 M2 記憶體量測。2026-09-10 加。",
+  "_cutscene_reason": "過場大圖只在過場顯示、一次一張，允許 1024（短邊 576）；仍要記入 M2 記憶體量測。2026-09-10 加。"
 }

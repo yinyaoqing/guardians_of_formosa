@@ -1,0 +1,14 @@
+{
+  "_doc": "FLUX.2 Klein 4B 多參考圖編輯——過場大圖用（roadmap §5.2：內容靠圖、風格靠字）。本檔只放骨幹：文字條件 → 引導 → 取樣；參考圖鏈由 generate_batch.py 依資產的 refs 欄位動態插入（每張參考：LoadImage → ImageScaleToTotalPixels → VAEEncode → ReferenceLatent，串接在正向條件之後），最後把 ref_consumers 列的節點（FluxGuidance 與 ConditioningZeroOut）改接到鏈尾。輸出尺寸由 latent 節點依清單 size 設定，不再取自參考圖。取樣參數同 a2x_flux2_edit（蒸餾版 cfg 1.0）。",
+  "_roles": {"positive": "4", "latent": "7", "sampler": "8", "save": "10", "vae": "3", "ref_consumers": ["5", "6"]},
+  "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "flux-2-klein-4b.safetensors", "weight_dtype": "default"}},
+  "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen_3_4b_fp4_flux2.safetensors", "type": "flux2", "device": "default"}},
+  "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
+  "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": "placeholder"}},
+  "5": {"class_type": "FluxGuidance", "inputs": {"conditioning": ["4", 0], "guidance": 3.5}},
+  "6": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["4", 0]}},
+  "7": {"class_type": "EmptyFlux2LatentImage", "inputs": {"width": 1024, "height": 576, "batch_size": 1}},
+  "8": {"class_type": "KSampler", "inputs": {"model": ["1", 0], "positive": ["5", 0], "negative": ["6", 0], "latent_image": ["7", 0], "seed": 16610430, "steps": 20, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}},
+  "9": {"class_type": "VAEDecode", "inputs": {"samples": ["8", 0], "vae": ["3", 0]}},
+  "10": {"class_type": "SaveImage", "inputs": {"images": ["9", 0], "filename_prefix": "flux2_multiref"}}
+}

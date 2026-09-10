@@ -33,6 +33,9 @@ WORKFLOWS = {
     # 史料參考圖 + Klein 參考圖編輯：內容靠圖、風格靠字（A2x §8 結論）。給鐵人軍、大熕船這類
     # 純文字叫不出正確形制的資產用；資產需有 ref 欄位（檔案已在 comfyui/input/）。
     "ref": os.path.join(REPO, "art", "workflows", "a2x_flux2_edit.api.json"),
+    # 過場大圖：Klein 多參考圖編輯。資產的 refs 列資產 id，母本原圖由 master_set.json 取，
+    # 參考鏈在 attach_refs() 動態插入（roadmap §5.2）。
+    "cutscene": os.path.join(REPO, "art", "workflows", "a2x_flux2_multiref.api.json"),
 }
 
 # 各工作流的節點編號不同（FLUX.2 的正向在 4、latent 在 7、KSampler 在 8），
@@ -74,6 +77,37 @@ def build_prompts(m: dict, asset: dict) -> tuple[str, str]:
         if n
     )
     return positive, negative
+
+
+def resolve_ref(ref_id: str) -> str:
+    """參考圖優先取母本集記錄的原圖（1024px），沒有記錄才退回 game/assets 的成品——
+    成品只有 128–256px，餵給 Klein 會糊，所以那是備援不是常態。"""
+    import select_masters
+    path = select_masters.selected_path(ref_id)
+    if path and os.path.exists(path):
+        return path
+    return os.path.join(REPO, "game", "assets", "chapter01", f"{ref_id}.png")
+
+
+def attach_refs(wf: dict, r: dict, asset: dict) -> None:
+    """把 refs 串成 ReferenceLatent 鏈接在正向條件之後，再把引導與零向節點改接鏈尾。
+
+    每張參考縮到 0.5MP：三張參考 + 1024×576 輸出在 8GB 卡上要留餘裕；參考只需
+    讓模型認出形制與配色，不需要全解析度。節點編號從 100 起，避開骨幹的 1–10。
+    """
+    cond = [r["positive"], 0]
+    for i, ref_id in enumerate(asset["refs"]):
+        name = f"cs_ref_{ref_id}.png"
+        shutil.copyfile(resolve_ref(ref_id), os.path.join(COMFY_INPUT, name))
+        base = 100 + i * 10
+        wf[str(base)] = {"class_type": "LoadImage", "inputs": {"image": name}}
+        wf[str(base + 1)] = {"class_type": "ImageScaleToTotalPixels", "inputs": {
+            "image": [str(base), 0], "upscale_method": "lanczos", "megapixels": 0.5, "resolution_steps": 1}}
+        wf[str(base + 2)] = {"class_type": "VAEEncode", "inputs": {"pixels": [str(base + 1), 0], "vae": [r["vae"], 0]}}
+        wf[str(base + 3)] = {"class_type": "ReferenceLatent", "inputs": {"conditioning": cond, "latent": [str(base + 2), 0]}}
+        cond = [str(base + 3), 0]
+    for node_id in r["ref_consumers"]:
+        wf[node_id]["inputs"]["conditioning"] = cond
 
 
 def stage_dir(asset_id: str, stage: str) -> str:
@@ -132,6 +166,8 @@ def run_one(base_wf: dict, m: dict, asset: dict, batch: int, seed: int, timeout:
         wf[r["latent"]]["inputs"].update({"width": w, "height": h, "batch_size": batch})
     if stage in ("a", "ref"):
         wf[r["ref"]]["inputs"]["image"] = asset["ref"]
+    if stage == "cutscene":
+        attach_refs(wf, r, asset)
     if stage == "a":
         wf[r["pose"]]["inputs"]["image"] = f"pose_{asset['pose']}.png"
 
@@ -162,8 +198,8 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=16610430, help="1661/04/30 大潮")
     ap.add_argument("--timeout", type=float, default=1200.0)
     ap.add_argument("--force", action="store_true", help="重做已有足量產出的資產")
-    ap.add_argument("--stage", choices=["text", "a", "b", "flux2", "flat", "ref"], default="text",
-                    help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字；flat=同 flux2，扁平幾何風格重跑；ref=史料參考圖 + Klein 編輯")
+    ap.add_argument("--stage", choices=["text", "a", "b", "flux2", "flat", "ref", "cutscene"], default="text",
+                    help="text=SDXL 純文字；a=史料參考+骨架；b=重新上風格；flux2=FLUX.2 Klein 純文字；flat=同 flux2，扁平幾何風格重跑；ref=史料參考圖 + Klein 編輯；cutscene=多參考圖編輯（refs 列資產 id）")
     ap.add_argument("--dry-run", action="store_true", help="只印 prompt 不出圖")
     # 風格實驗用另一份清單、另一組資產 id，產出才不會混進 chapter01 的候選目錄。
     ap.add_argument("--manifest", default=MANIFEST, help="資產清單路徑（預設 chapter01）")
@@ -183,6 +219,8 @@ def main() -> int:
         assets = [a for a in assets if a.get("ref") and a.get("pose")]
     elif args.stage == "ref":
         assets = [a for a in assets if a.get("ref")]
+    elif args.stage == "cutscene":
+        assets = [a for a in assets if a.get("refs")]
     if args.only:
         assets = [a for a in assets if a["id"] in args.only]
     if args.cat:

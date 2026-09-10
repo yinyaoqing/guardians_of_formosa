@@ -318,7 +318,7 @@ def main() -> int:
             unpicked.append(a["id"])
         src = Image.open(src_path)
         # 場景是滿版地形，沒有「背景」可去——對它泛洪會把邊角吃掉。
-        if a["cat"] == "scene":
+        if a["cat"] in ("scene", "cutscene"):
             im = src.convert("RGBA")
         else:
             im = trim(remove_background(src, args.tol))
@@ -331,7 +331,7 @@ def main() -> int:
         if not args.no_quantize:
             out = quantize(out, set(a.get("allow", [])), args.metric)
         # 場景是滿版貼片，沒有外輪廓可描。
-        if not args.no_outline and a["cat"] != "scene":
+        if not args.no_outline and a["cat"] not in ("scene", "cutscene"):
             out = outline(out, args.outline_width)
         dest = os.path.join(out_dir, f"{a['id']}.png")
         out.save(dest)

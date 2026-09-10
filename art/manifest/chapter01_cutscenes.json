@@ -1,0 +1,52 @@
+{
+  "_doc": "第一章過場大圖清單（roadmap §5.2）。2026-09-10 決定：過場與肖像、戰場同用扁平幾何無五官，少一種媒介。作法是 Klein 多參考圖編輯（a2x_flux2_multiref）：refs 列的是資產 id，generate_batch.py 從 master_set.json 取該資產的母本原圖餵進參考鏈，決定「誰穿什麼」；prompt 只寫構圖、舞台與媒介。資產 id 前綴 cs_，尺寸上限見 data/art_limits.json。用法：python art/scripts/generate_batch.py --manifest art/manifest/chapter01_cutscenes.json --stage cutscene --batch 2。",
+  "shared": {
+    "style": "STYLE: minimalist flat geometric vector illustration. Every shape is a clean flat polygon or smooth cut-out with hard edges; forms are built from a few large flat facets with a single straight split between the lit side (upper left) and a shaded side one step darker. Two or three flat tones per object, no outlines, no gradients, no texture, no brush strokes, no highlights. Bold readable silhouettes, poster-flat, like a travel poster.",
+    "palette": "PALETTE: terracotta #B5442E, deep ochre #8C3A22, banyan green #2F5B3A, ink green #1E4029, jade #5C8A4A, sand #C9A96B, sun-bleached sand #D9C08E, oyster-lime white #E8DCC6, indigo #2C5470, tidal teal #3E7A94, gamboge #E0A93B, cinnabar #A8332B, burnt umber linework #3A2A22.",
+    "negative_base": "eyes, pupils, mouth, teeth, nose, eyebrows, facial features, realistic face, outline, gradient, texture, shading, photorealism, 3D render"
+  },
+  "style_by_cat": {
+    "cutscene": "Every person in the scene is faceless: each face is ONE smooth flat shape with no eyes, no mouth, no nose — only the vertical light/dark split. The characters keep exactly the clothing, hair, hats, armour and props shown in the reference images. Sky, ground and water are large flat colour fields."
+  },
+  "framing": {
+    "cutscene": "wide 16:9 cinematic illustration of a complete scene with background, a few characters staged clearly from left to right at mid distance, full bodies visible, horizon line at one third of the height, no text, no borders."
+  },
+  "proportions": {
+    "cutscene": "Characters are about one third of the frame height, with realistic 7-head proportions."
+  },
+  "size": {
+    "cutscene": [1024, 576]
+  },
+  "negatives": {
+    "none": ""
+  },
+  "negatives_by_cat": {
+    "cutscene": "text, letters, watermark, split screen, comic panels, close-up bust, portrait framing"
+  },
+  "assets": [
+    {
+      "id": "cs_landdag",
+      "cat": "cutscene",
+      "fac": "none",
+      "name": "過場：地方會議授杖",
+      "subject": "the landdag ceremony at Fort Zeelandia, 1650s: at left, Governor Frederick Coyett in a black coat with a wide flat white collar holds out a long rattan cane with a silver knob — the staff of office; at right, a Siraya village elder with hair in a top knot and a green shoulder cloth receives it with both hands; the cane is the centre of the composition; behind them the terracotta brick bastion wall of the fort and a bright sky; at far left a VOC musketeer in a wide-brimmed hat stands guard with his musket.",
+      "refs": ["portrait_coyett", "portrait_elder", "tower_musket_t1"]
+    },
+    {
+      "id": "cs_landing",
+      "cat": "cutscene",
+      "fac": "none",
+      "name": "過場：鹿耳門登陸",
+      "subject": "dawn at the Luermen inlet on 30 April 1661, an unusually high tide: three Chinese war junks with battened fan-shaped sails ride over the sandbar toward the viewer; Ming loyalist soldiers wade ashore through the shallows carrying matchlock muskets; on the bow of the nearest junk stands the general Chen Ze in a plumed Ming helmet and vermilion lamellar armour; flat indigo water, sand-coloured flats and a pale gamboge sunrise sky.",
+      "refs": ["enemy_warjunk", "enemy_musketeer", "portrait_chenze"]
+    },
+    {
+      "id": "cs_evacuation",
+      "cat": "cutscene",
+      "fac": "none",
+      "name": "過場：大員街撤離",
+      "subject": "evening on the Tayouan sandbar: a line of Han Chinese settler families walk from right to left carrying cloth bundles and small children, leaving a thatched bamboo settlement; a young Siraya hunter with a javelin over his shoulder walks beside them as escort; tidal flats and the distant silhouette of the fort on the horizon; long flat shadows, warm sun-bleached sand and a deep ochre sky.",
+      "refs": ["civilian_family", "tower_hunter_t1", "prop_settlement"]
+    }
+  ]
+}
