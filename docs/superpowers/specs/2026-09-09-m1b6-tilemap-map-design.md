@@ -1,7 +1,9 @@
-# M1-B4 關卡地圖改 TileMap — 設計規格
+# M1-B6 關卡地圖改 TileMap — 設計規格
+
+> **2026-09-10 改號**：原編號 M1-B4 已由波次系統占用（`2026-09-06-m1b4-waves-design.md`，已在 main）。本文件改為 **M1-B6**。既有截圖檔名 `m1b4_*` 維持不變，那是實際存在的檔名。
 
 - 日期：2026-09-09
-- 狀態：**定案**（2026-09-09）。排入 M1 收尾（架構規格 §9 里程碑表 2026-09-09 新增列）；實作計畫 `docs/superpowers/plans/2026-09-09-m1b4-tilemap-map.md`
+- 狀態：**定案**（2026-09-09）。排入 M1 收尾（架構規格 §9 里程碑表 2026-09-09 新增列）；實作計畫 `docs/superpowers/plans/2026-09-09-m1b6-tilemap-map.md`
 - 對應規格：`2026-09-04-tower-defense-architecture-design.md` §4、§9；`2026-09-04-visual-polish-pipeline.md` L1；`docs/art/A2x-shadow-puppet-experiment.md` §4
 - 原型：`game/fx/pixel_demo.gd`（執行期組 TileSet、程序化地磚、擺件 y_sort、L1 陰影）
 

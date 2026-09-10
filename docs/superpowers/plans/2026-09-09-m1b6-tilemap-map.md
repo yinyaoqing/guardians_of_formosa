@@ -1,4 +1,6 @@
-# M1-B4 關卡地圖改 TileMap — 實作計畫
+# M1-B6 關卡地圖改 TileMap — 實作計畫
+
+> **2026-09-10 改號**：原編號 M1-B4 已由波次系統占用（`2026-09-06-m1b4-waves-design.md`，已在 main）。本文件改為 **M1-B6**。既有截圖檔名 `m1b4_*` 維持不變，那是實際存在的檔名。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -37,7 +39,7 @@
 | `game/level/battle_scene.gd`、`battle_scene.tscn`（改） | 由 `LevelMap` 烘焙 `PathData` 與建塔點；掛 Ground／Props；移除 `Path2D` 與 `Marker2D` |
 | `art/manifest/chapter01_assets.json`（改） | 新增四個擺件資產 |
 | `game/fx/paper_overlay.gd`（新） | 兩層紙紋 shader（描邊只作用地圖、紙紋蓋全部） |
-| `docs/superpowers/specs/2026-09-09-m1b4-tilemap-map-design.md`（改） | 狀態改「定案」、待決策填答案 |
+| `docs/superpowers/specs/2026-09-09-m1b6-tilemap-map-design.md`（改） | 狀態改「定案」、待決策填答案 |
 
 ---
 
@@ -168,7 +170,7 @@ Expected: 解析錯誤 `Identifier "LevelMap" not declared`（class 尚未存在
 class_name LevelMap
 extends RefCounted
 
-## 關卡地圖的唯一真相（設計規格 2026-09-09-m1b4-tilemap-map-design.md §2）。
+## 關卡地圖的唯一真相（設計規格 2026-09-09-m1b6-tilemap-map-design.md §2）。
 ## 路徑折線同時產生敵人路徑（sample_path → PathData）與路徑地磚（path_cells），
 ## 兩者不可能漂開。core/ 只做資料與座標換算，不碰 TileMapLayer。
 
@@ -951,13 +953,13 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 9：規格與紀錄收尾
 
 **Files:**
-- Modify: `docs/superpowers/specs/2026-09-09-m1b4-tilemap-map-design.md`
+- Modify: `docs/superpowers/specs/2026-09-09-m1b6-tilemap-map-design.md`
 - Modify: `docs/superpowers/specs/2026-09-04-art-direction-bible.md`（§6 第 4 項）
 - Modify: `docs/art/roadmap-2026-09-09.md`（§3 打勾）
 
 - [ ] **Step 1：規格改定案**
 
-`2026-09-09-m1b4-tilemap-map-design.md`：狀態列改「**定案**（2026-09-09）」；§6 待決策改為「已定：磚 32px；路徑格素沙（沙洲黃平色）。理由：扁平幾何風格下靠色對比讀路徑，紋理反而突兀」。§2 的資料範例換成 Task 2 實際的 `map.json` 內容。
+`2026-09-09-m1b6-tilemap-map-design.md`：狀態列改「**定案**（2026-09-09）」；§6 待決策改為「已定：磚 32px；路徑格素沙（沙洲黃平色）。理由：扁平幾何風格下靠色對比讀路徑，紋理反而突兀」。§2 的資料範例換成 Task 2 實際的 `map.json` 內容。
 
 - [ ] **Step 2：美術聖經 §6 第 4 項**
 
@@ -974,7 +976,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - [ ] **Step 4：Commit**
 
 ```bash
-git add docs/superpowers/specs/2026-09-09-m1b4-tilemap-map-design.md docs/superpowers/specs/2026-09-04-art-direction-bible.md docs/art/roadmap-2026-09-09.md
+git add docs/superpowers/specs/2026-09-09-m1b6-tilemap-map-design.md docs/superpowers/specs/2026-09-04-art-direction-bible.md docs/art/roadmap-2026-09-09.md
 git commit -m "docs: TileMap 規格定案；美術聖經 §6 潮汐待決策解掉；roadmap §3 完成
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"

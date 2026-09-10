@@ -1,6 +1,7 @@
 {
   "id": "hunter_tower",
   "name_key": "tower.hunter_tower.name",
+  "kind": "shooter",
   "damage_type": "physical",
   "icon": "res://game/assets/chapter01/icon_tower_hunter.png",
   "levels": [

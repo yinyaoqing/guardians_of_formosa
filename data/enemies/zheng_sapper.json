@@ -6,7 +6,9 @@
   "armor": 0.2,
   "magic_resist": 0.0,
   "bounty": 8,
+  "melee_damage": 10.0,
+  "melee_interval": 1.1,
   "sprite": "res://game/assets/puppets/enemy_sapper/body.png",
   "puppet": "enemy_sapper",
-  "_note": "數值暫定（M0 灰盒基準 orc_grunt 的相對值，依章節規格 §4.1 的特性方向調），正式數值待玩法調校。分件母本＝母本集扁平幾何版。"
+  "_note": "數值暫定（M0 灰盒基準 orc_grunt 的相對值，依章節規格 §4.1 的特性方向調），正式數值待玩法調校；近戰數值 2026-09-10 補（缺這兩個鍵時 EnemyFactory 取 0.0，敵人永遠打不傷小兵）。分件母本＝母本集扁平幾何版。"
 }

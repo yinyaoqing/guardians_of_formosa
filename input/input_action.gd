@@ -14,6 +14,7 @@ const UPGRADE := &"upgrade"
 const CANCEL := &"cancel"
 const TOGGLE_PAUSE := &"toggle_pause"
 const CYCLE_SPEED := &"cycle_speed"
+const CALL_NEXT_WAVE := &"call_next_wave"
 
 var kind: StringName = &""
 var world_position: Vector2 = Vector2.ZERO  ## SELECT_AT 用

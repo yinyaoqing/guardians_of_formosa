@@ -6,3 +6,4 @@
 script = ExtResource("1_bscn0")
 
 [node name="Views" type="Node2D" parent="."]
+y_sort_enabled = true

@@ -50,7 +50,7 @@ func _assert_layer_is_node_free(root: String, layer_label: String) -> void:
 func test_battle_scene_configures_the_world_for_its_level() -> void:
 	var battle_scene_path := "res://game/level/battle_scene.gd"
 	var source := FileAccess.get_file_as_string(battle_scene_path)
-	assert_bool(source.contains("configure_for_level")).override_failure_message(
+	assert_bool(_count_in_code(source, "configure_for_level") >= 1).override_failure_message(
 		"表現層必須在 WorldState 中注入資料定義，因為 core/ 不讀檔案。\n" +
 		"headless 測試套件不執行場景腳本，所以沒有其他測試能抓到這個漏洞。\n" +
 		"缺少 configure_for_level() 呼叫會導致整個世界都不會被配置——資料定義、可用塔種、起始金幣與生命全部缺失，同時每項測試都通過。\n" +
@@ -66,7 +66,7 @@ func test_battle_scene_configures_the_world_for_its_level() -> void:
 func test_battle_scene_installs_input_bindings() -> void:
 	var battle_scene_path := "res://game/level/battle_scene.gd"
 	var source := FileAccess.get_file_as_string(battle_scene_path)
-	assert_bool(source.contains("InputBindings.install")).override_failure_message(
+	assert_bool(_count_in_code(source, "InputBindings.install") >= 1).override_failure_message(
 		"表現層必須呼叫 InputBindings.install() 註冊 InputMap 動作。\n" +
 		"漏掉這一行不會有任何錯誤或警告——遊戲會正常啟動、渲染、生怪，\n" +
 		"只是 MouseKeyboardInput.translate() 問到的 is_action_pressed() 全部是 false，\n" +
@@ -84,21 +84,79 @@ func test_battle_scene_installs_input_bindings() -> void:
 func test_battle_scene_wires_up_the_hud() -> void:
 	var battle_scene_path := "res://game/level/battle_scene.gd"
 	var source := FileAccess.get_file_as_string(battle_scene_path)
-	assert_bool(source.contains("_hud.setup(")).override_failure_message(
+	assert_bool(_count_in_code(source, "_hud.setup(") >= 1).override_failure_message(
 		"battle_scene.gd 沒有呼叫 _hud.setup()。\n" +
 		"少了這一步，HUD 的 _world/_sim 都是 null，_process() 會提早 return，\n" +
 		"金幣、生命、關卡名稱全部不會更新，但遊戲仍會正常啟動、渲染、生怪。"
 	).is_true()
-	assert_bool(source.contains("pause_pressed.connect")).override_failure_message(
+	assert_bool(_count_in_code(source, "pause_pressed.connect") >= 1).override_failure_message(
 		"battle_scene.gd 沒有接上 _hud.pause_pressed。\n" +
 		"暫停鈕會正常顯示、正常可點，點下去卻毫無反應——鍵盤的暫停鍵仍然管用，\n" +
 		"所以這個漏洞會被誤判成「按鈕是裝飾」而不是「接線掉了」，人工驗收很容易漏掉。"
 	).is_true()
-	assert_bool(source.contains("speed_pressed.connect")).override_failure_message(
+	assert_bool(_count_in_code(source, "speed_pressed.connect") >= 1).override_failure_message(
 		"battle_scene.gd 沒有接上 _hud.speed_pressed。\n" +
 		"倍速鈕會正常顯示、正常可點，點下去卻毫無反應，同上一條，鍵盤仍然管用，\n" +
 		"讀不出這是接線漏掉而不是設計如此。"
 	).is_true()
+	assert_bool(_count_in_code(source, "call_wave_pressed.connect") >= 1).override_failure_message(
+		"battle_scene.gd 沒有接上 _hud.call_wave_pressed。\n" +
+		"呼叫下一波的按鈕會正常顯示、正常可點，點下去卻毫無反應，同上兩條，\n" +
+		"鍵盤的 N 鍵仍然管用，讀不出這是接線漏掉而不是設計如此。"
+	).is_true()
+
+## 通關的收尾同樣是「靜默漏接」會出事的地方：少了 restart_pressed 的連線，
+## 「再來一次」鈕看起來完好、按下去卻沒有任何反應；少了 _update_result_panel()
+## 的呼叫，通關那一刻直接卡死——每隻敵人、投射物與 Label 全部凍結，沒有任何
+## 面板出現，玩家會以為遊戲當掉，而不是少了一步收尾。headless 測試套件不執行
+## 場景腳本，兩者都只有原始碼文本檢查抓得到。
+func test_battle_scene_wires_up_the_result_panel() -> void:
+	var battle_scene_path := "res://game/level/battle_scene.gd"
+	var source := FileAccess.get_file_as_string(battle_scene_path)
+	assert_bool(_count_in_code(source, "restart_pressed.connect") >= 1).override_failure_message(
+		"battle_scene.gd 沒有接上 _result_panel.restart_pressed。\n" +
+		"結算面板的「再來一次」鈕會正常顯示、正常可點，點下去卻毫無反應——\n" +
+		"玩家只能手動重開關卡，而畫面上看不出任何異狀。"
+	).is_true()
+	# 不能用 contains("_update_result_panel()")：函式定義那一行
+	# `func _update_result_panel() -> void:` 本身就含有這個子字串，
+	# 只要函式還存在，這個判斷永遠是 true，抓不到「定義了卻沒被呼叫」。
+	# 呼叫端是無接收者的自呼叫，寫法與定義那行的尾巴完全相同，唯一能分辨
+	# 兩者的辦法是數出現次數：只有定義，代表沒人呼叫；定義 + 呼叫，至少兩次。
+	# 用 _count_in_code() 而非整檔 count()：呼叫那行被 # 註解掉、忘了改回來，
+	# 整檔 count() 仍然算到那一次命中，守衛照樣是綠的。
+	assert_int(_count_in_code(source, "_update_result_panel()")).override_failure_message(
+		"battle_scene.gd 的 _process() 沒有呼叫 _update_result_panel()（只找到函式定義本身）。\n" +
+		"通關那一刻會直接卡死：advance() 回傳 0 後，每隻敵人、投射物與 Label 全部凍結，\n" +
+		"卻沒有任何結算面板出現——玩家會以為遊戲當掉，而不是少了收尾的一步。"
+	).is_greater(1)
+
+## 造敵人的邏輯只能有一份。DataRegistry 若自己重新展開欄位，兩條路就會漂移，
+## 而 headless 測試不會發現——兩邊各自都「正確」，只是不一致。
+## 與本檔其他守衛同樣是原始碼文字檢查，因為沒有其他手段看得到「有沒有委派」。
+func test_data_registry_delegates_enemy_construction() -> void:
+	var source := FileAccess.get_file_as_string("res://core/data/data_registry.gd")
+	assert_bool(_count_in_code(source, "EnemyFactory.from_def") >= 1).override_failure_message(
+		"DataRegistry.make_enemy 必須委派給 EnemyFactory.from_def。\n" +
+		"自己展開欄位的話，它與 WaveSystem 生出來的敵人會靜默漂移。"
+	).is_true()
+
+## 數子字串在「非註解行」中出現的次數。
+##
+## 這組守衛全部是純文字比對，不分程式碼與註解。用整檔 count() 的話，有人把
+## 呼叫那行加 # 註解掉、忘了改回來，守衛照樣是綠的——被註解掉的那行仍然
+## 貢獻一次命中。tests/test_ui_layer.gd 早就是逐行跳過整行註解的（M1-B3a
+## 的做法），這裡比照——只跳過以 # 開頭的整行，行尾的 # 註解仍會被算進去。
+##
+## 代價與 test_ui_layer.gd 相同：整行註解裡提到那個名字也不再被算進去。對
+## 「要求某個呼叫必須存在」的守衛而言這正是要的——註解裡的呼叫不會執行。
+func _count_in_code(source: String, needle: String) -> int:
+	var total := 0
+	for line in source.split("\n"):
+		if line.strip_edges().begins_with("#"):
+			continue
+		total += line.count(needle)
+	return total
 
 func _collect_gd_files(root: String) -> Array[String]:
 	var found: Array[String] = []
@@ -111,3 +169,44 @@ func _collect_gd_files(root: String) -> Array[String]:
 	for sub_dir in dir.get_directories():
 		found.append_array(_collect_gd_files(root.path_join(sub_dir)))
 	return found
+
+## HUD 的按鈕走 GUI 事件階段，不經過 _unhandled_input，所以那裡的通關檢查擋不到
+## 它們——三個 _on_hud_* 各自要再擋一次。漏掉的話通關後暫停與倍速仍可按，每按一下
+## 就往永遠不會被排空的佇列塞一筆意圖，而畫面上完全看不出來。
+func test_battle_scene_gates_hud_buttons_after_the_battle_ends() -> void:
+	var source := FileAccess.get_file_as_string("res://game/level/battle_scene.gd")
+	# 不能用 contains("_hud_input_accepted")：`func _hud_input_accepted() -> bool:`
+	# 這行自己就含有它，只要函式定義著就永遠是 true——三個 handler 少呼叫任何一個
+	# 都抓不到，而那正是這條守衛存在的理由。改數守衛那一行，數字就是 HUD 按鈕數；
+	# 之後多加一顆按鈕，這裡會逼人回來看一次。
+	# 用 _count_in_code() 而非整檔 count()：某個 handler 的擋線被 # 註解掉、
+	# 忘了改回來，整檔 count() 仍然算到那一次命中，守衛照樣是綠的。
+	assert_int(_count_in_code(source, "if not _hud_input_accepted():")).override_failure_message(
+		"battle_scene 的 HUD 按鈕處理器必須在通關後拒收。
+" +
+		"advance() 通關後回傳 0，_apply_pending_intents() 不再執行，所以排進去的意圖
+" +
+		"永遠不會被清掉——pending_intents 每按一下長一筆，had_intents 從此恆真。
+" +
+		"headless 測試套件不執行場景腳本，沒有其他測試抓得到。
+" +
+		"目前有三顆 HUD 按鈕（暫停、倍速、呼叫下一波），三個都要擋。"
+	).is_equal(3)
+
+## 同一種問題的又一個實例：battle_scene.gd 若沒有同步小兵的 view，
+## 兵營蓋起來會完全正常——扣錢、換圖、擋住敵人、敵人真的停下來——
+## 但戰場上一個小兵都看不到。core/ 的測試全綠，headless 套件不執行場景腳本，
+## 沒有任何自動化測試能抓到它。
+func test_battle_scene_syncs_soldier_views() -> void:
+	var battle_scene_path := "res://game/level/battle_scene.gd"
+	var source := FileAccess.get_file_as_string(battle_scene_path)
+	# 用 count(...) > 1 而非 contains(...)：函式自己的定義行也含這個字串，
+	# contains 會匹配到定義本身，於是「定義了但沒人呼叫」也算通過。
+	# 用 _count_in_code() 而非整檔 count()：純文字比對不分程式碼與註解，
+	# 呼叫那行被 # 註解掉、忘了改回來，整檔 count() 仍然算到那一次命中，
+	# 守衛照樣是綠的——_count_in_code() 跳過註解行，才會真的變紅。
+	assert_int(_count_in_code(source, "_sync_soldier_views()")).override_failure_message(
+		"battle_scene.gd 沒有呼叫 _sync_soldier_views()。\n" +
+		"兵營會完全正常運作——扣錢、擋敵人、敵人真的停住——但畫面上看不到小兵。\n" +
+		"被 # 註解掉的呼叫不算數——那行不會執行，守衛必須看穿它。"
+	).is_greater(1)

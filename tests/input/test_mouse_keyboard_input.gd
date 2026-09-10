@@ -21,7 +21,7 @@ func _mouse_event(button: MouseButton) -> InputEventMouseButton:
 func test_install_registers_every_action() -> void:
 	for action_name: String in [
 		"gof_select", "gof_cancel", "gof_sell", "gof_upgrade",
-		"gof_toggle_pause", "gof_cycle_speed",
+		"gof_toggle_pause", "gof_cycle_speed", "gof_call_wave",
 		"gof_choose_tower_1", "gof_choose_tower_2", "gof_choose_tower_3",
 	]:
 		assert_bool(InputMap.has_action(action_name)).override_failure_message(
@@ -78,6 +78,9 @@ func test_space_becomes_toggle_pause() -> void:
 
 func test_f_becomes_cycle_speed() -> void:
 	assert_str(MouseKeyboardInput.translate(_key_event(KEY_F), WORLD_POS).kind).is_equal("cycle_speed")
+
+func test_n_becomes_call_next_wave() -> void:
+	assert_str(MouseKeyboardInput.translate(_key_event(KEY_N), WORLD_POS).kind).is_equal("call_next_wave")
 
 func test_an_unbound_key_produces_nothing() -> void:
 	assert_bool(MouseKeyboardInput.translate(_key_event(KEY_Q), WORLD_POS) == null).override_failure_message(

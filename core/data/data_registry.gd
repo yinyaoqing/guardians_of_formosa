@@ -20,18 +20,7 @@ func load_from_disk(root: String = "res://data") -> void:
 ## 靜默回傳 null 會讓錯誤在很遠的地方才炸開。
 func make_enemy(enemy_id: StringName, path_id: StringName) -> Enemy:
 	assert(enemies.has(enemy_id), "找不到敵人定義: %s" % enemy_id)
-	var def: Dictionary = enemies[enemy_id]
-	var enemy := Enemy.new()
-	enemy.enemy_id = enemy_id
-	enemy.hp = def["hp"]
-	enemy.max_hp = def["hp"]
-	enemy.base_speed = def["speed"]
-	enemy.base_armor = def["armor"]
-	enemy.base_magic_resist = def["magic_resist"]
-	enemy.reset_derived_stats()
-	enemy.bounty = def["bounty"]
-	enemy.path_id = path_id
-	return enemy
+	return EnemyFactory.from_def(enemies[enemy_id], enemy_id, path_id)
 
 func _load_dir(dir_path: String) -> Dictionary:
 	var result: Dictionary = {}
@@ -63,6 +52,15 @@ func _load_level_dirs(dir_path: String) -> Dictionary:
 		assert(parsed is Dictionary, "JSON 格式錯誤: %s" % meta_path)
 		var meta: Dictionary = parsed
 		assert(meta.has("id"), "關卡 meta 缺少 id 欄位: %s" % meta_path)
+		# 波次單獨一個檔：八波的陣列擺進 meta.json 會把它撐得看不完。
+		var waves_path := dir_path.path_join(sub_dir).path_join("waves.json")
+		assert(FileAccess.file_exists(waves_path), "關卡目錄缺少 waves.json: %s" % sub_dir)
+		var waves_text := FileAccess.get_file_as_string(waves_path)
+		var waves_parsed: Variant = JSON.parse_string(waves_text)
+		assert(waves_parsed is Dictionary, "JSON 格式錯誤: %s" % waves_path)
+		var waves_data: Dictionary = waves_parsed
+		meta["waves"] = waves_data["waves"]
+		meta["call_bonus_per_second"] = waves_data["call_bonus_per_second"]
 		# 地圖是選配：沒有 map.json 的關卡仍可載入（M0 灰盒關卡就沒有）。
 		# 有的話整份塞進 meta["map"]，由 LevelMap 解析；註冊表不解讀它的欄位。
 		var map_path := dir_path.path_join(sub_dir).path_join("map.json")

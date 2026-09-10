@@ -14,30 +14,33 @@ const PHYSICAL := &"physical"
 const MAGIC := &"magic"
 const TRUE_DAMAGE := &"true"
 
-## 對敵人造成傷害，回傳實際造成的傷害值。
-static func apply(enemy: Enemy, amount: float, damage_type: StringName) -> float:
-	if not enemy.alive:
+## 對一個 Combatant 造成傷害，回傳實際造成的傷害值。
+##
+## 參數型別是 Combatant 而非 Enemy：敵人砍小兵與塔打敵人必須走同一個入口，
+## 否則減免邏輯就有兩份。
+static func apply(target: Combatant, amount: float, damage_type: StringName) -> float:
+	if not target.alive:
 		return 0.0
 
 	var reduction := 0.0
 	match damage_type:
 		PHYSICAL:
-			reduction = enemy.armor
+			reduction = target.armor
 		MAGIC:
-			reduction = enemy.magic_resist
+			reduction = target.magic_resist
 		TRUE_DAMAGE:
 			reduction = 0.0
 		_:
 			push_error("未知的傷害類型: %s" % damage_type)
 			return 0.0
 
-	# 減免比例必須夾限在 [0, 1]。敵人的 armor 與 magic_resist 是公開欄位，
-	# 下個里程碑的破甲狀態效果會直接寫入這些欄位。若沒夾限，負值會變成傷害放大。
+	# 減免比例必須夾限在 [0, 1]。armor 與 magic_resist 是公開欄位，
+	# 破甲狀態效果會直接寫入它們。若沒夾限，負值會變成傷害放大。
 	reduction = clampf(reduction, 0.0, 1.0)
 
 	var dealt := maxf(0.0, amount * (1.0 - reduction))
-	enemy.hp -= dealt
-	if enemy.hp <= 0.0:
-		enemy.hp = 0.0
-		enemy.alive = false
+	target.hp -= dealt
+	if target.hp <= 0.0:
+		target.hp = 0.0
+		target.alive = false
 	return dealt

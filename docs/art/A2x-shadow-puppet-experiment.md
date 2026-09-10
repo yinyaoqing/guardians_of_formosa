@@ -221,7 +221,7 @@ layer 100  只有紙紋       ← 讓單位也躺在紙上
 
 ### 9.2 TileMap → M1 收尾
 
-架構規格 §9 里程碑表新增「M1 收尾：地圖改 TileMap」一列；設計規格 `docs/superpowers/specs/2026-09-09-m1b4-tilemap-map-design.md`（草案）：路徑折線為唯一真相同時驅動 `Path2D` 與地磚、潮汐改為換格子、擺件 y_sort + L1 陰影。實作計畫待寫。
+架構規格 §9 里程碑表新增「M1 收尾：地圖改 TileMap」一列；設計規格 `docs/superpowers/specs/2026-09-09-m1b6-tilemap-map-design.md`（草案）：路徑折線為唯一真相同時驅動 `Path2D` 與地磚、潮汐改為換格子、擺件 y_sort + L1 陰影。實作計畫待寫。
 
 ### 9.3 重跑比對：Oklab 被否決，RGB + 兩個針對性修正
 

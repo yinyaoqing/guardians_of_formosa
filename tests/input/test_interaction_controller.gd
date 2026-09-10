@@ -237,3 +237,12 @@ func test_control_actions_do_not_disturb_the_selection() -> void:
 	controller.handle(InputAction.simple(InputAction.TOGGLE_PAUSE), world)
 	controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), world)
 	assert_int(controller.selected_slot_id).is_equal(_slot_a(world).id)
+
+func test_call_next_wave_needs_no_selection() -> void:
+	var world := _make_world_with_towers()
+	var controller := InteractionController.new()
+	controller.handle(InputAction.simple(InputAction.CALL_NEXT_WAVE), world)
+	assert_array(world.pending_intents).override_failure_message(
+		"呼叫下一波與選中什麼無關，未選取時也該發得出去"
+	).has_size(1)
+	assert_str(world.pending_intents[0].kind).is_equal("call_next_wave")

@@ -13,11 +13,37 @@ var effect_defs: Dictionary = {}   ## StringName -> Dictionary
 
 ## 塔的 JSON 定義與本關可用的塔種，同樣由 configure_for_level 注入。
 var tower_defs: Dictionary = {}              ## StringName -> Dictionary
+## 波次系統從這裡造敵人。core/ 不讀檔，所以定義由 configure_for_level 注入，
+## 與 tower_defs、effect_defs 同一個模式。
+var enemy_defs: Dictionary = {}               ## StringName -> Dictionary
+var waves: Array = []                         ## 每筆是一波的定義
+var call_bonus_per_second: int = 0
+var wave_state := WaveState.new()
+
+## 所有波次都生成完畢，且場上沒有活著的敵人。
+##
+## 這一關沒有「輸」——第一章規格 §0.2 決定三排除強制失敗關卡，所以這是唯一
+## 的結束條件，成立即通關，差別只在救到多少平民。
+var battle_finished: bool = false
 var available_towers: Array[StringName] = []
 var sell_refund_ratio: float = 0.0
 
 var gold: int = 0
-var lives: int = 20
+
+## 待撤離的平民數。漏過去一隻敵人就少救一個。
+##
+## 歸零**不是失敗**——第一章規格 §0.2 決定三明文排除強制失敗關卡：
+## 撐過波次即通關，差別在救到多少人。所以這個數字夾在 0，且不觸發任何事。
+var civilians_remaining: int = 20
+
+## 平民撤離數的原始總量，供 ResultSystem.star_count() 算第二顆星用。
+## civilians_remaining 會隨戰局遞減，星等規則需要的是「總共要救幾個」，
+## 兩者不是同一個數字，所以另開一個欄位，不是把 civilians_remaining 覆用。
+var starting_civilians: int = 0
+
+## 拿到第二顆星所需的平民撤離門檻。規格是「≥ 門檻」，判定邏輯在
+## core/systems/result_system.gd，這裡只負責從關卡資料注入。
+var star_civilian_threshold: int = 0
 
 ## 每 tick 由 BattleSim 重建的查詢結構
 var grid := UniformGrid.new()
@@ -25,6 +51,14 @@ var enemies_by_id: Dictionary = {}  ## int -> Enemy
 
 var build_slots: Array[BuildSlot] = []
 var build_slots_by_id: Dictionary = {}   ## int -> BuildSlot
+
+var soldiers: Array[Soldier] = []
+var soldiers_by_id: Dictionary = {}      ## int -> Soldier
+
+## 兵營小兵的實例池。M1 的建塔點是個位數，全部蓋滿兵營也只有十餘個小兵，
+## 32 留了倍數餘裕。
+const SOLDIER_POOL_CAPACITY := 32
+var soldier_pool := ObjectPool.new(func() -> Soldier: return Soldier.new(), SOLDIER_POOL_CAPACITY)
 
 ## 待處理的玩家意圖。BattleSim 於 tick 第一步排空並套用。
 var pending_intents: Array[GameIntent] = []
@@ -55,6 +89,7 @@ func configure_for_level(registry: DataRegistry, level_id: StringName) -> void:
 
 	effect_defs = registry.status_effects
 	tower_defs = registry.towers
+	enemy_defs = registry.enemies
 
 	var towers_for_level: Array[StringName] = []
 	for tower_id in meta["available_towers"]:
@@ -63,7 +98,13 @@ func configure_for_level(registry: DataRegistry, level_id: StringName) -> void:
 
 	sell_refund_ratio = meta["sell_refund_ratio"]
 	gold = int(meta["starting_gold"])
-	lives = int(meta["starting_lives"])
+	civilians_remaining = int(meta["starting_civilians"])
+	starting_civilians = int(meta["starting_civilians"])
+	star_civilian_threshold = int(meta["star_civilian_threshold"])
+
+	waves = meta.get("waves", [])
+	call_bonus_per_second = int(meta.get("call_bonus_per_second", 0))
+	reset_wave_state()
 
 func add_enemy(enemy: Enemy) -> void:
 	if enemy.id == 0:
@@ -82,12 +123,41 @@ func add_build_slot(slot: BuildSlot) -> void:
 	build_slots.append(slot)
 	build_slots_by_id[slot.id] = slot
 
+func add_soldier(soldier: Soldier) -> void:
+	if soldier.id == 0:
+		soldier.id = next_id()
+	soldiers.append(soldier)
+	soldiers_by_id[soldier.id] = soldier
+
+## 把一個小兵移出世界：解開它攔住的敵人、自索引移除、歸還物件池。
+##
+## 與 add_soldier() 對稱，住在 WorldState 是因為那三件事動到的全是它自己的
+## 容器與池子。死亡與賣塔都要做這三件事，差別只在死亡還要空出兵營名額並
+## 起算重生倒數——那一部分留在各自的呼叫端。
+##
+## 刻意不動 world.soldiers 陣列：兩個呼叫端都是在走訪它的過程中決定誰該走，
+## 邊走訪邊 erase 是典型的漏元素 bug。呼叫端各自蒐集倖存者後整個換掉。
+func release_soldier(soldier: Soldier) -> void:
+	var enemy: Enemy = enemies_by_id.get(soldier.engaged_enemy_id)
+	if enemy != null and enemy.blocked_by == soldier.id:
+		enemy.blocked_by = 0
+	soldiers_by_id.erase(soldier.id)
+	soldier_pool.release(soldier)
+
 func queue_intent(intent: GameIntent) -> void:
 	pending_intents.append(intent)
 
-## 配發一個全新的實體 id。敵人、塔、投射物共用同一個遞增計數器，
-## 確保 id 在型別之間也不重複。
+## 配發一個全新的實體 id。敵人、塔、建塔點、小兵、投射物共用同一個遞增計數器，
+## 確保 id 在型別之間也不重複——Enemy.blocked_by 存的是小兵 id，
+## 而 BuildSystem 靠這個性質分辨「呼叫端把 slot id 當成 tower id 傳了進來」。
 func next_id() -> int:
 	var id := _next_entity_id
 	_next_entity_id += 1
 	return id
+
+## 把波次狀態重設到第一波的倒數。configure_for_level 之後、以及測試裡
+## 直接指定 waves 之後都要呼叫，否則倒數是 0、第一波會立刻開始。
+func reset_wave_state() -> void:
+	wave_state = WaveState.new()
+	if not waves.is_empty():
+		wave_state.countdown = float(waves[0]["delay"])

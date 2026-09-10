@@ -1,6 +1,7 @@
 {
   "id": "musket_tower",
   "name_key": "tower.musket_tower.name",
+  "kind": "shooter",
   "damage_type": "physical",
   "icon": "res://game/assets/chapter01/icon_tower_musket.png",
   "levels": [

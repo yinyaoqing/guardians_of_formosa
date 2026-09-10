@@ -1,0 +1,137 @@
+{
+  "call_bonus_per_second": 2,
+  "waves": [
+    {
+      "delay": 15.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_musketeer",
+          "count": 4,
+          "interval": 1.6,
+          "path_id": "main",
+          "start_delay": 0.0
+        }
+      ]
+    },
+    {
+      "delay": 12.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_musketeer",
+          "count": 6,
+          "interval": 1.4,
+          "path_id": "main",
+          "start_delay": 0.0
+        }
+      ]
+    },
+    {
+      "delay": 12.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_rattan",
+          "count": 8,
+          "interval": 1.2,
+          "path_id": "main",
+          "start_delay": 0.0
+        }
+      ]
+    },
+    {
+      "delay": 12.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_musketeer",
+          "count": 6,
+          "interval": 1.2,
+          "path_id": "main",
+          "start_delay": 0.0
+        },
+        {
+          "enemy_id": "zheng_archer",
+          "count": 4,
+          "interval": 1.0,
+          "path_id": "main",
+          "start_delay": 4.0
+        }
+      ]
+    },
+    {
+      "delay": 14.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_sapper",
+          "count": 10,
+          "interval": 1.0,
+          "path_id": "main",
+          "start_delay": 0.0
+        }
+      ]
+    },
+    {
+      "delay": 12.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_musketeer",
+          "count": 6,
+          "interval": 0.9,
+          "path_id": "main",
+          "start_delay": 0.0
+        },
+        {
+          "enemy_id": "zheng_ironman",
+          "count": 6,
+          "interval": 0.9,
+          "path_id": "main",
+          "start_delay": 2.0
+        }
+      ]
+    },
+    {
+      "delay": 12.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_rattan",
+          "count": 8,
+          "interval": 1.0,
+          "path_id": "main",
+          "start_delay": 0.0
+        },
+        {
+          "enemy_id": "zheng_archer",
+          "count": 8,
+          "interval": 1.0,
+          "path_id": "main",
+          "start_delay": 3.0
+        }
+      ]
+    },
+    {
+      "delay": 15.0,
+      "groups": [
+        {
+          "enemy_id": "zheng_musketeer",
+          "count": 12,
+          "interval": 0.8,
+          "path_id": "main",
+          "start_delay": 0.0
+        },
+        {
+          "enemy_id": "zheng_ironman",
+          "count": 3,
+          "interval": 0.8,
+          "path_id": "main",
+          "start_delay": 2.0
+        },
+        {
+          "enemy_id": "zheng_chenze",
+          "count": 1,
+          "interval": 0.8,
+          "path_id": "main",
+          "start_delay": 4.0
+        }
+      ]
+    }
+  ],
+  "_note": "陣容 2026-09-10 由 orc_grunt 換成第一章六種鄭軍敵人（波次規格 §4「波次內容是暫定的……真正的配置要等敵種補齊」）。每一波的隻數與 interval 完全沿用 B4 的曲線，只換敵種；角色分配依章節規格 §4.1（藤牌快、弓手遠程、鐵人重甲、陳澤 Boss），潮汐轉向的第 5 波給工兵。敵人數值本身仍是暫定。"
+}

@@ -26,6 +26,8 @@ static func translate(event: InputEvent, world_position: Vector2) -> InputAction
 		return InputAction.simple(InputAction.TOGGLE_PAUSE)
 	if event.is_action_pressed(&"gof_cycle_speed"):
 		return InputAction.simple(InputAction.CYCLE_SPEED)
+	if event.is_action_pressed(&"gof_call_wave"):
+		return InputAction.simple(InputAction.CALL_NEXT_WAVE)
 	for i in range(1, TOWER_CHOICE_COUNT + 1):
 		if event.is_action_pressed(StringName("gof_choose_tower_%d" % i)):
 			return InputAction.choose_tower(i)

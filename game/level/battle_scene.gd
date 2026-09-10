@@ -5,21 +5,17 @@ extends Node2D
 ##  2. 驅動 BattleSim
 ##  3. 依模擬狀態建立與更新 view
 
+## 取樣間距同時決定小兵崗位的精度：BuildSystem._assign_post() 掃過 world.paths 的
+## 所有取樣點取最近者。改這個值會連帶改變崗位落點（M1-B5 規格 §5.3）。
 const PATH_SAMPLE_SPACING := 8.0
 const MAIN_PATH_ID := &"main"
-const SPAWN_INTERVAL := 1.5
-## 敵人消失時離路徑終點不到這個距離，視為走到終點（不播死亡）；一個 tick 最多走
-## 65px/s ÷ 30 ≈ 2.2px，取 16px 足夠寬鬆
-const LEAK_EPSILON_PX := 16.0
-const SPAWN_ROSTER: Array[StringName] = [
-	&"zheng_musketeer", &"zheng_rattan", &"zheng_archer", &"zheng_sapper", &"zheng_ironman", &"zheng_chenze",
-]
 const LEVEL_ID := &"level_01"
 
 const EnemyViewScript := preload("res://game/views/enemy_view.gd")
 const TowerViewScript := preload("res://game/views/tower_view.gd")
 const ProjectileViewScript := preload("res://game/views/projectile_view.gd")
 const BuildSlotViewScript := preload("res://game/views/build_slot_view.gd")
+const SoldierViewScript := preload("res://game/views/soldier_view.gd")
 
 ## 置換用的投射物貼圖。之後應改為依 Projectile.projectile_id 從資料查表，
 ## 目前銃樓與獵寮共用同一張，寫成常數即可。
@@ -34,6 +30,7 @@ const PROP_ASSET_DIR := "res://game/assets/chapter01"
 
 const BattleHudScene := preload("res://ui/battle_hud.tscn")
 const BuildMenuScene := preload("res://ui/build_menu.tscn")
+const ResultPanelScene := preload("res://ui/result_panel.tscn")
 const RangeCircleScript := preload("res://game/views/range_circle.gd")
 
 @onready var _view_root: Node2D = $Views
@@ -47,17 +44,22 @@ var _enemy_views: Dictionary = {}       ## int -> EnemyView
 var _tower_views: Dictionary = {}       ## int -> TowerView
 var _projectile_views: Dictionary = {}  ## instance_id -> ProjectileView
 var _slot_views: Dictionary = {}        ## slot_id -> BuildSlotView
+var _soldier_views: Dictionary = {}     ## int -> SoldierView
 var _controller := InteractionController.new()
 var _hud: BattleHud = null
 
 ## 每座塔上次畫出來的等級。升級換圖靠它偵測，與 HUD 只在值變動時才寫 Label
 ## 是同一個手法——每幀無條件重載一張 128px 的圖是白燒的。
 var _shown_tower_levels: Dictionary = {}   ## tower id -> int
-var _spawn_timer: float = 0.0
-var _spawn_index: int = 0
 
 var _build_menu: BuildMenu = null
 var _range_circle: RangeCircle = null
+var _result_panel: ResultPanel = null
+var _result_shown: bool = false
+
+## 上一次同步 view 時的平民數。用來換算「這一批消失的敵人裡有幾個是走到終點的」，
+## 見 _release_vanished_enemy_views()。
+var _shown_civilians: int = 0
 
 ## 選單目前畫的是哪一批選項。拆成結構與金錢兩個簽章，理由見 _update_build_menu()。
 var _menu_structural_signature: Array = []
@@ -72,7 +74,7 @@ func _ready() -> void:
 	_level_map = LevelMap.new(meta["map"])
 
 	# 地面與擺件放在 CanvasLayer -10：一定在單位（根層，layer 0）之下，
-	# 而且 Task 8 的描邊 pass（layer -5）只看得到它們、看不到單位。
+	# 而且描邊 pass（layer -5）只看得到它們、看不到單位。
 	var ground_layers := CanvasLayer.new()
 	ground_layers.name = "GroundLayers"
 	ground_layers.layer = -10
@@ -86,7 +88,10 @@ func _ready() -> void:
 
 	var world := WorldState.new()
 	world.configure_for_level(_registry, LEVEL_ID)
+	# 路徑必須在任何塔被建造之前填好：BuildSystem._assign_post() 在建塔當下
+	# 掃過 world.paths 取最近的取樣點當小兵崗位（M1-B5 規格 §5.3）。
 	world.paths[MAIN_PATH_ID] = PathData.new(_level_map.sample_path(PATH_SAMPLE_SPACING), PATH_SAMPLE_SPACING)
+	_shown_civilians = world.civilians_remaining
 
 	_sim = BattleSim.new(world)
 	_bake_build_slots(world)
@@ -100,6 +105,7 @@ func _ready() -> void:
 	_hud.setup(world, _sim, StringName(_registry.levels[LEVEL_ID]["name_key"]))
 	_hud.pause_pressed.connect(_on_hud_pause_pressed)
 	_hud.speed_pressed.connect(_on_hud_speed_pressed)
+	_hud.call_wave_pressed.connect(_on_hud_call_wave_pressed)
 
 	_build_menu = BuildMenuScene.instantiate() as BuildMenu
 	add_child(_build_menu)
@@ -110,33 +116,31 @@ func _ready() -> void:
 	_range_circle = RangeCircleScript.new() as RangeCircle
 	_view_root.add_child(_range_circle)
 
+	_result_panel = ResultPanelScene.instantiate() as ResultPanel
+	add_child(_result_panel)
+	_result_panel.restart_pressed.connect(_on_restart_pressed)
+
 func _process(delta: float) -> void:
 	# 暫停時 advance 回傳 0，但佇列仍會被排空（建造與賣出正是玩家暫停下來規劃時
 	# 要做的事）。只看 ticks 的話，暫停中蓋的塔要到恢復才出現在畫面上。
 	var had_intents := not _sim.world.pending_intents.is_empty()
 	var ticks := _sim.advance(delta)
 
-	# 生怪計時器走模擬時間而非渲染時間：暫停時 advance() 回傳 0 個 tick，
-	# 計時器因此完全不動；4 倍速下 ticks 對應的模擬時間也是 4 倍，生怪
-	# 頻率才會跟著倍率一起變快，而不是被渲染幀率牽著走。
-	# 生怪邏輯目前留在場景層是暫時的，等到波次系統子里程碑會搬進 tick 裡。
-	_spawn_timer -= float(ticks) * BattleSim.TICK_DELTA
-	if _spawn_timer <= 0.0:
-		_spawn_timer = SPAWN_INTERVAL
-		# 暫時的生怪輪替：把第一章六種敵人輪流放出來，看分件動畫與剪影是否都成立。
-		# 波次系統子里程碑會把這段搬進 tick、改由關卡資料驅動。
-		_spawn_enemy(SPAWN_ROSTER[_spawn_index % SPAWN_ROSTER.size()])
-		_spawn_index += 1
-
 	if ticks > 0 or had_intents:
 		_sync_views()
 	_interpolate_views()
-	_update_slot_views()
+	# 通關後停止更新選取提示與建造選單：advance() 已經回傳 0、_apply_pending_intents()
+	# 不會再跑，這裡若繼續呼叫，點擊建塔點排出的意圖就會卡在 pending_intents 裡
+	# 永遠沒有人清空，had_intents 因此永遠是 true，_sync_views() 也會跟著永遠執行。
+	if not _sim.world.battle_finished:
+		_update_slot_views()
+	_update_result_panel()
 
-## 把編輯器畫的 Curve2D 等距取樣成點陣列。
-## core/ 只認得點陣列，不認得 Curve2D——這個轉換就是分層的邊界。
 ## 建塔點由 map.json 指定格子，LevelMap 換算成像素座標交給 core/。
 ## core/ 不認得格子與貼圖，與 LevelMap → PathData 是同一個分層邊界。
+##
+## 場景裡不再有 Marker2D：建塔點與路徑同出於 map.json 這一份真相，
+## 兩套並存的話 BuildSystem 不知道哪一組才算數。
 func _bake_build_slots(world: WorldState) -> void:
 	for pos in _level_map.build_slot_positions():
 		var slot := BuildSlot.new()
@@ -148,37 +152,23 @@ func _bake_build_slots(world: WorldState) -> void:
 		_view_root.add_child(view)
 		_slot_views[slot.id] = view
 
-func _spawn_enemy(enemy_id: StringName) -> void:
-	var enemy := _registry.make_enemy(enemy_id, MAIN_PATH_ID)
-	# 先把座標設到路徑起點再建 view。否則 view 會先出現在原點，
-	# 等第一個 tick 才跳到路徑起點，看起來像瞬移。
-	enemy.position = _sim.world.paths[MAIN_PATH_ID].position_at(0.0)
-	_sim.world.add_enemy(enemy)
-
-	var view := EnemyViewScript.new() as EnemyView
-	var def: Dictionary = _registry.enemies[enemy_id]
-	view.setup(enemy.id, def["sprite"], enemy.position, def.get("puppet", ""))
-	_view_root.add_child(view)
-	_enemy_views[enemy.id] = view
-
 ## 每個邏輯 tick 後同步一次：推進插值目標、清掉已死亡的 view
 func _sync_views() -> void:
 	for enemy: Enemy in _sim.world.enemies:
 		var view: EnemyView = _enemy_views.get(enemy.id)
-		if view != null:
+		if view == null:
+			# 生成搬進 tick 之後，建立 view 的責任跟著移到這裡。
+			# 先用敵人當下的座標建，才不會從畫面原點滑進來。
+			view = EnemyViewScript.new() as EnemyView
+			var def: Dictionary = _registry.enemies[enemy.enemy_id]
+			# puppet 是分件行走的拆件資料；沒有這個鍵的敵人退回整張圖，view 自己處理。
+			view.setup(enemy.id, def["sprite"], enemy.position, def.get("puppet", ""))
+			_view_root.add_child(view)
+			_enemy_views[enemy.id] = view
+		else:
 			view.on_tick(enemy.position, enemy.hp / maxf(enemy.max_hp, 1.0))
 
-	# 敵人從模擬消失有兩種原因：被殺、走到終點。模擬不回頭告訴 view 是哪一種，
-	# 但 view 最後的位置會說話——貼著路徑終點就是漏掉的，否則是死的，倒下淡出。
-	var path_end: Vector2 = _sim.world.paths[MAIN_PATH_ID].position_at(INF)
-	for view_id: int in _enemy_views.keys():
-		if not _sim.world.enemies_by_id.has(view_id):
-			var view: EnemyView = _enemy_views[view_id]
-			if view.position.distance_to(path_end) <= LEAK_EPSILON_PX:
-				view.queue_free()
-			else:
-				view.play_death()
-			_enemy_views.erase(view_id)
+	_release_vanished_enemy_views()
 
 	for tower: Tower in _sim.world.towers:
 		if not _tower_views.has(tower.id):
@@ -205,7 +195,59 @@ func _sync_views() -> void:
 		if target != null:
 			_tower_views[tower.id].aim_at(target.position)
 
+	_sync_soldier_views()
 	_sync_projectile_views()
+
+## 敵人從模擬消失有兩種原因：被擊殺（倒下淡出）、走到終點（直接消失）。
+## 模擬不回頭告訴 view 是哪一種，而 leaked 旗標在同一個 tick 內就被
+## _collect_leaked() 與 _remove_dead() 用掉了，表現層看不到它。
+##
+## 用座標距離去猜會與 core 的判定不同步（core 判的是 distance_along >=
+## total_length()，不是像素距離）。改成向 core 要一個精確的**數量**：
+## 每個走到終點的敵人正好讓 civilians_remaining 少一，所以這一批消失的
+## view 裡，走到終點的恰好有「平民數的減少量」個。哪幾個則以「離路徑終點
+## 多近」排序決定——同一批裡同時有擊殺與洩漏時，最靠近終點的那個就是洩漏的。
+## 數量永遠正確；只有「同一次同步內兩者並存」時才依賴這個排序。
+func _release_vanished_enemy_views() -> void:
+	var vanished: Array[int] = []
+	for view_id: int in _enemy_views.keys():
+		if not _sim.world.enemies_by_id.has(view_id):
+			vanished.append(view_id)
+	if vanished.is_empty():
+		return
+
+	var leaked_count := maxi(0, _shown_civilians - _sim.world.civilians_remaining)
+	_shown_civilians = _sim.world.civilians_remaining
+
+	if leaked_count > 0 and vanished.size() > 1:
+		var path_end: Vector2 = _sim.world.paths[MAIN_PATH_ID].position_at(INF)
+		vanished.sort_custom(func(a: int, b: int) -> bool:
+			return (_enemy_views[a] as EnemyView).position.distance_squared_to(path_end) 				< (_enemy_views[b] as EnemyView).position.distance_squared_to(path_end))
+
+	for i in vanished.size():
+		var view: EnemyView = _enemy_views[vanished[i]]
+		if i < leaked_count:
+			view.queue_free()
+		else:
+			view.play_death()
+		_enemy_views.erase(vanished[i])
+
+## 小兵的崗位固定不動，所以沒有插值，只有血量在變。
+func _sync_soldier_views() -> void:
+	for soldier: Soldier in _sim.world.soldiers:
+		var view: SoldierView = _soldier_views.get(soldier.id)
+		if view == null:
+			view = SoldierViewScript.new() as SoldierView
+			view.setup(soldier.id, soldier.position, soldier.slot_index)
+			_view_root.add_child(view)
+			_soldier_views[soldier.id] = view
+		view.on_tick(soldier.hp / maxf(1.0, soldier.max_hp))
+
+	for view_id: int in _soldier_views.keys():
+		if not _sim.world.soldiers_by_id.has(view_id):
+			var view: SoldierView = _soldier_views[view_id]
+			view.queue_free()
+			_soldier_views.erase(view_id)
 
 ## 賣塔之後對應的 view 要跟著消失。塔的數量少，線性搜尋即可。
 func _find_tower_view_owner(view_id: int) -> Tower:
@@ -330,7 +372,15 @@ func _current_menu_structural_signature(slot_id: int, slot: BuildSlot) -> Array:
 ## 把原始事件翻成裝置無關的動作，交給控制器。
 ## 螢幕座標換算成世界座標需要 viewport，所以這一步留在場景。
 ## 關卡整幅入鏡、無鏡頭平移，因此只差一個畫布變換。
+##
+## 通關後直接不理會輸入：advance() 已經回傳 0，選取與建造再也沒有意義，
+## 讓 _controller 繼續處理只會把意圖排進一個永遠沒人清空的佇列。
+## 結算面板自己的按鈕不受影響——Button 是 Control，會在 GUI 事件階段
+## 先吃掉點擊、直接呼叫它自己的 pressed，事件根本不會落到這裡的
+## _unhandled_input；只有沒被任何 Control 接住的事件才會走到這裡。
 func _unhandled_input(event: InputEvent) -> void:
+	if _sim.world.battle_finished:
+		return
 	var world_position: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * event.position \
 		if event is InputEventMouse else Vector2.ZERO
 	var action := MouseKeyboardInput.translate(event, world_position)
@@ -342,11 +392,46 @@ func _unhandled_input(event: InputEvent) -> void:
 ## HUD 的按鈕與鍵盤走同一條路：翻成 InputAction 餵給控制器，而不是直接改 sim。
 ## B2 已經有測試守著「動作 → 意圖 → 路由器」那條路；另開一條的話那條路上
 ## 一條測試都沒有，而兩條路遲早會漂移。
+## HUD 的按鈕走 GUI 事件階段，Button 會就地消費掉點擊並發 signal——**完全不經過
+## _unhandled_input**，所以那裡的通關檢查擋不到它們。通關後 advance() 回傳 0、
+## 佇列不再被排空，這三顆若不各自擋一次，每按一下就往永遠不會清空的佇列塞一筆。
+func _hud_input_accepted() -> bool:
+	return not _sim.world.battle_finished
+
 func _on_hud_pause_pressed() -> void:
+	if not _hud_input_accepted():
+		return
 	_controller.handle(InputAction.simple(InputAction.TOGGLE_PAUSE), _sim.world)
 
 func _on_hud_speed_pressed() -> void:
+	if not _hud_input_accepted():
+		return
 	_controller.handle(InputAction.simple(InputAction.CYCLE_SPEED), _sim.world)
+
+func _on_hud_call_wave_pressed() -> void:
+	if not _hud_input_accepted():
+		return
+	_controller.handle(InputAction.simple(InputAction.CALL_NEXT_WAVE), _sim.world)
+
+## 通關時把結算面板叫出來。只叫一次——面板不是每幀重畫的東西。
+##
+## 星等規則住在 core/systems/result_system.gd，這裡只負責讀 WorldState 顯示——
+## 門檻與起始平民數都經由 configure_for_level() 注入，不再直接讀 registry。
+func _update_result_panel() -> void:
+	if _result_shown or not _sim.world.battle_finished:
+		return
+	_result_shown = true
+
+	# 通關後就不再更新選單與射程圈了（見 _process 的說明），所以要在這裡收一次，
+	# 否則最後一隻敵人剛好在選單開著時死掉，那個選單會凍在結算面板旁邊直到重來。
+	_build_menu.hide_menu()
+	_range_circle.hide_circle()
+
+	var stars := ResultSystem.star_count(_sim.world)
+	_result_panel.show_result(stars, _sim.world.waves.size(), _sim.world.civilians_remaining, _sim.world.starting_civilians)
+
+func _on_restart_pressed() -> void:
+	get_tree().reload_current_scene()
 
 ## 選中有塔的建塔點時顯示現有射程；空位不顯示，要滑過某一瓣才預覽。
 func _show_range_for_selection(slot: BuildSlot) -> void:
@@ -385,13 +470,18 @@ func _on_menu_option_hovered(option_index: int) -> void:
 	match StringName(option["kind"]):
 		BuildMenuOptions.KIND_BUILD:
 			var levels: Array = _registry.towers[StringName(option["tower_id"])]["levels"]
-			_range_circle.show_at(slot.position, float(levels[0]["attack_range"]))
+			# 兵營的等級資料沒有 attack_range 鍵，這是 BuildSystem 分派兩種塔的
+			# 同一個 schema 差異（_apply_shooter_stats / _apply_barracks_stats）。
+			# .get(..., 0.0) 讓兵營回傳 0.0，show_at() 本來就會因此隱藏射程圈——
+			# 兵營本來就沒有射程，不該畫圈。
+			_range_circle.show_at(slot.position, float(levels[0].get("attack_range", 0.0)))
 		BuildMenuOptions.KIND_UPGRADE:
 			var tower := _find_tower_view_owner(slot.occupied_by)
 			if tower == null:
 				return
 			var next_levels: Array = _registry.towers[tower.tower_id]["levels"]
-			_range_circle.show_at(tower.position, float(next_levels[tower.level]["attack_range"]))
+			# 同上：兵營沒有 attack_range 鍵。
+			_range_circle.show_at(tower.position, float(next_levels[tower.level].get("attack_range", 0.0)))
 		_:
 			pass
 
