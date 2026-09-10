@@ -59,7 +59,7 @@ SKIN = [_hex(v) for v in _P["skin"].values()]
 # ——那是明列要與 Kingdom Rush 區隔的第一項。故依局部色相在三色間選。
 OUTLINE_COLORS = [_hex(v) for v in _P["outline"].values()]
 
-SIZE_BY_CAT = {"unit": 128, "building": 192, "prop": 128, "vessel": 192, "scene": 512, "icon": 64}
+SIZE_BY_CAT = {"unit": 128, "building": 192, "prop": 128, "vessel": 192, "scene": 512, "icon": 64, "portrait": 256, "cutscene": 1024}
 
 
 def remove_background(im: Image.Image, tol: int = 46) -> Image.Image:

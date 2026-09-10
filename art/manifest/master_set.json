@@ -185,6 +185,36 @@
       "stage": "flat",
       "file": "prop_pandanus_flat_00002_.png",
       "picked_at": "2026-09-09"
+    },
+    "portrait_coyett": {
+      "stage": "flat",
+      "file": "portrait_coyett_flat_00002_.png",
+      "picked_at": "2026-09-10"
+    },
+    "portrait_chenze": {
+      "stage": "flat",
+      "file": "portrait_chenze_flat_00001_.png",
+      "picked_at": "2026-09-10"
+    },
+    "portrait_elder": {
+      "stage": "flat",
+      "file": "portrait_elder_flat_00002_.png",
+      "picked_at": "2026-09-10"
+    },
+    "portrait_slave": {
+      "stage": "flat",
+      "file": "portrait_slave_flat_00001_.png",
+      "picked_at": "2026-09-10"
+    },
+    "portrait_hunter": {
+      "stage": "flat",
+      "file": "portrait_hunter_flat_00002_.png",
+      "picked_at": "2026-09-10"
+    },
+    "portrait_civilian": {
+      "stage": "flat",
+      "file": "portrait_civilian_flat_00002_.png",
+      "picked_at": "2026-09-10"
     }
   }
 }
