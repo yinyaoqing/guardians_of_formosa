@@ -65,6 +65,7 @@ func _make_button(option: Dictionary, index: int) -> Button:
 	button.custom_minimum_size = BUTTON_SIZE
 	button.size = BUTTON_SIZE
 	button.focus_mode = Control.FOCUS_NONE
+	button.theme = GameTheme.get_theme()
 	_style_button(button, option)
 	button.pressed.connect(func() -> void: option_chosen.emit(index))
 	button.mouse_entered.connect(func() -> void: option_hovered.emit(index))
@@ -75,6 +76,11 @@ func _style_button(button: Button, option: Dictionary) -> void:
 	match StringName(option["kind"]):
 		BuildMenuOptions.KIND_BUILD:
 			button.icon = load(option["icon"])
+			# 圖示在上、造價在下；底板由 GameTheme 的 IconButton 畫，圖示本身不帶框
+			button.theme_type_variation = &"IconButton"
+			button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+			button.expand_icon = true
 			# 造價是純數字，沒有可翻譯的內容。硬做成 %d 的格式 key 會讓兩個語系
 			# 完全相同，而那正好違反 B3a 的 test_the_two_locales_actually_differ。
 			button.text = str(option["cost"])

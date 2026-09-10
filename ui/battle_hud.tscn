@@ -18,12 +18,12 @@ mouse_filter = 2
 
 [node name="GoldLabel" type="Label" parent="Root/Top"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_type_variation = &"HudLabel"
 vertical_alignment = 1
 
 [node name="LivesLabel" type="Label" parent="Root/Top"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_type_variation = &"HudLabel"
 vertical_alignment = 1
 
 [node name="SpacerLeft" type="Control" parent="Root/Top"]
@@ -33,7 +33,7 @@ mouse_filter = 2
 
 [node name="LevelNameLabel" type="Label" parent="Root/Top"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_type_variation = &"HudLabel"
 vertical_alignment = 1
 
 [node name="SpacerRight" type="Control" parent="Root/Top"]
@@ -44,9 +44,7 @@ mouse_filter = 2
 [node name="PauseButton" type="Button" parent="Root/Top"]
 custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
 
 [node name="SpeedButton" type="Button" parent="Root/Top"]
 custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
-theme_override_font_sizes/font_size = 36

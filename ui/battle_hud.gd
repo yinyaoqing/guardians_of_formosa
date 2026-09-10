@@ -32,6 +32,10 @@ extends CanvasLayer
 signal pause_pressed
 signal speed_pressed
 
+## 頂欄與畫面邊緣的基本距離（設計單位）。安全區邊距疊加在這之上，不取代它——
+## 桌面安全區是 0，沒有這個值數字會貼著螢幕左緣。
+const EDGE_MARGIN := 24
+
 @onready var _root: MarginContainer = $Root
 @onready var _gold_label: Label = $Root/Top/GoldLabel
 @onready var _lives_label: Label = $Root/Top/LivesLabel
@@ -53,6 +57,8 @@ var _shown_speed: int = -1
 var _shown_paused: bool = true    ## sim 起始為 false，故第一幀必定不同
 
 func _ready() -> void:
+	# 主題掛在 Root 上就會沿子樹傳下去；.tscn 裡不放任何顏色，全部由 GameTheme 決定。
+	_root.theme = GameTheme.get_theme()
 	_pause_button.pressed.connect(_on_pause_button_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
 	_apply_safe_area()
@@ -112,6 +118,6 @@ func _apply_safe_area() -> void:
 	var scale_x := canvas.x / float(window.x)
 	var scale_y := canvas.y / float(window.y)
 
-	_root.add_theme_constant_override("margin_left", maxi(0, int(safe.position.x * scale_x)))
-	_root.add_theme_constant_override("margin_top", maxi(0, int(safe.position.y * scale_y)))
-	_root.add_theme_constant_override("margin_right", maxi(0, int((window.x - safe.end.x) * scale_x)))
+	_root.add_theme_constant_override("margin_left", EDGE_MARGIN + maxi(0, int(safe.position.x * scale_x)))
+	_root.add_theme_constant_override("margin_top", EDGE_MARGIN + maxi(0, int(safe.position.y * scale_y)))
+	_root.add_theme_constant_override("margin_right", EDGE_MARGIN + maxi(0, int((window.x - safe.end.x) * scale_x)))

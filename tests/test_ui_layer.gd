@@ -248,6 +248,47 @@ func test_build_menu_show_options_creates_buttons_and_reports_the_right_index() 
 		"stale-button regression：show_options 換過一批選項後，子節點數該穩定回到 1"
 	).is_equal(1)
 
+const DIALOGUE_CARD_SCENE := "res://ui/dialogue_card.tscn"
+
+## 主題是程式建的，色票讀 data/art_palette.json。這裡守兩件事：色名解析得到（改色票
+## 名字時主題會跟著壞），以及三個型別變體真的存在（.tscn 用 theme_type_variation
+## 引用它們，打錯字不會報錯、只會靜靜退回預設樣式）。
+func test_game_theme_builds_from_the_palette() -> void:
+	var theme := GameTheme.build()
+	assert_bool(theme.has_stylebox("normal", "Button")).is_true()
+	for variation: StringName in [&"IconButton", &"HudLabel", &"DialogueCard", &"PortraitFrame", &"SpeakerLabel", &"BodyLabel"]:
+		assert_bool(theme.get_type_variation_base(variation) != &"").override_failure_message(
+			"主題缺少型別變體 %s；.tscn 引用它時不會報錯，只會靜靜退回預設樣式" % variation
+		).is_true()
+	assert_bool(GameTheme.color("焦茶") == Color.html("#3A2A22")).override_failure_message(
+		"GameTheme.color 應該讀到 art_palette.json 的焦茶"
+	).is_true()
+	assert_bool(GameTheme.color("不存在的色") == Color.MAGENTA).is_true()
+
+func test_the_dialogue_card_scene_loads_and_shows_a_line() -> void:
+	var packed: PackedScene = load(DIALOGUE_CARD_SCENE)
+	assert_bool(packed != null).override_failure_message(
+		"載入不了 %s；.tscn 是手寫的" % DIALOGUE_CARD_SCENE
+	).is_true()
+	var card: DialogueCard = packed.instantiate()
+	add_child(card)
+	auto_free(card)
+	assert_bool(card.has_signal("advance_pressed")).is_true()
+	assert_bool(card.is_showing()).override_failure_message("對話卡初始應隱藏").is_false()
+
+	card.show_line(null, &"hud.pause", &"hud.resume")
+	assert_bool(card.is_showing()).is_true()
+	assert_str(card.get_node("Root/Card/Row/Text/SpeakerLabel").text).is_equal(tr(&"hud.pause"))
+	assert_str(card.get_node("Root/Card/Row/Text/BodyLabel").text).is_equal(tr(&"hud.resume"))
+	assert_bool(card.get_node("Root/Card/Row/PortraitFrame").visible).override_failure_message(
+		"沒有肖像（旁白）時肖像框應收起"
+	).is_false()
+
+	card.show_line(PlaceholderTexture2D.new(), &"hud.pause", &"hud.resume")
+	assert_bool(card.get_node("Root/Card/Row/PortraitFrame").visible).is_true()
+	card.hide_card()
+	assert_bool(card.is_showing()).is_false()
+
 func _collect_gd_files(root: String) -> Array[String]:
 	var found: Array[String] = []
 	var dir := DirAccess.open(root)
