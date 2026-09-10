@@ -136,3 +136,57 @@ python art/scripts/check_lighting.py --stage flux2
 ### 進 `game/assets`
 
 33 張替換 `game/assets/chapter01/`，`godot --headless --import` 後全套測試通過。踩到一個坑：`03_processed/` 裡還留著實驗期的 `xp_*` 產出，`cp *.png` 一起帶進去讓 7 個測試失敗——`postprocess --out` 的正式輸出目錄應該只放清單資產，或搬進 `game/assets` 時以清單過濾。
+
+---
+
+# 第三批：對話肖像與過場大圖（2026-09-10）
+
+A2 閘門要求「連續三批風格穩定」。第一批＝A1 的 FLUX.2 全量，第二批＝扁平幾何 33 張母本，
+第三批就是這裡的敘事層產出。**同一套 `shared.style` 字串、同一份色票、同一條無五官條款**，
+只換 framing 與尺寸——三份清單（`chapter01_assets`／`chapter01_portraits`／`chapter01_cutscenes`）
+的風格區塊逐字相同，這是刻意的：批次差要能歸因到 framing 而不是風格描述漂移。
+
+## 肖像六張
+
+| 項目 | 內容 |
+|---|---|
+| 清單 | `art/manifest/chapter01_portraits.json`，framing＝胸像、深色石板底、768×768 |
+| 挑選 | 一輪定案 6/6（表單 radio，記入 `master_set.json`，stage 全為 `flat`） |
+| 後處理 | `postprocess.py --stage flat --outline-width 1`，`SIZE_BY_CAT["portrait"] = 256` |
+| 色票閘門 | 6/6 通過（`--verify-only`） |
+| 尺寸上限 | `data/art_limits.json` 加 `"portrait_": 256`；`test_art_limits` 通過 |
+| 印樣 | `art_src/contact/portraits_processed.png` |
+
+**批次差**：與 33 張母本並排看不出差異。臉一律留空，鬍鬚、髮髻、笠盔、白領這些身分標記都在——
+與單位圖的處理方式一致。揆一的髮鬚被畫成榕蔭綠，是色票內的合法選色，不是漂移。
+
+## 過場大圖三張
+
+| 項目 | 內容 |
+|---|---|
+| 清單 | `art/manifest/chapter01_cutscenes.json`，framing＝16:9 全景、1024×576 |
+| 工作流 | `a2x_flux2_multiref.api.json`——**Klein 多參考圖編輯**，每張餵 3 張母本原圖 |
+| 候選 | 3 張各 2 張（`stage_cutscene`），印樣 `art_src/contact/cutscenes_candidates.png` |
+| 挑選 | 進行中 |
+| 尺寸上限 | `data/art_limits.json` 加 `"cs_": 1024` |
+
+**這一批最有價值的實測**：多參考圖編輯在「三個角色同框」的情境下仍然成立。授杖那張餵了
+揆一肖像、頭目肖像、銃樓火繩槍手三張母本，出來的圖裡黑袍白領、髮髻與肩布、闊邊帽與火繩槍
+各自跟著自己的參考圖走，prompt 一個字都沒有描述服裝。登陸那張的中式硬帆扇形與陳澤的明盔
+同理。A2x §8 的結論「內容靠圖、風格靠字」從單一角色推廣到多角色場景，**這是 A3 決定不訓
+LoRA 的最後一塊依據**。
+
+無五官條款在 1024px 下仍守住：六張候選放大檢查，臉全部是單一色塊（`cutscenes_faces.png`）。
+
+## A2 閘門結論
+
+| 閘門 | 狀態 |
+|---|---|
+| 連續三批風格穩定 | **達成**——三批共 42 個資產、7 個類別，並排看不出批次差 |
+| 色票 | 33/33 + 6/6 通過；過場不受色票約束（滿版場景，與 `scene` 同處理） |
+| 剪影 | 單位類 1 對擦線（musketeer ↔ coyett 0.933），肖像與過場不適用此量尺 |
+| 光源 | diagonal 量尺對垂直分光線的扁平風格不適用，已記在第二批；改量 horizontal 待做 |
+
+**A3 風格 LoRA：不做。** 美術聖經 §8 的條件是「第三批仍有漂移才訓」，三批沒有漂移，
+而一致性的實際承擔者是扁平幾何風格本身與 Klein 參考圖編輯。這條決定已同步進精緻度規格 §2。
+
